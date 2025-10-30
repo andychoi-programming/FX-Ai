@@ -203,6 +203,24 @@ class TradingEngine:
                 
                 logger.info(f"Order validated: {final_ratio:.1f}:1 risk-reward ratio")
 
+            # CRITICAL FIX: Round prices to symbol's decimal places for JPY pairs
+            price = round(price, symbol_info.digits)
+            if stop_loss is not None:
+                stop_loss = round(stop_loss, symbol_info.digits)
+            if take_profit is not None:
+                take_profit = round(take_profit, symbol_info.digits)
+
+            # Debug before sending to MT5
+            print(f"\n=== SENDING TO MT5 ===")
+            print(f"Symbol: {symbol}")
+            print(f"Entry: {price}")
+            print(f"Stop Loss: {stop_loss}")
+            print(f"Take Profit: {take_profit}")
+            if stop_loss is not None:
+                sl_distance = abs(price - stop_loss)
+                print(f"SL Distance: {sl_distance:.5f}")
+            print("=" * 30)
+
             # Create order request
             request = {
                 "action": mt5.TRADE_ACTION_DEAL,
@@ -236,6 +254,15 @@ class TradingEngine:
 
             if result.retcode == mt5.TRADE_RETCODE_DONE:
                 logger.info(f"Order placed: {symbol} {order_type} @ {price}")
+
+                # CRITICAL FIX: Verify what was actually placed
+                positions = mt5.positions_get(symbol=symbol)
+                if positions:
+                    actual_sl = positions[-1].sl
+                    print(f"ACTUAL SL SET: {actual_sl}")
+                    if stop_loss is not None and abs(actual_sl - stop_loss) > 0.01:
+                        print(f"WARNING: SL mismatch! Expected {stop_loss}, got {actual_sl}")
+                        logger.warning(f"Stop loss mismatch for {symbol}: expected {stop_loss}, got {actual_sl}")
 
                 # Track the order
                 if order_type.lower() in ['buy', 'sell']:
