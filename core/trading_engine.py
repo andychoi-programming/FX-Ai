@@ -228,6 +228,58 @@ class TradingEngine:
             if take_profit is not None:
                 take_profit = round(take_profit, symbol_info.digits)
 
+            # FIX 2: Check for broker minimum stop distance restrictions
+            if stop_loss is not None:
+                min_stop_points = getattr(symbol_info, 'trade_stops_level', 0)
+                min_stop_distance = max(min_stop_points * symbol_info.point, 0.0001)  # Minimum 1 point
+                
+                actual_sl_distance = abs(price - stop_loss)
+                if actual_sl_distance < min_stop_distance:
+                    print(f"⚠️  BROKER MINIMUM STOP: Required {min_stop_distance:.5f}, have {actual_sl_distance:.5f}")
+                    # Adjust to meet broker minimum
+                    if order_type.lower() in ['buy', 'buy_limit', 'buy_stop']:
+                        stop_loss = price - min_stop_distance
+                    else:
+                        stop_loss = price + min_stop_distance
+                    stop_loss = round(stop_loss, symbol_info.digits)
+                    print(f"Adjusted SL to: {stop_loss}")
+                    
+            if take_profit is not None:
+                min_stop_points = getattr(symbol_info, 'trade_stops_level', 0)
+                min_stop_distance = max(min_stop_points * symbol_info.point, 0.0001)
+                
+                actual_tp_distance = abs(price - take_profit)
+                if actual_tp_distance < min_stop_distance:
+                    print(f"⚠️  BROKER MINIMUM TP: Required {min_stop_distance:.5f}, have {actual_tp_distance:.5f}")
+                    # Adjust to meet broker minimum
+                    if order_type.lower() in ['buy', 'buy_limit', 'buy_stop']:
+                        take_profit = price + min_stop_distance
+                    else:
+                        take_profit = price - min_stop_distance
+                    take_profit = round(take_profit, symbol_info.digits)
+                    print(f"Adjusted TP to: {take_profit}")
+
+            # CRITICAL DEBUG: Enhanced diagnostic for EURJPY SL bug
+            if "EURJPY" in symbol and stop_loss is not None:
+                print(f"\n{'='*60}")
+                print(f"🚨 CRITICAL DEBUG: EURJPY ORDER PLACEMENT")
+                print(f"Symbol: {symbol}")
+                print(f"Order Type: {order_type}")
+                print(f"Entry Price: {price} (type: {type(price)})")
+                print(f"Stop Loss Price: {stop_loss} (type: {type(stop_loss)})")
+                print(f"Take Profit Price: {take_profit} (type: {type(take_profit) if take_profit else None})")
+                
+                # Calculate what we expect
+                sl_distance = abs(price - stop_loss)
+                pip_size = 0.01 if "JPY" in symbol else 0.0001
+                expected_pips = sl_distance / pip_size
+                print(f"Expected SL Distance: {sl_distance:.5f}")
+                print(f"Pip Size: {pip_size}")
+                print(f"Expected SL Pips: {expected_pips:.1f}")
+                print(f"Symbol Digits: {symbol_info.digits}")
+                print(f"Symbol Point: {symbol_info.point}")
+                print(f"{'='*60}")
+
             # Debug before sending to MT5
             print(f"\n=== SENDING TO MT5 ===")
             print(f"Symbol: {symbol}")
@@ -259,6 +311,14 @@ class TradingEngine:
             if take_profit is not None:
                 request["tp"] = take_profit
 
+            # CRITICAL DEBUG: Print the exact request being sent
+            print(f"REQUEST BEING SENT TO MT5:")
+            for key, value in request.items():
+                print(f"  {key}: {value}")
+            print(f"REQUEST SL FIELD TYPE: {type(request.get('sl'))}")
+            print(f"REQUEST SL FIELD VALUE: {request.get('sl')}")
+            print("=" * 50)
+
             # Send order
             result = mt5.order_send(request)
 
@@ -273,14 +333,76 @@ class TradingEngine:
             if result.retcode == mt5.TRADE_RETCODE_DONE:
                 logger.info(f"Order placed: {symbol} {order_type} @ {price}")
 
-                # CRITICAL FIX: Verify what was actually placed
+                # ALTERNATIVE FIX: Use TRADE_ACTION_SLTP to set SL/TP after order placement
+                # This ensures SL/TP are set correctly even if initial order had issues
+                if stop_loss is not None or take_profit is not None:
+                    import time
+                    time.sleep(0.2)  # Brief pause before modifying
+                    
+                    modify_request = {
+                        "action": mt5.TRADE_ACTION_SLTP,
+                        "position": result.order,  # Use the order ticket as position ID
+                        "symbol": symbol,
+                    }
+                    
+                    if stop_loss is not None:
+                        modify_request["sl"] = stop_loss
+                    if take_profit is not None:
+                        modify_request["tp"] = take_profit
+                    
+                    print(f"Modifying order with SLTP: {modify_request}")
+                    modify_result = mt5.order_send(modify_request)
+                    
+                    if modify_result and modify_result.retcode != mt5.TRADE_RETCODE_DONE:
+                        print(f"⚠️  WARNING: SLTP modification failed: {modify_result.comment}")
+                        logger.warning(f"Failed to set SL/TP for order {result.order}: {modify_result.comment}")
+                    else:
+                        print(f"✅ SLTP modification successful")
+
+                # CRITICAL FIX: Enhanced verification with detailed diagnostics
+                import time
+                time.sleep(0.5)  # Wait for position to register
+                
                 positions = mt5.positions_get(symbol=symbol)
                 if positions:
-                    actual_sl = positions[-1].sl
-                    print(f"ACTUAL SL SET: {actual_sl}")
-                    if stop_loss is not None and abs(actual_sl - stop_loss) > 0.01:
-                        print(f"WARNING: SL mismatch! Expected {stop_loss}, got {actual_sl}")
-                        logger.warning(f"Stop loss mismatch for {symbol}: expected {stop_loss}, got {actual_sl}")
+                    actual_position = positions[-1]
+                    actual_sl = actual_position.sl
+                    actual_tp = actual_position.tp
+                    
+                    print(f"\n🔍 ORDER VERIFICATION:")
+                    print(f"Requested SL: {stop_loss}")
+                    print(f"MT5 Set SL: {actual_sl}")
+                    print(f"Requested TP: {take_profit}")
+                    print(f"MT5 Set TP: {actual_tp}")
+                    
+                    if stop_loss is not None:
+                        sl_mismatch = abs(actual_sl - stop_loss)
+                        print(f"SL Mismatch: {sl_mismatch:.5f}")
+                        
+                        if sl_mismatch > 0.01:
+                            print(f"🚨 CRITICAL BUG: MT5 ignored our SL!")
+                            print(f"Expected: {stop_loss}, Got: {actual_sl}")
+                            print(f"Difference: {sl_mismatch:.5f} price units")
+                            
+                            # Calculate what MT5 thinks the pips are
+                            if "JPY" in symbol:
+                                actual_pips = sl_mismatch / 0.01
+                            else:
+                                actual_pips = sl_mismatch / 0.0001
+                            print(f"This equals ~{actual_pips:.1f} pips difference")
+                            
+                            logger.error(f"Stop loss mismatch for {symbol}: expected {stop_loss}, got {actual_sl}")
+                        else:
+                            print(f"✅ SL set correctly")
+                    
+                    if take_profit is not None:
+                        tp_mismatch = abs(actual_tp - take_profit)
+                        if tp_mismatch > 0.01:
+                            print(f"🚨 WARNING: TP mismatch! Expected {take_profit}, got {actual_tp}")
+                    
+                    print("=" * 50)
+                else:
+                    print(f"⚠️  WARNING: No positions found after order placement!")
 
                 # Track the order
                 if order_type.lower() in ['buy', 'sell']:
