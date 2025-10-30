@@ -35,6 +35,29 @@ class TradingEngine:
 
         logger.info("Trading Engine initialized")
 
+    def get_filling_mode(self, symbol):
+        """Get the correct filling mode for a symbol"""
+        info = mt5.symbol_info(symbol)
+        if info is None:
+            logger.warning(f"Failed to get symbol info for {symbol}, using FOK as fallback")
+            return mt5.ORDER_FILLING_FOK
+
+        filling = info.filling_mode
+        logger.debug(f"Symbol {symbol} filling modes supported: {filling}")
+
+        if filling & 1:  # ORDER_FILLING_FOK
+            logger.debug(f"Using ORDER_FILLING_FOK for {symbol}")
+            return mt5.ORDER_FILLING_FOK
+        elif filling & 2:  # ORDER_FILLING_IOC
+            logger.debug(f"Using ORDER_FILLING_IOC for {symbol}")
+            return mt5.ORDER_FILLING_IOC
+        elif filling & 4:  # ORDER_FILLING_RETURN
+            logger.debug(f"Using ORDER_FILLING_RETURN for {symbol}")
+            return mt5.ORDER_FILLING_RETURN
+        else:
+            logger.warning(f"No filling mode detected for {symbol}, using FOK as fallback")
+            return mt5.ORDER_FILLING_FOK
+
     def debug_stop_loss_calculation(self, symbol: str, order_type: str, stop_loss_pips: float):
         """Debug function to trace stop loss calculation issues"""
         
@@ -302,7 +325,7 @@ class TradingEngine:
                 "magic": self.magic_number,
                 "comment": comment or "FX-Ai",
                 "type_time": mt5.ORDER_TIME_GTC,
-                # Removed type_filling to avoid "Unsupported filling mode" errors
+                "type_filling": self.get_filling_mode(symbol),  # Dynamic filling mode
             }
 
             # Add stop loss and take profit if provided
