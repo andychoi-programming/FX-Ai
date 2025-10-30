@@ -207,29 +207,26 @@ Position Size Calculation for {symbol}:
                                  order_type: str,
                                  entry_price: float,
                                  stop_loss_pips: float = 20) -> float:
-        """Calculate stop loss price based on pips"""
+        """Calculate stop loss price based on pips - Fixed for JPY pairs"""
         try:
             symbol_info = mt5.symbol_info(symbol)
             if symbol_info is None:
                 return 0.0
             
-            point = symbol_info.point
-            digits = symbol_info.digits
-            
-            # Determine pip size
-            if digits == 3 or digits == 5:
-                pip_size = point * 10
+            # Correct pip size for JPY pairs
+            if "JPY" in symbol:
+                pip_size = 0.01  # JPY pairs: 1 pip = 0.01 price units
             else:
-                pip_size = point
+                pip_size = 0.0001  # Standard pairs: 1 pip = 0.0001 price units
             
-            # Calculate SL price based on order type
+            # Calculate distance in price units
+            distance = stop_loss_pips * pip_size
+            
+            # Calculate SL price
             if order_type.upper() == "BUY":
-                sl_price = entry_price - (stop_loss_pips * pip_size)
+                sl_price = entry_price - distance
             else:  # SELL
-                sl_price = entry_price + (stop_loss_pips * pip_size)
-            
-            # Round to symbol digits
-            sl_price = round(sl_price, digits)
+                sl_price = entry_price + distance
             
             return sl_price
             
