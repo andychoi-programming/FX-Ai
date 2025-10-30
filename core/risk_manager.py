@@ -58,6 +58,11 @@ class RiskManager:
                 logger.error(f"Symbol {symbol} not found")
                 return 0.01
             
+            # Use specialized calculation for metals
+            if "XAU" in symbol or "XAG" in symbol:
+                return self.calculate_position_size_metals(symbol, stop_loss_pips, 
+                                                         risk_override if risk_override else self.risk_per_trade)
+            
             # Use override risk or default
             risk_amount = risk_override if risk_override else self.risk_per_trade
             
@@ -202,6 +207,51 @@ Position Size Calculation for {symbol}:
             logger.error(f"Error calculating position size: {e}")
             return 0.01
     
+    def calculate_position_size_metals(self, symbol, stop_loss_pips, risk_amount=50):
+        """Special calculation for Gold and Silver"""
+        
+        symbol_info = mt5.symbol_info(symbol)
+        tick = mt5.symbol_info_tick(symbol)
+        
+        if "XAU" in symbol:  # Gold
+            # For Gold: 1 pip = $0.10 movement = $10 per lot
+            # So 1 pip = $10 for 1 lot, $1 for 0.1 lot, $0.10 for 0.01 lot
+            
+            # If stop loss is 500 pips (typical for gold)
+            # Risk per 0.01 lot = 500 * $0.10 = $50
+            # So for $50 risk with 500 pip SL = 0.01 lots
+            
+            pip_value_per_001_lot = 0.10  # $0.10 per pip for 0.01 lot
+            lot_size = risk_amount / (stop_loss_pips * pip_value_per_001_lot * 100)
+            
+        elif "XAG" in symbol:  # Silver  
+            # For Silver: 1 pip = $0.001 movement = $50 per lot
+            # 1 pip = $50 for 1 lot, $5 for 0.1 lot, $0.50 for 0.01 lot
+            
+            # If stop loss is 500 pips
+            # Risk per 0.01 lot = 500 * $0.50 = $250 (too much!)
+            # Need 0.002 lots for $50 risk
+            
+            pip_value_per_001_lot = 0.50  # $0.50 per pip for 0.01 lot
+            lot_size = risk_amount / (stop_loss_pips * pip_value_per_001_lot * 100)
+            
+            # Check if we can trade with broker's minimum
+            min_lot = symbol_info.volume_min
+            min_risk = stop_loss_pips * pip_value_per_001_lot * min_lot * 100
+            
+            if min_risk > risk_amount:
+                print(f"Cannot trade {symbol}: Minimum risk ${min_risk:.2f} > ${risk_amount}")
+                return 0  # Cannot trade within risk limits
+        
+        # Round to lot step
+        lot_step = symbol_info.volume_step
+        lot_size = round(lot_size / lot_step) * lot_step
+        
+        # Apply limits
+        lot_size = max(symbol_info.volume_min, min(lot_size, symbol_info.volume_max))
+        
+        return lot_size
+    
     def calculate_stop_loss_price(self, 
                                  symbol: str, 
                                  order_type: str,
@@ -320,32 +370,44 @@ Position Size Calculation for {symbol}:
             symbol_info = mt5.symbol_info(symbol)
             if symbol_info is None:
                 return self.risk_per_trade
-            
+
             tick = mt5.symbol_info_tick(symbol)
             if tick is None:
                 return self.risk_per_trade
-            
+
             # Calculate pip value
             contract_size = symbol_info.trade_contract_size
             point = symbol_info.point
             digits = symbol_info.digits
-            
-            if digits == 3 or digits == 5:
+
+            # Determine pip size based on symbol type
+            if "XAU" in symbol or "GOLD" in symbol or "XAG" in symbol:
+                pip_size = point * 10  # Metals: 1 pip = 10 points
+            elif digits == 3 or digits == 5:
                 pip_size = point * 10
             else:
                 pip_size = point
-            
-            # Simplified pip value calculation
-            if "JPY" in symbol:
+
+            # Calculate pip value per lot
+            if "JPY" in symbol and symbol.endswith("JPY"):
                 pip_value = (pip_size * contract_size) / tick.bid
-            else:
+            elif symbol.startswith("USD"):
                 pip_value = pip_size * contract_size
-            
+            elif symbol.endswith("USD"):
+                pip_value = pip_size * contract_size
+            elif "XAU" in symbol or "GOLD" in symbol:
+                pip_value = pip_size * contract_size  # For XAUUSD: 0.1 * 100 = $10 per pip per lot
+            elif "XAG" in symbol:
+                pip_value = pip_size * contract_size  # For XAGUSD: similar calculation
+            else:
+                # Get current price for cross pairs
+                pip_value = (pip_size * contract_size) / tick.bid
+
             # Calculate risk
             risk_amount = lot_size * stop_loss_pips * pip_value
-            
+
             return risk_amount
-            
+
         except Exception as e:
             logger.error(f"Error estimating risk: {e}")
             return self.risk_per_trade
