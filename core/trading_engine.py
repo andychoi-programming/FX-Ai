@@ -126,10 +126,19 @@ class TradingEngine:
             if stop_loss is not None:
                 # Get minimum stop distance from symbol info, with fallback
                 stops_level = getattr(symbol_info, 'trade_stops_level', 0)
-                min_stop_points = max(stops_level, 100)  # Increased to 100 points minimum
-                min_stop_distance = min_stop_points * symbol_info.point
                 
-                logger.info(f"Symbol {symbol}: stops_level={stops_level}, point={symbol_info.point}, min_stop_points={min_stop_points}, min_stop_distance={min_stop_distance}")
+                # Calculate minimum stop distance in PIPS, not points
+                # For JPY pairs: 1 pip = 0.01, for others: 1 pip = 0.0001
+                if "JPY" in symbol:
+                    pip_size = 0.01
+                    min_stop_pips = max(stops_level / 10, 25)  # Convert points to pips, minimum 25 pips
+                else:
+                    pip_size = 0.0001
+                    min_stop_pips = max(stops_level / 10, 25)  # Convert points to pips, minimum 25 pips
+                
+                min_stop_distance = min_stop_pips * pip_size
+                
+                logger.info(f"Symbol {symbol}: stops_level={stops_level}, pip_size={pip_size}, min_stop_pips={min_stop_pips}, min_stop_distance={min_stop_distance}")
                 logger.info(f"Order {order_type} {symbol}: price={price}, original_sl={stop_loss}, min_distance={min_stop_distance}")
                 
                 if order_type.lower() in ['buy', 'buy_limit', 'buy_stop']:
@@ -171,8 +180,17 @@ class TradingEngine:
             if take_profit is not None:
                 # Get minimum stop distance from symbol info, with fallback
                 stops_level = getattr(symbol_info, 'trade_stops_level', 0)
-                min_stop_points = max(stops_level, 100)  # Increased to 100 points minimum
-                min_stop_distance = min_stop_points * symbol_info.point
+                
+                # Calculate minimum stop distance in PIPS, not points
+                # For JPY pairs: 1 pip = 0.01, for others: 1 pip = 0.0001
+                if "JPY" in symbol:
+                    pip_size = 0.01
+                    min_stop_pips = max(stops_level / 10, 25)  # Convert points to pips, minimum 25 pips
+                else:
+                    pip_size = 0.0001
+                    min_stop_pips = max(stops_level / 10, 25)  # Convert points to pips, minimum 25 pips
+                
+                min_stop_distance = min_stop_pips * pip_size
                 
                 logger.info(f"Order {order_type} {symbol}: price={price}, original_tp={take_profit}, min_distance={min_stop_distance}")
                 

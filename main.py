@@ -263,8 +263,10 @@ class FXAiApplication:
                         # Ensure minimum stop distance matches position sizing requirements
                         min_sl_pips = self.config.get('risk_management', {}).get('minimum_sl_pips', 25)
                         # Use higher minimum SL for metals due to higher volatility
-                        if 'XAU' in symbol or 'XAG' in symbol or 'GOLD' in symbol:
-                            min_sl_pips = max(min_sl_pips, 500)  # Minimum 500 pips for metals
+                        if 'XAU' in symbol or 'GOLD' in symbol:
+                            min_sl_pips = max(min_sl_pips, 500)  # Minimum 500 pips for gold
+                        elif 'XAG' in symbol:
+                            min_sl_pips = max(min_sl_pips, 100)  # Minimum 100 pips for silver (reduced for tradability)
                         
                         # Convert minimum pips to distance
                         if 'JPY' in symbol:
