@@ -35,6 +35,44 @@ class TradingEngine:
 
         logger.info("Trading Engine initialized")
 
+    def debug_stop_loss_calculation(self, symbol: str, order_type: str, stop_loss_pips: float):
+        """Debug function to trace stop loss calculation issues"""
+        
+        print(f"\n=== ORDER DEBUG for {symbol} ===")
+        print(f"Stop Loss Pips Input: {stop_loss_pips}")
+        
+        symbol_info = mt5.symbol_info(symbol)
+        if symbol_info is None:
+            print("ERROR: Symbol info not available")
+            return
+            
+        print(f"Symbol Digits: {symbol_info.digits}")
+        print(f"Symbol Point: {symbol_info.point}")
+        
+        # Show pip calculation
+        if "JPY" in symbol:
+            pip_size = 0.01
+            print(f"JPY Pair - Pip Size: {pip_size}")
+        else:
+            pip_size = 0.0001 if symbol_info.digits == 5 else 0.01
+            print(f"Regular Pair - Pip Size: {pip_size}")
+        
+        sl_distance = stop_loss_pips * pip_size
+        print(f"SL Distance: {sl_distance}")
+        
+        current_price = mt5.symbol_info_tick(symbol)
+        if current_price:
+            current_price = current_price.ask if order_type.lower() == 'buy' else current_price.bid
+            stop_loss_price = current_price - sl_distance if order_type.lower() == 'buy' else current_price + sl_distance
+            
+            print(f"Current Price: {current_price}")
+            print(f"Calculated Stop Loss Price: {stop_loss_price}")
+            print(f"Actual SL Distance in Pips: {(abs(current_price - stop_loss_price)) / pip_size}")
+        else:
+            print("ERROR: Could not get current price")
+            
+        print("=" * 40)
+
     async def place_order(self, symbol: str, order_type: str, volume: float,
                          stop_loss: float = None, take_profit: float = None,
                          price: float = None, comment: str = "") -> Dict:
@@ -108,6 +146,26 @@ class TradingEngine:
                         stop_loss = required_sl
                 
                 logger.info(f"Final stop loss: {stop_loss}")
+
+            # DEBUG: Trace EURJPY stop loss calculation
+            if stop_loss is not None and "EURJPY" in symbol:
+                print(f"\n=== ORDER DEBUG for {symbol} ===")
+                print(f"Order Type: {order_type}")
+                print(f"Entry Price: {price}")
+                print(f"Stop Loss Price: {stop_loss}")
+                
+                # Calculate pip size for JPY pairs
+                pip_size = 0.01 if "JPY" in symbol else 0.0001
+                print(f"Pip Size: {pip_size}")
+                
+                # Calculate actual pips
+                sl_distance = abs(price - stop_loss)
+                actual_pips = sl_distance / pip_size
+                print(f"SL Distance: {sl_distance}")
+                print(f"Actual SL Pips: {actual_pips:.1f}")
+                print(f"Symbol Digits: {symbol_info.digits}")
+                print(f"Symbol Point: {symbol_info.point}")
+                print("=" * 40)
 
             # Adjust take profit to meet minimum requirements (only if too close to entry)
             if take_profit is not None:
