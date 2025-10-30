@@ -1,0 +1,211 @@
+{
+  "mt5": {
+    "login": 53605,
+    "password": "AshtonAmy369!",
+    "server": "TIOMarkets-Demo1",
+    "timeout": 60000,
+    "path": ""
+  },
+  "trading": {
+    "symbols": [
+      "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD",
+      "USDCHF", "NZDUSD", "EURJPY", "GBPJPY", "EURGBP",
+      "XAUUSD", "XAGUSD"
+    ],
+    "risk_per_trade": 50.0,
+    "risk_type": "fixed_dollar",
+    "default_sl_pips": 20,
+    "default_tp_pips": 40,
+    "max_positions": 20,
+    "max_spread": 3.0,
+    "min_lot_size": 0.01,
+    "max_lot_size": 1.0,
+    "max_daily_loss": 500.0,
+    "enable_news_filter": true,
+    "enable_session_filter": true,
+    "day_trading_only": true,
+    "close_before_weekend": true,
+    "close_on_shutdown": true,
+    "prevent_multiple_positions_per_symbol": true
+  },
+  "risk_management": {
+    "mode": "fixed_dollar_risk",
+    "fixed_risk_amount": 50.0,
+    "risk_calculation_method": "pip_based",
+    "stop_loss_method": "atr_based",
+    "atr_multiplier": 1.5,
+    "minimum_sl_pips": 25,
+    "maximum_sl_pips": 50,
+    "risk_reward_ratio": 3.0,
+    "trailing_stop": {
+      "enabled": true,
+      "activation_pips": 20,
+      "trail_distance_pips": 15
+    },
+    "breakeven": {
+      "enabled": true,
+      "activation_pips": 15
+    },
+    "position_sizing": {
+      "method": "fixed_risk",
+      "risk_per_trade_usd": 50.0,
+      "max_position_size": 1.0,
+      "use_kelly_criterion": false,
+      "margin_safety_factor": 0.95
+    },
+    "daily_limits": {
+      "max_daily_loss_usd": 150.0,
+      "max_consecutive_losses": 3,
+      "pause_after_losses": true,
+      "max_daily_trades": 10
+    }
+  },
+  "indicators": {
+    "vwap_period": 20,
+    "ema_period": 20,
+    "rsi_period": 14,
+    "atr_period": 14,
+    "use_support_resistance": true,
+    "volume_analysis": true
+  },
+  "fundamental": {
+    "myfxbook": {
+      "enabled": true,
+      "url": "https://www.myfxbook.com",
+      "weight": 0.25,
+      "update_interval": 300
+    },
+    "fxstreet": {
+      "enabled": true,
+      "url": "https://www.fxstreet.com",
+      "weight": 0.25,
+      "update_interval": 300
+    },
+    "fxblue": {
+      "enabled": true,
+      "url": "https://www.fxblue.com",
+      "weight": 0.2,
+      "update_interval": 300
+    },
+    "investing": {
+      "enabled": true,
+      "url": "https://www.investing.com",
+      "weight": 0.2,
+      "update_interval": 300
+    },
+    "forexclientsentiment": {
+      "enabled": true,
+      "url": "https://www.forexclientsentiment.com",
+      "weight": 0.1,
+      "update_interval": 600
+    }
+  },
+  "ml": {
+    "enabled": true,
+    "adaptive_learning": true,
+    "models": {
+      "xgboost": {
+        "enabled": true,
+        "retrain_interval": 86400,
+        "min_data_points": 1000,
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "n_estimators": 100
+      },
+      "random_forest": {
+        "enabled": true,
+        "retrain_interval": 86400,
+        "min_data_points": 1000,
+        "n_estimators": 100,
+        "max_depth": 10
+      },
+      "lstm": {
+        "enabled": true,
+        "retrain_interval": 172800,
+        "min_data_points": 2000,
+        "sequence_length": 50,
+        "hidden_units": 64
+      }
+    },
+    "ensemble_method": "weighted_average",
+    "min_accuracy": 0.65,
+    "backtest_period": 365,
+    "walk_forward_window": 30,
+    "retrain_interval_hours": 24,
+    "min_trades_for_update": 50,
+    "performance_window_days": 30,
+    "adaptation_rate": 0.1,
+    "immediate_learning_threshold": 5.0
+  },
+  "adaptive_learning": {
+    "enabled": true,
+    "parameter_optimization": {
+      "enabled": true,
+      "interval_hours": 12,
+      "method": "grid_search",
+      "parameters": {
+        "rsi_oversold": {
+          "min": 20,
+          "max": 40,
+          "step": 5
+        },
+        "rsi_overbought": {
+          "min": 60,
+          "max": 80,
+          "step": 5
+        },
+        "min_signal_strength": {
+          "min": 0.5,
+          "max": 0.8,
+          "step": 0.05
+        },
+        "trailing_stop_distance": {
+          "min": 15,
+          "max": 30,
+          "step": 5
+        },
+        "risk_multiplier": {
+          "min": 0.8,
+          "max": 1.5,
+          "step": 0.1
+        }
+      }
+    },
+    "signal_weight_adjustment": {
+      "enabled": true,
+      "interval_hours": 4,
+      "min_correlation": 0.1,
+      "adaptation_speed": 0.1
+    },
+    "pattern_recognition": {
+      "enabled": true,
+      "min_pattern_occurrences": 10,
+      "confidence_threshold": 0.7
+    },
+    "performance_thresholds": {
+      "trigger_optimization": 0.55,
+      "trigger_retraining": 0.6,
+      "minimum_sharpe": 0.5,
+      "maximum_drawdown": 0.2
+    }
+  },
+  "notifications": {
+    "enabled": false,
+    "email": "",
+    "telegram_token": "",
+    "telegram_chat_id": "",
+    "notify_on_trade": true,
+    "notify_on_learning": true,
+    "notify_on_error": true
+  },
+  "logging": {
+    "level": "INFO",
+    "file_rotation": true,
+    "max_file_size": 10485760,
+    "backup_count": 5,
+    "log_trades": true,
+    "log_learning": true,
+    "log_performance": true,
+    "log_calculations": true
+  }
+}
