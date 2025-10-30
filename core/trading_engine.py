@@ -362,25 +362,34 @@ class TradingEngine:
                     import time
                     time.sleep(0.2)  # Brief pause before modifying
                     
-                    modify_request = {
-                        "action": mt5.TRADE_ACTION_SLTP,
-                        "position": result.order,  # Use the order ticket as position ID
-                        "symbol": symbol,
-                    }
-                    
-                    if stop_loss is not None:
-                        modify_request["sl"] = stop_loss
-                    if take_profit is not None:
-                        modify_request["tp"] = take_profit
-                    
-                    print(f"Modifying order with SLTP: {modify_request}")
-                    modify_result = mt5.order_send(modify_request)
-                    
-                    if modify_result and modify_result.retcode != mt5.TRADE_RETCODE_DONE:
-                        print(f"⚠️  WARNING: SLTP modification failed: {modify_result.comment}")
-                        logger.warning(f"Failed to set SL/TP for order {result.order}: {modify_result.comment}")
+                    # CRITICAL FIX: Get the actual position ticket, not order ticket
+                    positions = mt5.positions_get(symbol=symbol)
+                    if positions:
+                        # Get the most recent position for this symbol
+                        position = positions[-1]  # Last position
+                        position_ticket = position.ticket
+                        
+                        modify_request = {
+                            "action": mt5.TRADE_ACTION_SLTP,
+                            "position": position_ticket,  # Use actual position ticket
+                            "symbol": symbol,
+                        }
+                        
+                        if stop_loss is not None:
+                            modify_request["sl"] = stop_loss
+                        if take_profit is not None:
+                            modify_request["tp"] = take_profit
+                        
+                        print(f"Modifying position {position_ticket} with SLTP: {modify_request}")
+                        modify_result = mt5.order_send(modify_request)
+                        
+                        if modify_result and modify_result.retcode != mt5.TRADE_RETCODE_DONE:
+                            print(f"⚠️  WARNING: SLTP modification failed: {modify_result.comment}")
+                            logger.warning(f"Failed to set SL/TP for position {position_ticket}: {modify_result.comment}")
+                        else:
+                            print(f"✅ SLTP modification successful")
                     else:
-                        print(f"✅ SLTP modification successful")
+                        print(f"⚠️  WARNING: No position found to modify SL/TP")
 
                 # CRITICAL FIX: Enhanced verification with detailed diagnostics
                 import time
