@@ -148,10 +148,10 @@ if __name__ == "__main__":
     )
 
     if success:
-        print("✅ Signal sent to MT5 EA")
+        logger.info("✅ Signal sent to MT5 EA")
     else:
-        print("❌ Failed to send signal")
+        logger.error("❌ Failed to send signal")
 
     # Check signal count
     count = ea_comm.get_signal_count()
-    print(f"📊 Pending signals: {count}")
+    logger.info(f"📊 Pending signals: {count}")

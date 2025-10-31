@@ -8,6 +8,8 @@ import asyncio
 from datetime import datetime, time
 from typing import Dict, List, Optional, Any
 import MetaTrader5 as mt5
+from utils.position_monitor import PositionMonitor
+from utils.risk_validator import RiskValidator
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +35,11 @@ class TradingEngine:
         self.magic_number = self.config.get('trading', {}).get('magic_number', 20241029)
         self.max_slippage = self.config.get('trading', {}).get('max_slippage', 3)
 
-        logger.info("Trading Engine initialized")
+        # Initialize position monitor for change detection
+        self.position_monitor = PositionMonitor(self.magic_number)
+        self.position_monitor.enable_alerts(True)
+
+        logger.info("Trading Engine initialized with position monitoring")
 
     def get_filling_mode(self, symbol):
         """Get the correct filling mode for a symbol"""
@@ -61,40 +67,40 @@ class TradingEngine:
     def debug_stop_loss_calculation(self, symbol: str, order_type: str, stop_loss_pips: float):
         """Debug function to trace stop loss calculation issues"""
         
-        print(f"\n=== ORDER DEBUG for {symbol} ===")
-        print(f"Stop Loss Pips Input: {stop_loss_pips}")
+        logger.debug(f"=== ORDER DEBUG for {symbol} ===")
+        logger.debug(f"Stop Loss Pips Input: {stop_loss_pips}")
         
         symbol_info = mt5.symbol_info(symbol)
         if symbol_info is None:
-            print("ERROR: Symbol info not available")
+            logger.error("Symbol info not available")
             return
             
-        print(f"Symbol Digits: {symbol_info.digits}")
-        print(f"Symbol Point: {symbol_info.point}")
+        logger.debug(f"Symbol Digits: {symbol_info.digits}")
+        logger.debug(f"Symbol Point: {symbol_info.point}")
         
         # Show pip calculation
         if "JPY" in symbol:
             pip_size = 0.01
-            print(f"JPY Pair - Pip Size: {pip_size}")
+            logger.debug(f"JPY Pair - Pip Size: {pip_size}")
         else:
             pip_size = 0.0001 if symbol_info.digits == 5 else 0.01
-            print(f"Regular Pair - Pip Size: {pip_size}")
+            logger.debug(f"Regular Pair - Pip Size: {pip_size}")
         
         sl_distance = stop_loss_pips * pip_size
-        print(f"SL Distance: {sl_distance}")
+        logger.debug(f"SL Distance: {sl_distance}")
         
         current_price = mt5.symbol_info_tick(symbol)
         if current_price:
             current_price = current_price.ask if order_type.lower() == 'buy' else current_price.bid
             stop_loss_price = current_price - sl_distance if order_type.lower() == 'buy' else current_price + sl_distance
             
-            print(f"Current Price: {current_price}")
-            print(f"Calculated Stop Loss Price: {stop_loss_price}")
-            print(f"Actual SL Distance in Pips: {(abs(current_price - stop_loss_price)) / pip_size}")
+            logger.debug(f"Current Price: {current_price}")
+            logger.debug(f"Calculated Stop Loss Price: {stop_loss_price}")
+            logger.debug(f"Actual SL Distance in Pips: {(abs(current_price - stop_loss_price)) / pip_size}")
         else:
-            print("ERROR: Could not get current price")
+            logger.error("Could not get current price")
             
-        print("=" * 40)
+        logger.debug("=" * 40)
 
     async def place_order(self, symbol: str, order_type: str, volume: float,
                          stop_loss: float = None, take_profit: float = None,
@@ -181,23 +187,23 @@ class TradingEngine:
 
             # DEBUG: Trace EURJPY stop loss calculation
             if stop_loss is not None and "EURJPY" in symbol:
-                print(f"\n=== ORDER DEBUG for {symbol} ===")
-                print(f"Order Type: {order_type}")
-                print(f"Entry Price: {price}")
-                print(f"Stop Loss Price: {stop_loss}")
+                logger.debug(f"=== ORDER DEBUG for {symbol} ===")
+                logger.debug(f"Order Type: {order_type}")
+                logger.debug(f"Entry Price: {price}")
+                logger.debug(f"Stop Loss Price: {stop_loss}")
                 
                 # Calculate pip size for JPY pairs
                 pip_size = 0.01 if "JPY" in symbol else 0.0001
-                print(f"Pip Size: {pip_size}")
+                logger.debug(f"Pip Size: {pip_size}")
                 
                 # Calculate actual pips
                 sl_distance = abs(price - stop_loss)
                 actual_pips = sl_distance / pip_size
-                print(f"SL Distance: {sl_distance}")
-                print(f"Actual SL Pips: {actual_pips:.1f}")
-                print(f"Symbol Digits: {symbol_info.digits}")
-                print(f"Symbol Point: {symbol_info.point}")
-                print("=" * 40)
+                logger.debug(f"SL Distance: {sl_distance}")
+                logger.debug(f"Actual SL Pips: {actual_pips:.1f}")
+                logger.debug(f"Symbol Digits: {symbol_info.digits}")
+                logger.debug(f"Symbol Point: {symbol_info.point}")
+                logger.debug("=" * 40)
 
             # Adjust take profit to meet minimum requirements (only if too close to entry)
             if take_profit is not None:
@@ -258,14 +264,14 @@ class TradingEngine:
                 
                 actual_sl_distance = abs(price - stop_loss)
                 if actual_sl_distance < min_stop_distance:
-                    print(f"⚠️  BROKER MINIMUM STOP: Required {min_stop_distance:.5f}, have {actual_sl_distance:.5f}")
+                    logger.debug(f"⚠️  BROKER MINIMUM STOP: Required {min_stop_distance:.5f}, have {actual_sl_distance:.5f}")
                     # Adjust to meet broker minimum
                     if order_type.lower() in ['buy', 'buy_limit', 'buy_stop']:
                         stop_loss = price - min_stop_distance
                     else:
                         stop_loss = price + min_stop_distance
                     stop_loss = round(stop_loss, symbol_info.digits)
-                    print(f"Adjusted SL to: {stop_loss}")
+                    logger.debug(f"Adjusted SL to: {stop_loss}")
                     
             if take_profit is not None:
                 min_stop_points = getattr(symbol_info, 'trade_stops_level', 0)
@@ -273,46 +279,46 @@ class TradingEngine:
                 
                 actual_tp_distance = abs(price - take_profit)
                 if actual_tp_distance < min_stop_distance:
-                    print(f"⚠️  BROKER MINIMUM TP: Required {min_stop_distance:.5f}, have {actual_tp_distance:.5f}")
+                    logger.debug(f"⚠️  BROKER MINIMUM TP: Required {min_stop_distance:.5f}, have {actual_tp_distance:.5f}")
                     # Adjust to meet broker minimum
                     if order_type.lower() in ['buy', 'buy_limit', 'buy_stop']:
                         take_profit = price + min_stop_distance
                     else:
                         take_profit = price - min_stop_distance
                     take_profit = round(take_profit, symbol_info.digits)
-                    print(f"Adjusted TP to: {take_profit}")
+                    logger.debug(f"Adjusted TP to: {take_profit}")
 
             # CRITICAL DEBUG: Enhanced diagnostic for EURJPY SL bug
             if "EURJPY" in symbol and stop_loss is not None:
-                print(f"\n{'='*60}")
-                print(f"🚨 CRITICAL DEBUG: EURJPY ORDER PLACEMENT")
-                print(f"Symbol: {symbol}")
-                print(f"Order Type: {order_type}")
-                print(f"Entry Price: {price} (type: {type(price)})")
-                print(f"Stop Loss Price: {stop_loss} (type: {type(stop_loss)})")
-                print(f"Take Profit Price: {take_profit} (type: {type(take_profit) if take_profit else None})")
+                logger.debug(f"\n{'='*60}")
+                logger.debug(f"🚨 CRITICAL DEBUG: EURJPY ORDER PLACEMENT")
+                logger.debug(f"Symbol: {symbol}")
+                logger.debug(f"Order Type: {order_type}")
+                logger.debug(f"Entry Price: {price} (type: {type(price)})")
+                logger.debug(f"Stop Loss Price: {stop_loss} (type: {type(stop_loss)})")
+                logger.debug(f"Take Profit Price: {take_profit} (type: {type(take_profit) if take_profit else None})")
                 
                 # Calculate what we expect
                 sl_distance = abs(price - stop_loss)
                 pip_size = 0.01 if "JPY" in symbol else 0.0001
                 expected_pips = sl_distance / pip_size
-                print(f"Expected SL Distance: {sl_distance:.5f}")
-                print(f"Pip Size: {pip_size}")
-                print(f"Expected SL Pips: {expected_pips:.1f}")
-                print(f"Symbol Digits: {symbol_info.digits}")
-                print(f"Symbol Point: {symbol_info.point}")
-                print(f"{'='*60}")
+                logger.debug(f"Expected SL Distance: {sl_distance:.5f}")
+                logger.debug(f"Pip Size: {pip_size}")
+                logger.debug(f"Expected SL Pips: {expected_pips:.1f}")
+                logger.debug(f"Symbol Digits: {symbol_info.digits}")
+                logger.debug(f"Symbol Point: {symbol_info.point}")
+                logger.debug(f"{'='*60}")
 
             # Debug before sending to MT5
-            print(f"\n=== SENDING TO MT5 ===")
-            print(f"Symbol: {symbol}")
-            print(f"Entry: {price}")
-            print(f"Stop Loss: {stop_loss}")
-            print(f"Take Profit: {take_profit}")
+            logger.debug(f"=== SENDING TO MT5 ===")
+            logger.debug(f"Symbol: {symbol}")
+            logger.debug(f"Entry: {price}")
+            logger.debug(f"Stop Loss: {stop_loss}")
+            logger.debug(f"Take Profit: {take_profit}")
             if stop_loss is not None:
                 sl_distance = abs(price - stop_loss)
-                print(f"SL Distance: {sl_distance:.5f}")
-            print("=" * 30)
+                logger.debug(f"SL Distance: {sl_distance:.5f}")
+            logger.debug("=" * 30)
 
             # Create order request
             request = {
@@ -335,12 +341,12 @@ class TradingEngine:
                 request["tp"] = take_profit
 
             # CRITICAL DEBUG: Print the exact request being sent
-            print(f"REQUEST BEING SENT TO MT5:")
+            logger.debug(f"REQUEST BEING SENT TO MT5:")
             for key, value in request.items():
-                print(f"  {key}: {value}")
-            print(f"REQUEST SL FIELD TYPE: {type(request.get('sl'))}")
-            print(f"REQUEST SL FIELD VALUE: {request.get('sl')}")
-            print("=" * 50)
+                logger.debug(f"  {key}: {value}")
+            logger.debug(f"REQUEST SL FIELD TYPE: {type(request.get('sl'))}")
+            logger.debug(f"REQUEST SL FIELD VALUE: {request.get('sl')}")
+            logger.debug("=" * 50)
 
             # Send order
             result = mt5.order_send(request)
@@ -380,16 +386,16 @@ class TradingEngine:
                         if take_profit is not None:
                             modify_request["tp"] = take_profit
                         
-                        print(f"Modifying position {position_ticket} with SLTP: {modify_request}")
+                        logger.debug(f"Modifying position {position_ticket} with SLTP: {modify_request}")
                         modify_result = mt5.order_send(modify_request)
                         
                         if modify_result and modify_result.retcode != mt5.TRADE_RETCODE_DONE:
-                            print(f"⚠️  WARNING: SLTP modification failed: {modify_result.comment}")
+                            logger.debug(f"⚠️  WARNING: SLTP modification failed: {modify_result.comment}")
                             logger.warning(f"Failed to set SL/TP for position {position_ticket}: {modify_result.comment}")
                         else:
-                            print(f"✅ SLTP modification successful")
+                            logger.debug(f"✅ SLTP modification successful")
                     else:
-                        print(f"⚠️  WARNING: No position found to modify SL/TP")
+                        logger.debug(f"⚠️  WARNING: No position found to modify SL/TP")
 
                 # CRITICAL FIX: Enhanced verification with detailed diagnostics
                 import time
@@ -401,40 +407,40 @@ class TradingEngine:
                     actual_sl = actual_position.sl
                     actual_tp = actual_position.tp
                     
-                    print(f"\n🔍 ORDER VERIFICATION:")
-                    print(f"Requested SL: {stop_loss}")
-                    print(f"MT5 Set SL: {actual_sl}")
-                    print(f"Requested TP: {take_profit}")
-                    print(f"MT5 Set TP: {actual_tp}")
+                    logger.debug(f"\n🔍 ORDER VERIFICATION:")
+                    logger.debug(f"Requested SL: {stop_loss}")
+                    logger.debug(f"MT5 Set SL: {actual_sl}")
+                    logger.debug(f"Requested TP: {take_profit}")
+                    logger.debug(f"MT5 Set TP: {actual_tp}")
                     
                     if stop_loss is not None:
                         sl_mismatch = abs(actual_sl - stop_loss)
-                        print(f"SL Mismatch: {sl_mismatch:.5f}")
+                        logger.debug(f"SL Mismatch: {sl_mismatch:.5f}")
                         
                         if sl_mismatch > 0.01:
-                            print(f"🚨 CRITICAL BUG: MT5 ignored our SL!")
-                            print(f"Expected: {stop_loss}, Got: {actual_sl}")
-                            print(f"Difference: {sl_mismatch:.5f} price units")
+                            logger.debug(f"🚨 CRITICAL BUG: MT5 ignored our SL!")
+                            logger.debug(f"Expected: {stop_loss}, Got: {actual_sl}")
+                            logger.debug(f"Difference: {sl_mismatch:.5f} price units")
                             
                             # Calculate what MT5 thinks the pips are
                             if "JPY" in symbol:
                                 actual_pips = sl_mismatch / 0.01
                             else:
                                 actual_pips = sl_mismatch / 0.0001
-                            print(f"This equals ~{actual_pips:.1f} pips difference")
+                            logger.debug(f"This equals ~{actual_pips:.1f} pips difference")
                             
                             logger.error(f"Stop loss mismatch for {symbol}: expected {stop_loss}, got {actual_sl}")
                         else:
-                            print(f"✅ SL set correctly")
+                            logger.debug(f"✅ SL set correctly")
                     
                     if take_profit is not None:
                         tp_mismatch = abs(actual_tp - take_profit)
                         if tp_mismatch > 0.01:
-                            print(f"🚨 WARNING: TP mismatch! Expected {take_profit}, got {actual_tp}")
+                            logger.debug(f"🚨 WARNING: TP mismatch! Expected {take_profit}, got {actual_tp}")
                     
-                    print("=" * 50)
+                    logger.debug("=" * 50)
                 else:
-                    print(f"⚠️  WARNING: No positions found after order placement!")
+                    logger.debug(f"⚠️  WARNING: No positions found after order placement!")
 
                 # Track the order
                 if order_type.lower() in ['buy', 'sell']:
@@ -475,6 +481,33 @@ class TradingEngine:
             if positions:
                 for position in positions:
                     if position.magic == self.magic_number:
+                        # FIRST: Check position monitor for unexpected changes
+                        alerts = await self.position_monitor.check_positions()
+                        if alerts:
+                            for alert in alerts:
+                                if "VERY TIGHT SL" in alert and str(position.ticket) in alert:
+                                    logger.error(f"🚨 PREVENTING AUTOMATED MANAGEMENT: {alert}")
+                                    logger.error("Position has suspiciously tight SL - skipping automated management")
+                                    continue
+
+                        # SECOND: Validate position integrity before management
+                        validation = RiskValidator.comprehensive_position_check(position)
+                        if not validation['overall_valid']:
+                            logger.error(f"🚨 POSITION VALIDATION FAILED for {position.symbol} position {position.ticket}:")
+                            for issue in validation['issues']:
+                                logger.error(f"  • {issue}")
+                            logger.error("Skipping automated management due to validation failures")
+                            continue
+
+                        # THIRD: Check if position was manually modified (skip automated management)
+                        time_since_update = position.time_update - position.time
+                        manual_modification_threshold = 600  # 10 minutes in seconds
+
+                        if time_since_update > manual_modification_threshold:
+                            logger.info(f"Skipping automated management for {position.symbol} position {position.ticket} "
+                                      f"(appears manually modified {time_since_update/3600:.1f} hours ago)")
+                            continue
+
                         # Update take profit based on new analysis first
                         tp_increased = await self.update_take_profit(position)
 
@@ -827,12 +860,23 @@ class TradingEngine:
             original_sl = position.sl
             if original_sl > 0:
                 if position.type == mt5.ORDER_TYPE_BUY:
-                    risk_pips = (original_sl - position.price_open) / mt5.symbol_info(position.symbol).point
+                    risk_pips = abs(original_sl - position.price_open) / mt5.symbol_info(position.symbol).point
                 else:  # SELL
-                    risk_pips = (position.price_open - original_sl) / mt5.symbol_info(position.symbol).point
-                
+                    risk_pips = abs(position.price_open - original_sl) / mt5.symbol_info(position.symbol).point
+
                 if 'JPY' in position.symbol:
                     risk_pips = risk_pips / 100
+
+                # VALIDATION: Ensure risk calculation is positive and reasonable
+                if risk_pips <= 0:
+                    logger.error(f"🚨 RISK CALCULATION ERROR: Negative risk {risk_pips:.1f} pips for {position.symbol} position {position.ticket}")
+                    logger.error("Skipping position management to prevent corruption")
+                    return False
+
+                if risk_pips < 5:
+                    logger.warning(f"⚠️ VERY TIGHT RISK: {risk_pips:.1f} pips for {position.symbol} position {position.ticket}")
+                elif risk_pips > 500:
+                    logger.warning(f"⚠️ VERY WIDE RISK: {risk_pips:.1f} pips for {position.symbol} position {position.ticket}")
                 
                 # Breakeven and trailing stop logic
                 # Activate only after reaching 1:3 profit ratio (3x the risk)
@@ -880,7 +924,8 @@ class TradingEngine:
                 # Only update if new TP is significantly better (at least 10 pips improvement)
                 tp_improvement = abs(new_tp - current_tp) / (100 if 'JPY' in position.symbol else 0.0001)
 
-                if tp_improvement >= 10 and new_tp != current_tp:
+                if tp_improvement >= 10 and abs(new_tp - current_tp) > symbol_info.point * 2:  # Add minimum difference check
+                    logger.debug(f"Updating TP for {position.symbol}: current={current_tp:.5f}, new={new_tp:.5f}, improvement={tp_improvement:.1f} pips")
                     # Update take profit
                     request = {
                         "action": mt5.TRADE_ACTION_SLTP,
@@ -899,6 +944,9 @@ class TradingEngine:
                     else:
                         logger.warning(f"Failed to update take profit for {position.symbol}: {result.comment}")
                         return False
+                else:
+                    logger.debug(f"Skipping TP update for {position.symbol}: improvement={tp_improvement:.1f} pips, difference={abs(new_tp - current_tp):.5f}")
+                    return False
 
         except Exception as e:
             logger.error(f"Error updating take profit: {e}")

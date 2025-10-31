@@ -12,7 +12,7 @@ from typing import Optional
 
 def setup_logger(name: str = 'FX-Ai', level: str = 'INFO',
                 log_file: Optional[str] = None, max_bytes: int = 10485760,
-                backup_count: int = 5) -> logging.Logger:
+                backup_count: int = 5, rotation_type: str = 'size') -> logging.Logger:
     """
     Set up logger with file and console handlers
 
@@ -20,8 +20,9 @@ def setup_logger(name: str = 'FX-Ai', level: str = 'INFO',
         name: Logger name
         level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         log_file: Log file path (optional)
-        max_bytes: Maximum log file size in bytes
+        max_bytes: Maximum log file size in bytes (for size-based rotation)
         backup_count: Number of backup log files to keep
+        rotation_type: 'size' for RotatingFileHandler or 'time' for TimedRotatingFileHandler
 
     Returns:
         logging.Logger: Configured logger
@@ -56,12 +57,25 @@ def setup_logger(name: str = 'FX-Ai', level: str = 'INFO',
             if log_dir and not os.path.exists(log_dir):
                 os.makedirs(log_dir, exist_ok=True)
 
-            # Rotating file handler
-            file_handler = logging.handlers.RotatingFileHandler(
-                log_file,
-                maxBytes=max_bytes,
-                backupCount=backup_count
-            )
+            if rotation_type == 'time':
+                # Timed rotating file handler (daily rotation with date in filename)
+                file_handler = logging.handlers.TimedRotatingFileHandler(
+                    log_file,
+                    when='midnight',
+                    interval=1,
+                    backupCount=backup_count
+                )
+                # Set custom suffix to include underscore and .log extension
+                file_handler.suffix = "_%Y-%m-%d.log"
+                file_handler.extMatch = r"^\d{4}-\d{2}-\d{2}\.log$"
+            else:
+                # Rotating file handler (size-based rotation)
+                file_handler = logging.handlers.RotatingFileHandler(
+                    log_file,
+                    maxBytes=max_bytes,
+                    backupCount=backup_count
+                )
+            
             file_handler.setLevel(logging.DEBUG)  # Log everything to file
             file_handler.setFormatter(file_formatter)
             logger.addHandler(file_handler)
@@ -97,20 +111,21 @@ def set_log_level(logger: logging.Logger, level: str):
         handler.setLevel(getattr(logging, level.upper(), logging.INFO))
 
 def add_file_handler(logger: logging.Logger, log_file: str,
-                    max_bytes: int = 10485760, backup_count: int = 5):
+                    max_bytes: int = 10485760, backup_count: int = 5, rotation_type: str = 'size'):
     """
     Add file handler to existing logger
 
     Args:
         logger: Logger instance
         log_file: Log file path
-        max_bytes: Maximum log file size
+        max_bytes: Maximum log file size (for size-based rotation)
         backup_count: Number of backup files
+        rotation_type: 'size' for RotatingFileHandler or 'time' for TimedRotatingFileHandler
     """
     try:
         # Check if file handler already exists
         for handler in logger.handlers:
-            if isinstance(handler, logging.handlers.RotatingFileHandler):
+            if isinstance(handler, (logging.handlers.RotatingFileHandler, logging.handlers.TimedRotatingFileHandler)):
                 if handler.baseFilename == os.path.abspath(log_file):
                     return  # Already exists
 
@@ -124,11 +139,25 @@ def add_file_handler(logger: logging.Logger, log_file: str,
             '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
         )
 
-        file_handler = logging.handlers.RotatingFileHandler(
-            log_file,
-            maxBytes=max_bytes,
-            backupCount=backup_count
-        )
+        if rotation_type == 'time':
+            # Timed rotating file handler (daily rotation with date in filename)
+            file_handler = logging.handlers.TimedRotatingFileHandler(
+                log_file,
+                when='midnight',
+                interval=1,
+                backupCount=backup_count
+            )
+            # Set custom suffix to include underscore and .log extension
+            file_handler.suffix = "_%Y-%m-%d.log"
+            file_handler.extMatch = r"^\d{4}-\d{2}-\d{2}\.log$"
+        else:
+            # Rotating file handler (size-based rotation)
+            file_handler = logging.handlers.RotatingFileHandler(
+                log_file,
+                maxBytes=max_bytes,
+                backupCount=backup_count
+            )
+        
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(file_formatter)
 

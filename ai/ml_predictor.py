@@ -157,8 +157,8 @@ class MLPredictor:
             volume = data.get('volume', data.get('tick_volume', np.ones(50)))  # Handle both volume column names
             volume = volume[-50:] if len(volume) >= 50 else volume  # Ensure volume matches price data length
             
-            print(f"DEBUG: Close prices length: {len(close_prices)}")
-            print(f"DEBUG: Volume length: {len(volume)}")
+            # print(f"DEBUG: Close prices length: {len(close_prices)}")
+            # print(f"DEBUG: Volume length: {len(volume)}")
 
             # Returns
             returns_1d = np.diff(close_prices[-2:])[0] / close_prices[-2] if len(close_prices) >= 2 else 0.0
@@ -169,7 +169,7 @@ class MLPredictor:
             returns_5d = float(returns_5d) if np.isscalar(returns_5d) else 0
 
             features.extend([returns_1d, returns_5d])
-            print(f"DEBUG: After returns, features length: {len(features)}")
+            # print(f"DEBUG: After returns, features length: {len(features)}")
 
             # Volatility features
             volatility_5d = float(np.std(np.diff(close_prices[-6:]))) if len(close_prices) >= 6 else 0.0

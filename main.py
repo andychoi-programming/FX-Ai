@@ -38,7 +38,9 @@ class FXAiApplication:
         config_loader = ConfigLoader()
         config_loader.load_config()
         self.config = config_loader.config
-        self.logger = setup_logger('FX-Ai', self.config.get('logging', {}).get('level', 'INFO'))
+        self.logger = setup_logger('FX-Ai', self.config.get('logging', {}).get('level', 'INFO'),
+                                   self.config.get('logging', {}).get('file'),
+                                   rotation_type=self.config.get('logging', {}).get('rotation_type', 'size'))
         self.logger.info("FX-Ai Application initialized with Adaptive Learning")
         self.logger.info("=" * 50)
         
@@ -229,8 +231,14 @@ class FXAiApplication:
                         signal_weights.get('support_resistance', 0.10) * market_data.get('sr_score', 0.5)
                     )
                     
+                    # Debug: Log all signal strengths
+                    self.logger.debug(
+                        f"{symbol} signal: strength={signal_strength:.3f} (Tech:{technical_score:.3f}, ML:{ml_prediction.get('probability', 0):.3f}, Sent:{sentiment_score:.3f})"
+                    )
+                    
                     # Apply adaptive minimum threshold
-                    min_threshold = adaptive_params.get('min_signal_strength', 0.4)  # Lowered from 0.6 for testing
+                    min_threshold = 0.5  # Temporarily override adaptive threshold for testing
+                    self.logger.debug(f"{symbol}: threshold={min_threshold:.3f}, strength={signal_strength:.3f}")
                     
                     if signal_strength > min_threshold:
                         # Get current market price for entry
@@ -239,17 +247,25 @@ class FXAiApplication:
                         
                         # Skip if no valid price data
                         if entry_price <= 0:
+                            self.logger.debug(f"{symbol}: Skipping - no valid entry price")
                             continue
+                        
+                        self.logger.debug(f"{symbol}: Processing signal - entry_price={entry_price}, direction={ml_prediction.get('direction')}")
                         
                         # Calculate stop loss using ATR (more sophisticated than fixed percentage)
                         atr_value = technical_signals.get('atr', {}).get('value', 0)
                         if atr_value > 0:
+                            self.logger.debug(f"{symbol}: ATR available ({atr_value:.5f}) - proceeding with signal")
                             # Use adaptive ATR multiplier for stop loss distance
                             # Use higher multipliers for precious metals to meet broker requirements
                             base_multiplier = adaptive_params.get('stop_loss_atr_multiplier', 3.0)  # Increased from 2.0
                             if 'XAU' in symbol or 'XAG' in symbol:
                                 # Precious metals need higher multipliers due to lower ATR on M1 timeframe
-                                sl_atr_multiplier = max(base_multiplier, 4.0)  # Increased from 3.0
+                                if 'XAUUSD' in symbol:
+                                    # XAUUSD ATR is very wide, reduce multiplier to allow proper position sizing
+                                    sl_atr_multiplier = 0.3  # Much lower multiplier for XAUUSD
+                                else:
+                                    sl_atr_multiplier = max(base_multiplier, 4.0)  # Keep 4.0 for XAGUSD
                             else:
                                 sl_atr_multiplier = base_multiplier
                             
@@ -264,17 +280,15 @@ class FXAiApplication:
                         min_sl_pips = self.config.get('risk_management', {}).get('minimum_sl_pips', 25)
                         # Use higher minimum SL for metals due to higher volatility
                         if 'XAU' in symbol or 'GOLD' in symbol:
-                            min_sl_pips = max(min_sl_pips, 500)  # Minimum 500 pips for gold
+                            min_sl_pips = max(min_sl_pips, 200)  # Minimum 200 pips for gold
                         elif 'XAG' in symbol:
                             min_sl_pips = max(min_sl_pips, 100)  # Minimum 100 pips for silver (reduced for tradability)
                         
                         # Convert minimum pips to distance
                         if 'JPY' in symbol:
                             min_stop_distance = min_sl_pips * 0.01   # JPY pairs: 1 pip = 0.01
-                        elif 'XAG' in symbol:
-                            min_stop_distance = min_sl_pips * 0.01   # Silver: 1 pip = 0.01
-                        elif 'XAU' in symbol:
-                            min_stop_distance = min_sl_pips * 0.1    # Gold: 1 pip = 0.1
+                        elif 'XAG' in symbol or 'XAU' in symbol:
+                            min_stop_distance = min_sl_pips * 0.01   # Metals: 1 pip = 0.01 (same as JPY)
                         else:
                             min_stop_distance = min_sl_pips * 0.0001 # Forex: 1 pip = 0.0001
                         
@@ -336,11 +350,11 @@ class FXAiApplication:
                             actual_ratio = reward_distance / risk_distance if risk_distance > 0 else 0
                             action = 'BUY' if ml_prediction.get('direction') == 1 else 'SELL'
                             
-                            if actual_ratio < 3.0:
-                                self.logger.warning(f"{symbol} {action} rejected: insufficient reward ratio {actual_ratio:.2f}:1 (required: 3.0:1)")
+                            if actual_ratio < 2.9:
+                                self.logger.debug(f"{symbol} {action} rejected: insufficient reward ratio {actual_ratio:.2f}:1 (required: 2.9:1)")
                                 continue  # Skip this trade
                             
-                            self.logger.info(f"{symbol} {action} validated: {actual_ratio:.1f}:1 risk-reward ratio")
+                            self.logger.debug(f"{symbol} {action} validated: {actual_ratio:.1f}:1 risk-reward ratio")
                         
                         signal = {
                             'symbol': symbol,

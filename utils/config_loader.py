@@ -56,7 +56,8 @@ class ConfigLoader:
             },
             'logging': {
                 'level': 'INFO',
-                'file': 'logs/fx_ai.log',
+                'file': 'logs/FX-Ai',
+                'rotation_type': 'time',
                 'max_size': 10485760,  # 10MB
                 'backup_count': 5
             },

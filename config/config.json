@@ -199,7 +199,9 @@
     "notify_on_error": true
   },
   "logging": {
-    "level": "INFO",
+    "level": "DEBUG",
+    "file": "logs/FX-Ai",
+    "rotation_type": "time",
     "file_rotation": true,
     "max_file_size": 10485760,
     "backup_count": 5,

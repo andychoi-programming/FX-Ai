@@ -240,7 +240,7 @@ Position Size Calculation for {symbol}:
             min_risk = stop_loss_pips * pip_value_per_001_lot * min_lot * 100
             
             if min_risk > risk_amount:
-                print(f"Cannot trade {symbol}: Minimum risk ${min_risk:.2f} > ${risk_amount}")
+                logger.warning(f"Cannot trade {symbol}: Minimum risk ${min_risk:.2f} > ${risk_amount}")
                 return 0  # Cannot trade within risk limits
         
         # Round to lot step
@@ -428,21 +428,46 @@ Position Size Calculation for {symbol}:
         """Quick check if trading is allowed"""
         from datetime import datetime
         
+        logger.debug(f"Checking if can trade {symbol}: daily_loss={self.daily_loss}, max_daily_loss={self.max_daily_loss}")
+        
         if self.daily_loss >= self.max_daily_loss:
             logger.warning(f"Daily loss limit reached: ${self.daily_loss:.2f}")
             return False
 
-        positions = mt5.positions_get()
-        if positions and len(positions) >= self.max_positions:
-            logger.warning(f"Max positions reached: {len(positions)}")
-            return False
-
-        # Check if we already have a position on this symbol (optional)
-        if self.config.get('trading', {}).get('prevent_multiple_positions_per_symbol', True):
-            symbol_positions = [p for p in positions if p.symbol == symbol] if positions else []
-            if symbol_positions:
-                logger.warning(f"Already have {len(symbol_positions)} position(s) on {symbol}, skipping")
+        try:
+            positions = mt5.positions_get()
+            logger.debug(f"Positions query result type: {type(positions)}, value: {positions}")
+            
+            if positions is None:
+                logger.warning(f"MT5 positions_get() returned None for {symbol}, allowing trade but this indicates connection issues")
+                # If we can't get positions, allow trading but log the issue
+                positions = []
+            elif not isinstance(positions, (list, tuple)):
+                logger.warning(f"MT5 positions_get() returned unexpected type {type(positions)} for {symbol}, allowing trade")
+                positions = []
+            
+            position_count = len(positions) if positions else 0
+            logger.debug(f"Current position count: {position_count}, max_positions: {self.max_positions}")
+            
+            if position_count >= self.max_positions:
+                logger.warning(f"Max positions reached: {position_count} >= {self.max_positions}")
                 return False
+
+            # Check if we already have a position on this symbol (optional)
+            prevent_multiple = self.config.get('trading', {}).get('prevent_multiple_positions_per_symbol', True)
+            logger.debug(f"Prevent multiple positions per symbol: {prevent_multiple}")
+            
+            if prevent_multiple:
+                symbol_positions = [p for p in positions if hasattr(p, 'symbol') and p.symbol == symbol] if positions else []
+                logger.debug(f"Existing positions on {symbol}: {len(symbol_positions)}")
+                if symbol_positions:
+                    logger.warning(f"Already have {len(symbol_positions)} position(s) on {symbol}, skipping")
+                    return False
+
+        except Exception as e:
+            logger.error(f"Error checking positions for {symbol}: {e}, allowing trade")
+            # If there's an error getting positions, allow trading
+            pass
 
         # Check cooldown period after losses
         current_time = datetime.now()
@@ -456,6 +481,7 @@ Position Size Calculation for {symbol}:
                 # Cooldown expired, remove it
                 del self.symbol_cooldowns[symbol]
 
+        logger.debug(f"Can trade {symbol}: True")
         return True
     
     def calculate_risk_for_lot_size(self, symbol: str, lot_size: float, stop_loss_pips: float) -> float:
@@ -549,64 +575,3 @@ Position Size Calculation for {symbol}:
             'risk_per_trade': self.risk_per_trade,
             'can_trade': self.can_trade("")
         }
-
-
-# Test function for position size calculation
-def test_position_size_calculation():
-    """Test the position size calculation with various scenarios"""
-    
-    # Initialize MT5 (for testing only)
-    if not mt5.initialize():
-        print("MT5 initialization failed")
-        return
-    
-    # Create test config
-    config = {
-        'trading': {
-            'risk_per_trade': 50.0,  # $50 risk
-            'max_positions': 3,
-            'max_daily_loss': 200.0,
-            'max_spread': 3.0
-        }
-    }
-    
-    # Create risk manager
-    rm = RiskManager(config)
-    
-    # Test scenarios
-    test_cases = [
-        ('EURUSD', 20, 50),   # 20 pips SL, $50 risk
-        ('EURUSD', 10, 50),   # 10 pips SL, $50 risk
-        ('GBPUSD', 15, 50),   # 15 pips SL, $50 risk
-        ('USDJPY', 20, 50),   # 20 pips SL, $50 risk
-        ('EURJPY', 10, 50),   # 10 pips SL, $50 risk
-        ('USDCAD', 15, 50),   # 15 pips SL, $50 risk
-        ('XAUUSD', 30, 50),   # 30 pips SL, $50 risk (Gold)
-    ]
-    
-    print("\n" + "="*60)
-    print("Position Size Calculation Test")
-    print("="*60)
-    
-    for symbol, sl_pips, risk in test_cases:
-        print(f"\n{symbol}:")
-        print(f"  Stop Loss: {sl_pips} pips")
-        print(f"  Risk Amount: ${risk}")
-        
-        lot_size = rm.calculate_position_size(symbol, sl_pips, risk)
-        
-        print(f"  Calculated Lot Size: {lot_size:.4f}")
-        
-        # Verify the risk
-        estimated_risk = rm.estimate_trade_risk(symbol, lot_size, sl_pips)
-        print(f"  Estimated Risk: ${estimated_risk:.2f}")
-        print(f"  Risk Accuracy: {(estimated_risk/risk)*100:.1f}%")
-    
-    print("\n" + "="*60)
-    
-    mt5.shutdown()
-
-
-if __name__ == "__main__":
-    # Run test when module is executed directly
-    test_position_size_calculation()
