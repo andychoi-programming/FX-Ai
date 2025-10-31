@@ -88,6 +88,13 @@ class FXAiApplication:
             if not self.mt5.connect():
                 raise Exception("Failed to connect to MT5")
             
+            # Reconfigure logger to use MT5 server time
+            self.logger.info("Reconfiguring logger to use MT5 server time...")
+            self.logger = setup_logger('FX-Ai', self.config.get('logging', {}).get('level', 'INFO'),
+                                       self.config.get('logging', {}).get('file'),
+                                       rotation_type=self.config.get('logging', {}).get('rotation_type', 'size'),
+                                       mt5_connector=self.mt5)
+            
             # 2. Clock Synchronization
             self.logger.info("Initializing clock synchronizer...")
             self.clock_sync = ClockSynchronizer(self.mt5)
