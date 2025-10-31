@@ -8,6 +8,12 @@ Version 3.0
 from utils.logger import setup_logger
 from utils.config_loader import ConfigLoader
 from ai.adaptive_learning_manager import AdaptiveLearningManager
+from ai.market_regime_detector import MarketRegimeDetector
+from ai.ensemble_predictor import EnsemblePredictor
+from ai.reinforcement_learning_agent import RLAgent
+from ai.advanced_risk_metrics import AdvancedRiskMetrics
+from ai.anomaly_detector import AnomalyDetector
+from ai.system_health_monitor import SystemHealthMonitor
 from ai.ml_predictor import MLPredictor
 from analysis.sentiment_analyzer import SentimentAnalyzer
 from analysis.technical_analyzer import TechnicalAnalyzer
@@ -25,8 +31,10 @@ import json
 import signal
 from datetime import datetime, time
 import asyncio
+import pandas as pd
 import sys
 import os
+from typing import Dict, Any
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -67,9 +75,15 @@ class FXAiApplication:
         self.technical_analyzer = None
         self.sentiment_analyzer = None
         self.ml_predictor = None
+        self.ensemble_predictor = None
         self.backtest_engine = None
         self.trading_engine = None
         self.adaptive_learning = None
+        self.market_regime_detector = None
+        self.reinforcement_agent = None
+        self.advanced_risk_metrics = None
+        self.anomaly_detector = None
+        self.system_health_monitor = None
 
         # Control flags
         self.running = False
@@ -151,6 +165,11 @@ class FXAiApplication:
             self.logger.info("Initializing ML predictor...")
             self.ml_predictor = MLPredictor(self.config)
 
+            # 8.5. Ensemble Predictor
+            self.logger.info("Initializing Ensemble Predictor...")
+            self.ensemble_predictor = EnsemblePredictor(self.config)
+            self.ensemble_predictor.initialize_models()
+
             # 9. Adaptive Learning Manager
             self.logger.info("Initializing Adaptive Learning Manager...")
             self.adaptive_learning = AdaptiveLearningManager(
@@ -164,6 +183,27 @@ class FXAiApplication:
             if self.learning_enabled:
                 self.logger.info("Starting continuous learning thread...")
                 # Note: Thread is already started in AdaptiveLearningManager.__init__()
+
+            # 9.5. Market Regime Detector
+            self.logger.info("Initializing Market Regime Detector...")
+            self.market_regime_detector = MarketRegimeDetector(self.config)
+
+            # 9.6. Reinforcement Learning Agent
+            self.logger.info("Initializing Reinforcement Learning Agent...")
+            self.reinforcement_agent = RLAgent(self.config)
+
+            # 9.7. Advanced Risk Metrics
+            self.logger.info("Initializing Advanced Risk Metrics...")
+            self.advanced_risk_metrics = AdvancedRiskMetrics(self.config)
+
+            # 9.8. Anomaly Detector
+            self.logger.info("Initializing Anomaly Detector...")
+            self.anomaly_detector = AnomalyDetector(self.config)
+
+            # 9.9. System Health Monitor
+            self.logger.info("Initializing System Health Monitor...")
+            self.system_health_monitor = SystemHealthMonitor(
+                self.config.get('system_health_monitoring', {}))
 
             # 10. Trading Engine
             self.logger.info("Initializing trading engine...")
@@ -201,48 +241,111 @@ class FXAiApplication:
                 bars_dict = {}
 
                 for symbol in symbols:
-                    data = self.market_data.get_latest_data(symbol)
-                    if data is not None:
-                        market_data_dict[symbol] = data
-                        # Get bars for technical analysis from multiple
-                        # timeframes
-                        bars_m1 = self.market_data.get_bars(
-                            symbol, mt5.TIMEFRAME_M1, 100)
-                        bars_m5 = self.market_data.get_bars(
-                            symbol, mt5.TIMEFRAME_M5, 100)
-                        bars_h1 = self.market_data.get_bars(
-                            symbol, mt5.TIMEFRAME_H1, 100)
-                        bars_h4 = self.market_data.get_bars(
-                            symbol, mt5.TIMEFRAME_H4, 100)
-                        bars_d1 = self.market_data.get_bars(
-                            symbol, mt5.TIMEFRAME_D1, 100)
+                    start_time = time_module.time()
+                    try:
+                        data = self.market_data.get_latest_data(symbol)
+                        response_time = time_module.time() - start_time
 
-                        if bars_h1 is not None:  # Use H1 as primary
-                            bars_dict[symbol] = {
-                                'M1': bars_m1,
-                                'M5': bars_m5,
-                                'H1': bars_h1,
-                                'H4': bars_h4,
-                                'D1': bars_d1
-                            }
+                        if self.system_health_monitor:
+                            self.system_health_monitor.record_api_call(
+                                'market_data.get_latest_data', response_time, data is not None)
+
+                        if data is not None:
+                            market_data_dict[symbol] = data
+                            # Get bars for technical analysis from multiple
+                            # timeframes
+                            bars_m1 = self.market_data.get_bars(
+                                symbol, mt5.TIMEFRAME_M1, 100)
+                            bars_m5 = self.market_data.get_bars(
+                                symbol, mt5.TIMEFRAME_M5, 100)
+                            bars_h1 = self.market_data.get_bars(
+                                symbol, mt5.TIMEFRAME_H1, 100)
+                            bars_h4 = self.market_data.get_bars(
+                                symbol, mt5.TIMEFRAME_H4, 100)
+                            bars_d1 = self.market_data.get_bars(
+                                symbol, mt5.TIMEFRAME_D1, 100)
+
+                            if bars_h1 is not None:  # Use H1 as primary
+                                bars_dict[symbol] = {
+                                    'M1': bars_m1,
+                                    'M5': bars_m5,
+                                    'H1': bars_h1,
+                                    'H4': bars_h4,
+                                    'D1': bars_d1
+                                }
+                    except Exception as e:
+                        response_time = time_module.time() - start_time
+                        if self.system_health_monitor:
+                            self.system_health_monitor.record_api_call(
+                                'market_data.get_latest_data', response_time, False, str(e))
+                        self.logger.warning(f"Failed to get market data for {symbol}: {e}")
 
                 if not market_data_dict:
                     await asyncio.sleep(10)
                     continue
 
                 # 2. Collect fundamental data (with caching)
-                fundamental_data = self.fundamental_collector.collect()
+                start_time = time_module.time()
+                try:
+                    fundamental_data = self.fundamental_collector.collect()
+                    response_time = time_module.time() - start_time
+                    if self.system_health_monitor:
+                        self.system_health_monitor.record_api_call(
+                            'fundamental_collector.collect', response_time, True)
+                except Exception as e:
+                    response_time = time_module.time() - start_time
+                    if self.system_health_monitor:
+                        self.system_health_monitor.record_api_call(
+                            'fundamental_collector.collect', response_time, False, str(e))
+                    self.logger.warning(f"Failed to collect fundamental data: {e}")
+                    fundamental_data = {}
 
                 # 3. Generate trading signals with adaptive weights
                 signals = []
 
                 for symbol, market_data in market_data_dict.items():
+                    # ===== ANOMALY DETECTION =====
+                    anomaly_report = None
+                    if self.anomaly_detector and self.anomaly_detector.enabled:
+                        try:
+                            # Get historical data for anomaly detection
+                            historical_data = self.market_data.get_bars(symbol, mt5.TIMEFRAME_H1, 300)  # Last 300 hours
+                            if historical_data is not None and len(historical_data) >= 200:
+                                hist_df = pd.DataFrame(historical_data)
+                                anomaly_report = self.anomaly_detector.get_comprehensive_anomaly_report(symbol, hist_df)
+
+                                if anomaly_report['overall_anomalies_detected']:
+                                    self.logger.warning(
+                                        f"Anomalies detected for {symbol}: "
+                                        f"severity={anomaly_report['overall_severity_score']:.2f}, "
+                                        f"recommendation={anomaly_report['recommendation']}"
+                                    )
+
+                                    # Skip trading based on anomaly severity
+                                    if anomaly_report['recommendation'] == 'halt_trading':
+                                        self.logger.warning(f"Halting trading for {symbol} due to severe anomalies")
+                                        continue
+                                    elif anomaly_report['recommendation'] == 'reduce_position_size':
+                                        self.logger.info(f"Reducing position size for {symbol} due to anomalies")
+                                        # This will be handled in risk management
+                                    elif anomaly_report['recommendation'] == 'increase_stops':
+                                        self.logger.info(f"Increasing stops for {symbol} due to anomalies")
+                                        # This will be handled in risk management
+
+                        except Exception as e:
+                            self.logger.warning(f"Anomaly detection failed for {symbol}: {e}")
+
                     # Get adaptive parameters if learning is enabled
                     if self.adaptive_learning:
                         signal_weights = self.adaptive_learning.get_current_weights()
                         adaptive_params = self.adaptive_learning.get_adaptive_parameters()
                         # Force fixed risk
                         adaptive_params['risk_multiplier'] = 1.0
+
+                        # Apply regime adaptation if available
+                        if self.market_regime_detector and hasattr(self.adaptive_learning, 'get_regime_adapted_parameters'):
+                            adaptive_params = self.adaptive_learning.get_regime_adapted_parameters(
+                                symbol, adaptive_params)
                     else:
                         # Adjusted weights for testing (more weight to
                         # technical)
@@ -268,15 +371,64 @@ class FXAiApplication:
                     technical_score = technical_signals.get(
                         'overall_score', 0.5)
 
-                    # ML prediction
-                    ml_prediction = await self.ml_predictor.predict(
-                        symbol, bars, technical_signals)
+                    # ML prediction (use ensemble if available)
+                    if self.ensemble_predictor and self.ensemble_predictor.enabled:
+                        try:
+                            # Prepare features for ensemble prediction
+                            features_df = self.ml_predictor.prepare_features(symbol, bars, technical_signals)
+                            if features_df is not None and not features_df.empty:
+                                ensemble_pred, ensemble_info = self.ensemble_predictor.predict(features_df)
+                                ml_prediction = {
+                                    'direction': 1 if ensemble_pred[0] == 1 else -1,
+                                    'probability': ensemble_info.get('probabilities', [0.5])[0],
+                                    'confidence': ensemble_info.get('confidence', [0.5])[0],
+                                    'model': 'ensemble',
+                                    'ensemble_info': ensemble_info
+                                }
+                                self.logger.debug(
+                                    f"{symbol}: Ensemble prediction - direction: {ml_prediction['direction']}, "
+                                    f"prob: {ml_prediction['probability']:.3f}, conf: {ml_prediction['confidence']:.3f}")
+                            else:
+                                # Fallback to regular ML predictor
+                                ml_prediction = await self.ml_predictor.predict(symbol, bars, technical_signals)
+                        except Exception as e:
+                            self.logger.warning(f"{symbol}: Ensemble prediction failed, using regular ML: {e}")
+                            ml_prediction = await self.ml_predictor.predict(symbol, bars, technical_signals)
+                    else:
+                        # Use regular ML predictor
+                        start_time = time_module.time()
+                        try:
+                            ml_prediction = await self.ml_predictor.predict(symbol, bars, technical_signals)
+                            response_time = time_module.time() - start_time
+                            if self.system_health_monitor:
+                                self.system_health_monitor.record_api_call(
+                                    'ml_predictor.predict', response_time, True)
+                        except Exception as e:
+                            response_time = time_module.time() - start_time
+                            ml_prediction = {'direction': 0, 'probability': 0.5, 'confidence': 0.5}
+                            if self.system_health_monitor:
+                                self.system_health_monitor.record_api_call(
+                                    'ml_predictor.predict', response_time, False, str(e))
+                            self.logger.warning(f"ML prediction failed for {symbol}: {e}")
 
                     # Sentiment analysis
-                    sentiment_result = await self.sentiment_analyzer.analyze_sentiment(
-                        symbol)
-                    sentiment_score = sentiment_result.get(
-                        'overall_score', 0.5)
+                    start_time = time_module.time()
+                    try:
+                        sentiment_result = await self.sentiment_analyzer.analyze_sentiment(
+                            symbol)
+                        response_time = time_module.time() - start_time
+                        sentiment_score = sentiment_result.get(
+                            'overall_score', 0.5)
+                        if self.system_health_monitor:
+                            self.system_health_monitor.record_api_call(
+                                'sentiment_analyzer.analyze_sentiment', response_time, True)
+                    except Exception as e:
+                        response_time = time_module.time() - start_time
+                        sentiment_score = 0.5  # Default neutral score
+                        if self.system_health_monitor:
+                            self.system_health_monitor.record_api_call(
+                                'sentiment_analyzer.analyze_sentiment', response_time, False, str(e))
+                        self.logger.warning(f"Sentiment analysis failed for {symbol}: {e}")
 
                     # Calculate weighted signal with adaptive weights
                     signal_strength = (
@@ -460,6 +612,41 @@ class FXAiApplication:
                                         f"correlation ({base_corr:.2f}, {quote_corr:.2f})")
                                     continue
 
+                        # 9. Check temporal analysis recommendations (optimal trading times)
+                        if self.adaptive_learning:
+                            temporal_recommendation = (
+                                self.adaptive_learning.get_comprehensive_temporal_recommendation(
+                                    symbol))
+                            if not temporal_recommendation['recommended']:
+                                self.logger.debug(
+                                    f"{symbol}: Skipping - poor temporal timing "
+                                    f"(confidence: {temporal_recommendation['confidence']:.2f}, "
+                                    f"reason: {temporal_recommendation['reason']})")
+                                continue
+
+                        # 10. Check market regime and adapt strategy
+                        if self.market_regime_detector:
+                            # Get historical data for regime analysis
+                            historical_data = self.market_data.get_bars(
+                                symbol, timeframe=mt5.TIMEFRAME_H1, count=300)
+
+                            if historical_data is not None and len(historical_data) >= 200:
+                                regime_analysis = self.market_regime_detector.analyze_regime(
+                                    symbol, historical_data)
+
+                                self.logger.debug(
+                                    f"{symbol}: Market regime - {regime_analysis.primary_regime.value} "
+                                    f"(confidence: {regime_analysis.confidence:.2f}, "
+                                    f"ADX: {regime_analysis.adx_value:.1f})")
+
+                                # Store regime info for adaptive learning
+                                if self.adaptive_learning:
+                                    self.adaptive_learning.update_regime_data(
+                                        symbol, regime_analysis)
+                            else:
+                                self.logger.debug(
+                                    f"{symbol}: Insufficient data for regime analysis")
+
                         # ===== END NEW LEARNING FEATURES =====
 
                         # Calculate stop loss using ATR (more sophisticated
@@ -623,9 +810,51 @@ class FXAiApplication:
                                 f"{symbol} {action} validated: "
                                 f"{actual_ratio:.1f}:1 risk-reward ratio")
 
+                        # ===== REINFORCEMENT LEARNING DECISION =====
+                        rl_decision = 'hold'  # Default action
+                        if self.reinforcement_agent and self.reinforcement_agent.enabled:
+                            try:
+                                # Prepare state for RL agent
+                                current_state = {
+                                    'rsi': technical_signals.get('rsi', {}).get('value', 50),
+                                    'adx': regime_analysis.adx_value if 'regime_analysis' in locals() else 25,
+                                    'volatility_ratio': technical_signals.get('atr', {}).get('value', 0) / entry_price if entry_price > 0 else 0,
+                                    'trend_strength': technical_signals.get('adx', {}).get('value', 25),
+                                    'market_regime': regime_analysis.primary_regime.value if 'regime_analysis' in locals() else 'ranging',
+                                    'signal_strength': signal_strength,
+                                    'position_status': 0  # No position currently
+                                }
+
+                                # Get RL action recommendation
+                                rl_decision = self.reinforcement_agent.choose_action_from_dict(current_state)
+                                self.logger.debug(f"{symbol}: RL decision - {rl_decision}")
+
+                                # Only proceed if RL recommends buy/sell (not hold or close)
+                                if rl_decision not in ['buy', 'sell']:
+                                    self.logger.debug(f"{symbol}: Skipping - RL recommends {rl_decision}")
+                                    continue
+
+                                # Override direction if RL disagrees with ML prediction
+                                if rl_decision == 'buy' and ml_prediction.get('direction') == -1:
+                                    self.logger.debug(f"{symbol}: RL overriding ML sell to buy")
+                                    action = 'BUY'
+                                    entry_price = current_data.get('ask', entry_price)
+                                    stop_loss = entry_price - stop_loss_distance
+                                    take_profit = entry_price + take_profit_distance
+                                elif rl_decision == 'sell' and ml_prediction.get('direction') == 1:
+                                    self.logger.debug(f"{symbol}: RL overriding ML buy to sell")
+                                    action = 'SELL'
+                                    entry_price = current_data.get('bid', entry_price)
+                                    stop_loss = entry_price + stop_loss_distance
+                                    take_profit = entry_price - take_profit_distance
+
+                            except Exception as e:
+                                self.logger.warning(f"{symbol}: RL decision failed, proceeding with ML: {e}")
+                                rl_decision = 'buy' if ml_prediction.get('direction') == 1 else 'sell'
+
                         signal = {
                             'symbol': symbol,
-                            'action': 'BUY' if ml_prediction.get('direction') == 1 else 'SELL',
+                            'action': action,
                             'strength': signal_strength,
                             'entry_price': entry_price,
                             'stop_loss': stop_loss,
@@ -635,6 +864,7 @@ class FXAiApplication:
                                 0),
                             'technical_score': technical_score,
                             'sentiment_score': sentiment_score,
+                            'rl_decision': rl_decision,
                             'timestamp': datetime.now(),
                             'adaptive_params': adaptive_params}
                         signals.append(signal)
@@ -648,6 +878,17 @@ class FXAiApplication:
                                 stop_loss:.5f} ({
                                 sl_atr_multiplier:.1f}x ATR), " f"TP: {tp_display} ({
                                 tp_atr_multiplier:.1f}x ATR)")
+
+                # Check if trading is allowed (before 22:30)
+                if self.config.get('trading', {}).get('day_trading_only', True):
+                    current_time = datetime.now().time()
+                    close_hour = self.config.get('trading', {}).get('close_hour', 22)
+                    close_minute = self.config.get('trading', {}).get('close_minute', 30)
+                    close_time = time(close_hour, close_minute)
+                    
+                    if current_time >= close_time:
+                        self.logger.info(f"Trading halted: Current time {current_time} is after trading close time {close_hour:02d}:{close_minute:02d}")
+                        signals = []  # Clear all signals to prevent trading
 
                 # 4. Execute trades with risk management
                 for signal in signals:
@@ -679,6 +920,56 @@ class FXAiApplication:
                             signal['symbol']} {
                             signal['action']}: {risk_check}")
                     if risk_check:
+                        # ===== ADVANCED RISK ASSESSMENT =====
+                        if self.advanced_risk_metrics:
+                            try:
+                                # Get current positions for portfolio risk assessment
+                                current_positions = {}
+                                positions = self.trading_engine.get_all_positions()
+                                for pos in positions:
+                                    current_positions[pos['symbol']] = pos['volume']
+
+                                # Get historical data for risk calculation
+                                market_data_risk = {}
+                                for sym in symbols:
+                                    hist_data = self.market_data.get_bars(sym, mt5.TIMEFRAME_H1, 252)  # 1 year
+                                    if hist_data is not None:
+                                        market_data_risk[sym] = pd.DataFrame(hist_data)
+
+                                # Assess portfolio risk
+                                portfolio_risk = self.advanced_risk_metrics.assess_portfolio_risk(
+                                    current_positions, market_data_risk)
+
+                                # Get risk limits
+                                account_info = mt5.account_info()
+                                account_balance = account_info.balance if account_info else 10000
+                                risk_limits = self.advanced_risk_metrics.get_risk_limits(signal['symbol'], account_balance)
+
+                                # Check advanced risk limits
+                                risk_warnings = portfolio_risk.get('warnings', [])
+                                if risk_warnings:
+                                    self.logger.warning(f"Portfolio risk warnings for {signal['symbol']}: {risk_warnings}")
+                                    # Allow trade but log warnings
+                                    for warning in risk_warnings:
+                                        self.logger.warning(f"Risk Warning: {warning}")
+
+                                # Check individual trade risk
+                                trade_risk = abs(signal['entry_price'] - signal['stop_loss']) * position_size
+                                if trade_risk > risk_limits['max_risk_per_trade']:
+                                    self.logger.warning(
+                                        f"Trade risk (${trade_risk:.2f}) exceeds limit (${risk_limits['max_risk_per_trade']:.2f}) for {signal['symbol']}")
+                                    continue
+
+                                # Log advanced risk metrics
+                                if portfolio_risk:
+                                    self.logger.debug(
+                                        f"Advanced risk metrics for {signal['symbol']}: "
+                                        f"Portfolio VaR: {portfolio_risk.get('portfolio_var_95', 0):.4f}, "
+                                        f"Max DD: {portfolio_risk.get('portfolio_max_dd', 0):.4f}")
+
+                            except Exception as e:
+                                self.logger.warning(f"Advanced risk assessment failed for {signal['symbol']}: {e}")
+
                         # Check free margin percentage
                         account_info = mt5.account_info()
                         if account_info and account_info.margin_free < 0.20 * account_info.equity:
@@ -783,20 +1074,69 @@ class FXAiApplication:
                             f"lot_size={position_size:.4f}")
 
                         # Execute trade with stop loss
-                        trade_result = await self.trading_engine.place_order(
-                            signal['symbol'],
-                            signal['action'].lower(),
-                            position_size,
-                            stop_loss=signal.get('stop_loss'),
-                            # Now using calculated take profit
-                            take_profit=signal.get('take_profit'),
-                            comment=f"FX-Ai {
-                                signal['action']} {
-                                signal_strength:.3f}"
-                        )
+                        start_time = time_module.time()
+                        try:
+                            trade_result = await self.trading_engine.place_order(
+                                signal['symbol'],
+                                signal['action'].lower(),
+                                position_size,
+                                stop_loss=signal.get('stop_loss'),
+                                # Now using calculated take profit
+                                take_profit=signal.get('take_profit'),
+                                comment=f"FX-Ai {
+                                    signal['action']} {
+                                    signal_strength:.3f}"
+                            )
+                            response_time = time_module.time() - start_time
+                            success = trade_result.get('success', False)
+                            if self.system_health_monitor:
+                                self.system_health_monitor.record_api_call(
+                                    'trading_engine.place_order', response_time, success,
+                                    trade_result.get('error', 'Unknown error') if not success else None)
+                        except Exception as e:
+                            response_time = time_module.time() - start_time
+                            trade_result = {'success': False, 'error': str(e)}
+                            if self.system_health_monitor:
+                                self.system_health_monitor.record_api_call(
+                                    'trading_engine.place_order', response_time, False, str(e))
+                            self.logger.error(f"Trade execution failed for {signal['symbol']}: {e}")
 
                         if trade_result.get('success', False):
                             self.session_stats['total_trades'] += 1
+
+                            # ===== REINFORCEMENT LEARNING EXPERIENCE =====
+                            if self.reinforcement_agent and self.reinforcement_agent.enabled:
+                                try:
+                                    # Record initial state and action for RL learning
+                                    initial_state = {
+                                        'rsi': technical_signals.get('rsi', {}).get('value', 50),
+                                        'adx': regime_analysis.adx_value if 'regime_analysis' in locals() else 25,
+                                        'volatility_ratio': technical_signals.get('atr', {}).get('value', 0) / signal['entry_price'] if signal['entry_price'] > 0 else 0,
+                                        'trend_strength': technical_signals.get('adx', {}).get('value', 25),
+                                        'market_regime': regime_analysis.primary_regime.value if 'regime_analysis' in locals() else 'ranging',
+                                        'signal_strength': signal['strength'],
+                                        'position_status': 1 if signal['action'] == 'BUY' else -1  # Position opened
+                                    }
+                                    action_taken = signal.get('rl_decision', 'buy' if signal['action'] == 'BUY' else 'sell')
+                                    
+                                    # Store experience for later learning when trade closes
+                                    rl_experience = {
+                                        'ticket': trade_result.get('order', 0),
+                                        'initial_state': initial_state,
+                                        'action': action_taken,
+                                        'entry_price': signal['entry_price'],
+                                        'symbol': signal['symbol'],
+                                        'timestamp': datetime.now()
+                                    }
+                                    
+                                    # Store in RL agent for learning when trade closes
+                                    if hasattr(self.reinforcement_agent, 'pending_experiences'):
+                                        self.reinforcement_agent.pending_experiences[trade_result.get('order', 0)] = rl_experience
+                                    
+                                    self.logger.debug(f"RL experience recorded for ticket {trade_result.get('order', 0)}")
+                                    
+                                except Exception as e:
+                                    self.logger.warning(f"Failed to record RL experience: {e}")
 
                             # Record trade for learning
                             if self.adaptive_learning:
@@ -940,6 +1280,41 @@ class FXAiApplication:
                         if self.adaptive_learning:
                             self.adaptive_learning.record_trade(trade_data)
 
+                        # ===== REINFORCEMENT LEARNING UPDATE =====
+                        if self.reinforcement_agent and self.reinforcement_agent.enabled:
+                            try:
+                                # Get the stored experience for this ticket
+                                if hasattr(self.reinforcement_agent, 'pending_experiences') and ticket in self.reinforcement_agent.pending_experiences:
+                                    experience = self.reinforcement_agent.pending_experiences[ticket]
+                                    
+                                    # Calculate reward based on trade outcome
+                                    reward = self.reinforcement_agent.calculate_reward(
+                                        experience['entry_price'],
+                                        exit_price,
+                                        trade_data['direction'],
+                                        trade_data['duration_minutes']
+                                    )
+                                    
+                                    # Create next state (position closed)
+                                    next_state = experience['initial_state'].copy()
+                                    next_state['position_status'] = 0  # Position closed
+                                    
+                                    # Learn from this experience
+                                    self.reinforcement_agent.update_q_table(
+                                        experience['initial_state'], 
+                                        experience['action'], 
+                                        reward, 
+                                        next_state
+                                    )
+                                    
+                                    # Remove from pending experiences
+                                    del self.reinforcement_agent.pending_experiences[ticket]
+                                    
+                                    self.logger.debug(f"RL updated: action={experience['action']}, reward={reward:.4f}")
+                                    
+                            except Exception as e:
+                                self.logger.warning(f"Failed to update RL agent: {e}")
+
                         # Update session stats
                         if profit_pct > 0:
                             self.session_stats['winning_trades'] += 1
@@ -1042,8 +1417,10 @@ class FXAiApplication:
                 return
 
             current_time = datetime.now().time()
-            # 11:30 PM - Latest time for trades to close
-            close_time = time(23, 30)
+            # Get close time from config, default to 22:30 (10:30 PM)
+            close_hour = self.config.get('trading', {}).get('close_hour', 22)
+            close_minute = self.config.get('trading', {}).get('close_minute', 30)
+            close_time = time(close_hour, close_minute)
 
             # Only close once per day - check if we haven't already closed
             # today
@@ -1056,7 +1433,7 @@ class FXAiApplication:
                     return  # Already closed today
 
                 self.logger.info(
-                    "Day trading hours ending - closing all positions")
+                    f"Day trading hours ending at {close_hour:02d}:{close_minute:02d} - closing all positions")
                 self._last_closure_date = today  # Mark as closed today
 
                 # Safe async handling for close_all_positions
@@ -1137,11 +1514,62 @@ class FXAiApplication:
         if self.clock_sync:
             self.clock_sync.stop_sync_thread()
 
+        # Stop system health monitoring
+        if self.system_health_monitor:
+            self.system_health_monitor.stop_monitoring()
+            # Export final health report
+            try:
+                health_report = self.system_health_monitor.get_health_report()
+                self.logger.info(f"Final health status: {health_report.get('status', 'unknown')}")
+                if health_report.get('critical_issues'):
+                    self.logger.warning(f"Critical issues at shutdown: {health_report['critical_issues']}")
+            except Exception as e:
+                self.logger.error(f"Error getting final health report: {e}")
+
         # Disconnect from MT5
         if self.mt5:
             self.mt5.disconnect()
 
         self.logger.info("FX-Ai shutdown complete")
+
+    def get_health_report(self) -> Dict[str, Any]:
+        """Get comprehensive system health report"""
+        if not self.system_health_monitor:
+            return {'status': 'not_initialized', 'message': 'System health monitor not initialized'}
+
+        try:
+            return self.system_health_monitor.get_health_report()
+        except Exception as e:
+            self.logger.error(f"Error getting health report: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def get_performance_stats(self) -> Dict[str, Any]:
+        """Get detailed performance statistics"""
+        if not self.system_health_monitor:
+            return {'status': 'not_initialized', 'message': 'System health monitor not initialized'}
+
+        try:
+            return self.system_health_monitor.get_performance_stats()
+        except Exception as e:
+            self.logger.error(f"Error getting performance stats: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def export_health_data(self, filepath: str = None) -> str:
+        """Export health monitoring data to file"""
+        if not self.system_health_monitor:
+            return "System health monitor not initialized"
+
+        if filepath is None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filepath = f"health_report_{timestamp}.json"
+
+        try:
+            self.system_health_monitor.export_health_data(filepath)
+            return f"Health data exported to {filepath}"
+        except Exception as e:
+            error_msg = f"Error exporting health data: {e}"
+            self.logger.error(error_msg)
+            return error_msg
 
     def print_session_summary(self):
         """Print trading session summary"""
@@ -1197,6 +1625,11 @@ class FXAiApplication:
         if not await self.initialize_components():
             self.logger.error("Failed to initialize components")
             return
+
+        # Start system health monitoring
+        if self.system_health_monitor:
+            self.system_health_monitor.start_monitoring()
+            self.logger.info("System health monitoring started")
 
         # Start trading loop
         try:

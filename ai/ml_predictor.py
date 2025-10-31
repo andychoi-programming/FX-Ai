@@ -13,6 +13,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 import joblib
 import os
+from .advanced_feature_engineer import AdvancedFeatureEngineer
 
 class MLPredictor:
     """Machine learning predictor for trading signals"""
@@ -40,6 +41,9 @@ class MLPredictor:
         self.technical_indicators = [
             'rsi', 'macd', 'bb_upper', 'bb_lower', 'ema_9', 'ema_21', 'vwap'
         ]
+
+        # Advanced feature engineering
+        self.feature_engineer = AdvancedFeatureEngineer(config.get('advanced_feature_engineering', {}))
 
         # Model paths
         self.model_dir = config.get('model_dir', 'models')
@@ -133,6 +137,60 @@ class MLPredictor:
         
         return self.predict_signal(symbol, data, technical_signals)
 
+    def prepare_features(self, symbol: str, data: Union[pd.DataFrame, Dict], technical_signals: Dict) -> Optional[pd.DataFrame]:
+        """
+        Public method to prepare features for ML models using advanced feature engineering
+
+        Args:
+            symbol: Trading symbol
+            data: Historical price data (DataFrame or dict of DataFrames by timeframe)
+            technical_signals: Technical analysis signals
+
+        Returns:
+            pd.DataFrame: Prepared features or None if preparation fails
+        """
+        try:
+            # Handle both DataFrame and dict formats
+            if isinstance(data, dict):
+                # Extract H1 data from timeframe dictionary
+                data = data.get('H1')
+                if data is None:
+                    return None
+
+            # Use advanced feature engineering
+            features_df = self.feature_engineer.create_features(symbol, data, technical_signals)
+
+            if features_df is None or features_df.empty:
+                self.logger.warning(f"Advanced feature engineering failed for {symbol}, falling back to basic features")
+                # Fallback to basic feature preparation
+                features_array = self._prepare_features(data, technical_signals)
+                if features_array is None:
+                    return None
+
+                # Convert to DataFrame for compatibility
+                feature_names = [
+                    'returns_1d', 'returns_5d', 'volatility_5d', 'volatility_20d', 'volume_ratio',
+                    'rsi_norm', 'vwap_position', 'bb_position', 'macd_signal', 'trend_strength',
+                    'momentum', 'support_resistance', 'regime_score'
+                ]
+
+                # Ensure we have the right number of features
+                if len(features_array) != len(feature_names):
+                    self.logger.warning(f"Feature count mismatch: got {len(features_array)}, expected {len(feature_names)}")
+                    # Pad or truncate to match expected length
+                    if len(features_array) < len(feature_names):
+                        features_array = np.pad(features_array, (0, len(feature_names) - len(features_array)), 'constant')
+                    else:
+                        features_array = features_array[:len(feature_names)]
+
+                features_df = pd.DataFrame([features_array], columns=feature_names)
+
+            return features_df
+
+        except Exception as e:
+            self.logger.error(f"Error preparing features for {symbol}: {e}")
+            return None
+
     def _prepare_features(self, data: pd.DataFrame, technical_signals: Dict) -> Optional[np.ndarray]:
         """
         Prepare features for ML model
@@ -154,8 +212,23 @@ class MLPredictor:
             close_prices = data['close'].values[-50:]
             high_prices = data['high'].values[-50:]
             low_prices = data['low'].values[-50:]
-            volume = data.get('volume', data.get('tick_volume', np.ones(50)))  # Handle both volume column names
-            volume = volume[-50:] if len(volume) >= 50 else volume  # Ensure volume matches price data length
+            volume_data = data.get('volume', data.get('tick_volume', np.ones(len(close_prices))))
+            
+            # Ensure volume has the same length as price data
+            if len(volume_data) > len(close_prices):
+                volume = volume_data[-len(close_prices):]
+            elif len(volume_data) < len(close_prices):
+                # Pad volume with ones if shorter
+                volume = np.ones(len(close_prices))
+                volume[-len(volume_data):] = volume_data
+            else:
+                volume = volume_data
+            
+            # Convert to numpy array if it's a pandas Series
+            if hasattr(volume, 'values'):
+                volume = volume.values
+            elif not isinstance(volume, np.ndarray):
+                volume = np.array(volume)
             
             # print(f"DEBUG: Close prices length: {len(close_prices)}")
             # print(f"DEBUG: Volume length: {len(volume)}")
@@ -183,7 +256,7 @@ class MLPredictor:
 
             # Volume features
             avg_volume = float(np.mean(volume))
-            volume_ratio = float(volume.iloc[-1] / avg_volume) if avg_volume > 0 else 1.0
+            volume_ratio = float(volume[-1] / avg_volume) if avg_volume > 0 else 1.0
             
             # Ensure volume features are scalars
             avg_volume = float(avg_volume)
@@ -217,6 +290,62 @@ class MLPredictor:
 
         except Exception as e:
             self.logger.error(f"Error preparing features: {e}")
+            return None
+
+    def prepare_features(self, symbol: str, data: Union[pd.DataFrame, Dict], technical_signals: Dict) -> Optional[pd.DataFrame]:
+        """
+        Prepare features for ensemble ML models
+
+        Args:
+            symbol: Trading symbol
+            data: Historical price data
+            technical_signals: Technical analysis signals
+
+        Returns:
+            pd.DataFrame: Feature DataFrame or None
+        """
+        try:
+            # Convert data to DataFrame if it's a dict
+            if isinstance(data, dict):
+                # Assume it's bars data with H1 timeframe
+                if 'H1' in data and data['H1'] is not None and not data['H1'].empty:
+                    df = pd.DataFrame(data['H1'])
+                    if len(df) == 0:
+                        return None
+                    # Use only the most recent data point for prediction
+                    data = df.tail(1)
+                else:
+                    return None
+
+            if not isinstance(data, pd.DataFrame) or data.empty:
+                return None
+
+            # Prepare features using existing method
+            features_array = self._prepare_features(data, technical_signals)
+            if features_array is None:
+                return None
+
+            # Convert to DataFrame with feature names
+            feature_names = [
+                'rsi', 'macd_signal', 'bb_position', 'ema_trend',
+                'volume_ratio', 'price_change', 'vwap_position',
+                'ema_score', 'feature_8', 'feature_9'
+            ]
+
+            # Ensure we have the right number of features
+            if len(features_array) < len(feature_names):
+                # Pad with zeros if needed
+                features_array = np.pad(features_array, (0, len(feature_names) - len(features_array)), 'constant')
+            elif len(features_array) > len(feature_names):
+                # Truncate if too many
+                features_array = features_array[:len(feature_names)]
+
+            features_df = pd.DataFrame([features_array], columns=feature_names[:len(features_array)])
+
+            return features_df
+
+        except Exception as e:
+            self.logger.error(f"Error preparing features DataFrame: {e}")
             return None
 
     def _load_or_train_model(self, symbol: str, data: pd.DataFrame):
@@ -379,17 +508,3 @@ class MLPredictor:
         except Exception as e:
             self.logger.debug(f"Error getting model version for {symbol}: {e}")
             return None
-
-    def get_model_version(self, symbol: str) -> str:
-        """
-        Get model version for symbol
-
-        Args:
-            symbol: Trading symbol
-
-        Returns:
-            str: Model version string
-        """
-        if symbol in self.models:
-            return "1.0.0"  # Current model version
-        return "none"  # No model available

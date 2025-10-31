@@ -26,7 +26,9 @@
     "day_trading_only": true,
     "close_before_weekend": true,
     "close_on_shutdown": true,
-    "prevent_multiple_positions_per_symbol": true
+    "prevent_multiple_positions_per_symbol": true,
+    "close_hour": 22,
+    "close_minute": 30
   },
   "risk_management": {
     "mode": "fixed_dollar_risk",
@@ -58,6 +60,39 @@
       "max_consecutive_losses": 3,
       "pause_after_losses": true,
       "max_daily_trades": 10
+    },
+    "advanced_risk": {
+      "enabled": true,
+      "var_confidence_levels": [0.95, 0.99, 0.999],
+      "max_portfolio_var": 0.05,
+      "max_correlation": 0.7,
+      "risk_free_rate": 0.02,
+      "min_sharpe_ratio": 0.5,
+      "max_drawdown_limit": 0.2,
+      "stress_test_scenarios": {
+        "mild_stress": {"volatility_multiplier": 1.5, "correlation_shift": 0.2},
+        "severe_stress": {"volatility_multiplier": 2.0, "correlation_shift": 0.4},
+        "extreme_stress": {"volatility_multiplier": 3.0, "correlation_shift": 0.6}
+      },
+      "risk_parity": {
+        "enabled": true,
+        "rebalance_threshold": 0.05
+      }
+    },
+    "anomaly_detection": {
+      "enabled": true,
+      "z_score_threshold": 3.0,
+      "iqr_multiplier": 1.5,
+      "mad_threshold": 3.5,
+      "isolation_forest_contamination": 0.1,
+      "ocsvm_nu": 0.1,
+      "short_window": 20,
+      "medium_window": 50,
+      "long_window": 200,
+      "max_anomaly_severity": 8.0,
+      "halt_trading_threshold": 8.0,
+      "reduce_position_threshold": 5.0,
+      "increase_stops_threshold": 3.0
     }
   },
   "indicators": {
@@ -135,7 +170,18 @@
     "min_trades_for_update": 50,
     "performance_window_days": 30,
     "adaptation_rate": 0.1,
-    "immediate_learning_threshold": 5.0
+    "immediate_learning_threshold": 5.0,
+    "ensemble": {
+      "enabled": true,
+      "voting_method": "soft",
+      "models": [
+        "random_forest",
+        "gradient_boosting",
+        "xgboost",
+        "lightgbm",
+        "mlp"
+      ]
+    }
   },
   "adaptive_learning": {
     "enabled": true,
@@ -182,11 +228,148 @@
       "min_pattern_occurrences": 10,
       "confidence_threshold": 0.7
     },
+    "temporal_analysis": {
+      "enabled": true,
+      "confidence_threshold": 0.6,
+      "min_trades_required": 20,
+      "timeframes": {
+        "daily": true,
+        "weekly": true,
+        "monthly": true,
+        "yearly": true
+      },
+      "performance_weights": {
+        "win_rate_weight": 0.4,
+        "sharpe_ratio_weight": 0.4,
+        "max_drawdown_weight": 0.2
+      }
+    },
+    "market_regime": {
+      "enabled": true,
+      "adaptation_strength": 0.3,
+      "history_length": 100,
+      "regime_adx_trending": 25,
+      "regime_adx_strong": 40,
+      "regime_vol_high": 1.5,
+      "regime_vol_low": 0.7,
+      "regime_bull_threshold": 0.02,
+      "regime_bear_threshold": -0.02,
+      "regime_ma_short": 20,
+      "regime_ma_medium": 50,
+      "regime_ma_long": 200
+    },
     "performance_thresholds": {
       "trigger_optimization": 0.55,
       "trigger_retraining": 0.6,
       "minimum_sharpe": 0.5,
       "maximum_drawdown": 0.2
+    }
+  },
+  "reinforcement_learning": {
+    "enabled": true,
+    "learning_rate": 0.1,
+    "discount_factor": 0.95,
+    "epsilon_start": 1.0,
+    "epsilon_end": 0.01,
+    "epsilon_decay": 0.995,
+    "state_bins": {
+      "rsi_bins": 10,
+      "adx_bins": 8,
+      "volatility_bins": 6,
+      "trend_bins": 5,
+      "regime_bins": 4
+    },
+    "reward_function": {
+      "profit_weight": 1.0,
+      "risk_weight": 0.5,
+      "timing_weight": 0.3,
+      "regime_weight": 0.2
+    },
+    "training": {
+      "min_experiences": 1000,
+      "batch_size": 32,
+      "save_interval": 1000,
+      "max_episodes": 10000
+    },
+    "actions": [
+      "hold",
+      "buy",
+      "sell",
+      "close_position"
+    ],
+    "state_features": [
+      "rsi",
+      "adx",
+      "volatility_ratio",
+      "trend_strength",
+      "market_regime",
+      "signal_strength",
+      "position_status"
+    ]
+  },
+  "advanced_feature_engineering": {
+    "enabled": true,
+    "categories": [
+      "technical",
+      "statistical",
+      "time_series",
+      "domain_specific",
+      "interactions"
+    ],
+    "technical_params": {
+      "rsi_periods": [7, 14, 21],
+      "macd_params": [[12, 26, 9], [8, 21, 5]],
+      "bb_periods": [20, 30],
+      "bb_std": [2.0, 2.5],
+      "stoch_params": [[14, 3, 3], [21, 5, 5]],
+      "williams_r_periods": [14, 21],
+      "cci_periods": [14, 20],
+      "mfi_periods": [14, 21],
+      "adx_periods": [14, 21],
+      "atr_periods": [14, 21],
+      "ema_periods": [9, 21, 50, 200],
+      "sma_periods": [10, 20, 50, 100]
+    },
+    "statistical_params": {
+      "rolling_windows": [5, 10, 20, 50],
+      "percentile_periods": [10, 20],
+      "zscore_windows": [20, 50],
+      "skewness_windows": [20, 50],
+      "kurtosis_windows": [20, 50]
+    },
+    "domain_params": {
+      "session_weights": {
+        "london": 1.2,
+        "new_york": 1.1,
+        "tokyo": 1.0,
+        "sydney": 0.9
+      },
+      "currency_pairs": ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD"],
+      "volatility_thresholds": [0.5, 1.0, 1.5, 2.0]
+    },
+    "selection_params": {
+      "method": "mutual_info",
+      "k_features": 50,
+      "correlation_threshold": 0.95
+    }
+  },
+  "system_health_monitoring": {
+    "enabled": true,
+    "monitoring_interval": 30,
+    "metrics_history_size": 1000,
+    "alert_cooldown": 300,
+    "thresholds": {
+      "memory_warning": 80.0,
+      "memory_critical": 90.0,
+      "cpu_warning": 70.0,
+      "cpu_critical": 85.0,
+      "disk_warning": 85.0,
+      "disk_critical": 95.0,
+      "api_response_warning": 5.0,
+      "api_response_critical": 10.0,
+      "error_rate_warning": 0.1,
+      "error_rate_critical": 0.25,
+      "max_consecutive_failures": 5
     }
   },
   "notifications": {

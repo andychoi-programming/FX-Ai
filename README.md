@@ -1143,17 +1143,20 @@ python main.py
 ### Trading Hours & Time-Based Controls
 
 #### Automated Position Closure
+
 - **Close Time**: 22:30 MT5 platform time (configurable)
 - **Action**: All open positions automatically closed
 - **Scope**: Applies to all symbols and position types
 
 #### Trade Prevention After Hours
+
 - **Restriction Period**: 22:30 to 24:00 MT5 time
 - **Prevention**: No new trades can be placed
 - **Monitoring**: System continues market analysis
 - **Reset**: Trading resumes normally next session
 
-#### Configuration Options
+#### Trading Configuration Options
+
 ```json
 {
   "trading": {

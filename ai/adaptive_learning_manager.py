@@ -184,8 +184,32 @@ class AdaptiveLearningManager:
         # Force reset risk multiplier to prevent inflation
         self.adaptive_params['risk_multiplier'] = 1.0
 
-        # Initialize database for performance tracking
-        self.init_database()
+        # Temporal analysis configuration
+        temporal_config = config.get('adaptive_learning', {}).get('temporal_analysis', {})
+        self.temporal_enabled = temporal_config.get('enabled', True)
+        self.temporal_confidence_threshold = temporal_config.get('confidence_threshold', 0.6)
+        self.temporal_min_trades = temporal_config.get('min_trades_required', 20)
+        self.temporal_timeframes = temporal_config.get('timeframes', {
+            'daily': True,
+            'weekly': True,
+            'monthly': True,
+            'yearly': True
+        })
+        self.temporal_weights = temporal_config.get('performance_weights', {
+            'win_rate_weight': 0.4,
+            'sharpe_ratio_weight': 0.4,
+            'max_drawdown_weight': 0.2
+        })
+
+        # Market regime configuration
+        regime_config = config.get('adaptive_learning', {}).get('market_regime', {})
+        self.regime_enabled = regime_config.get('enabled', True)
+        self.regime_adaptation_strength = regime_config.get('adaptation_strength', 0.3)
+        self.regime_history_length = regime_config.get('history_length', 100)
+
+        # Regime data storage
+        self.regime_history = {}  # symbol -> list of regime analyses
+        self.regime_performance = {}  # (symbol, regime) -> performance metrics
 
         # Schedule periodic tasks
         self.schedule_tasks()
@@ -194,6 +218,9 @@ class AdaptiveLearningManager:
         self.learning_thread = threading.Thread(
             target=self.run_continuous_learning, daemon=True)
         self.learning_thread.start()
+
+        # Initialize database
+        self.init_database()
 
         logger.info("Adaptive Learning Manager initialized")
 
@@ -283,6 +310,86 @@ class AdaptiveLearningManager:
                 avg_profit REAL,
                 win_rate REAL,
                 last_updated DATETIME
+            )
+        ''')
+
+        # Daily temporal analysis table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS daily_temporal_analysis (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT,
+                day_of_month INTEGER,  -- 1-31
+                month_of_year INTEGER, -- 1-12
+                year INTEGER,          -- Year
+                total_trades INTEGER,
+                profitable_trades INTEGER,
+                avg_profit REAL,
+                win_rate REAL,
+                avg_volatility REAL,
+                avg_spread_pips REAL,
+                sharpe_ratio REAL,
+                max_drawdown REAL,
+                last_updated DATETIME,
+                UNIQUE(symbol, day_of_month, month_of_year, year)
+            )
+        ''')
+
+        # Weekly temporal analysis table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS weekly_temporal_analysis (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT,
+                week_of_year INTEGER, -- 1-52
+                year INTEGER,          -- Year
+                total_trades INTEGER,
+                profitable_trades INTEGER,
+                avg_profit REAL,
+                win_rate REAL,
+                avg_volatility REAL,
+                avg_spread_pips REAL,
+                sharpe_ratio REAL,
+                max_drawdown REAL,
+                last_updated DATETIME,
+                UNIQUE(symbol, week_of_year, year)
+            )
+        ''')
+
+        # Monthly temporal analysis table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS monthly_temporal_analysis (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT,
+                month_of_year INTEGER, -- 1-12
+                year INTEGER,          -- Year
+                total_trades INTEGER,
+                profitable_trades INTEGER,
+                avg_profit REAL,
+                win_rate REAL,
+                avg_volatility REAL,
+                avg_spread_pips REAL,
+                sharpe_ratio REAL,
+                max_drawdown REAL,
+                last_updated DATETIME,
+                UNIQUE(symbol, month_of_year, year)
+            )
+        ''')
+
+        # Yearly temporal analysis table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS yearly_temporal_analysis (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT,
+                year INTEGER,          -- Year
+                total_trades INTEGER,
+                profitable_trades INTEGER,
+                avg_profit REAL,
+                win_rate REAL,
+                avg_volatility REAL,
+                avg_spread_pips REAL,
+                sharpe_ratio REAL,
+                max_drawdown REAL,
+                last_updated DATETIME,
+                UNIQUE(symbol, year)
             )
         ''')
 
@@ -1628,65 +1735,264 @@ class AdaptiveLearningManager:
     # ===== NEW LEARNING METHODS =====
 
     def analyze_entry_timing(self):
-        """Analyze profitable entry timing patterns"""
-        logger.info("Analyzing entry timing patterns...")
+        """Analyze profitable entry timing patterns across multiple timeframes"""
+        logger.info("Analyzing comprehensive temporal patterns...")
 
         try:
             symbols = self.config.get('trading', {}).get('symbols', [])
 
             for symbol in symbols:
-                # Get recent trades for this symbol
-                trades_df = self.get_recent_trades_df(symbol, days=365)
+                # Get recent trades for this symbol (2 years for comprehensive analysis)
+                trades_df = self.get_recent_trades_df(symbol, days=730)
 
-                if len(trades_df) < 20:
+                if len(trades_df) < 50:  # Need more trades for temporal analysis
+                    logger.info(f"Skipping {symbol}: insufficient trades ({len(trades_df)})")
                     continue
 
-                # Analyze by hour of day
-                trades_df['hour'] = pd.to_datetime(
-                    trades_df['timestamp']).dt.hour
-                trades_df['day_of_week'] = pd.to_datetime(
-                    trades_df['timestamp']).dt.dayofweek
+                # Prepare temporal features
+                trades_df['timestamp'] = pd.to_datetime(trades_df['timestamp'])
+                trades_df['hour'] = trades_df['timestamp'].dt.hour
+                trades_df['day_of_week'] = trades_df['timestamp'].dt.dayofweek
+                trades_df['day_of_month'] = trades_df['timestamp'].dt.day
+                trades_df['week_of_year'] = trades_df['timestamp'].dt.isocalendar().week
+                trades_df['month_of_year'] = trades_df['timestamp'].dt.month
+                trades_df['year'] = trades_df['timestamp'].dt.year
 
-                # Group by hour and calculate performance
-                hourly_performance = trades_df.groupby('hour').agg({
-                    'profit_pct': ['count', 'mean', lambda x: (x > 0).mean()],
-                    'profit': 'mean'
-                }).round(4)
+                # Calculate additional metrics
+                trades_df['is_profitable'] = trades_df['profit'] > 0
 
-                hourly_performance.columns = [
-                    'total_trades', 'avg_profit_pct', 'win_rate', 'avg_profit']
-                hourly_performance = hourly_performance.reset_index()
-
-                # Store results in database
                 conn = sqlite3.connect(self.db_path)
                 cursor = conn.cursor()
 
-                for _, row in hourly_performance.iterrows():
-                    cursor.execute('''
-                        INSERT OR REPLACE INTO entry_timing_analysis
-                        (symbol, hour_of_day, day_of_week, market_volatility,
-                         spread_pips,
-                         total_trades, profitable_trades, avg_profit, win_rate,
-                         last_updated)
-                        VALUES (?, ?, -1, 0, 0, ?, ?, ?, ?, ?)
-                    ''', (
-                        symbol,
-                        int(row['hour']),
-                        int(row['total_trades']),
-                        # profitable_trades
-                        int(row['total_trades'] * row['win_rate']),
-                        row['avg_profit'],
-                        row['win_rate'],
-                        datetime.now()
-                    ))
+                # 1. Analyze HOURLY patterns (existing)
+                self._analyze_hourly_patterns(cursor, symbol, trades_df)
+
+                # 2. Analyze DAILY patterns
+                self._analyze_daily_patterns(cursor, symbol, trades_df)
+
+                # 3. Analyze WEEKLY patterns
+                self._analyze_weekly_patterns(cursor, symbol, trades_df)
+
+                # 4. Analyze MONTHLY patterns
+                self._analyze_monthly_patterns(cursor, symbol, trades_df)
+
+                # 5. Analyze YEARLY patterns
+                self._analyze_yearly_patterns(cursor, symbol, trades_df)
 
                 conn.commit()
                 conn.close()
 
-                logger.info(f"Updated entry timing analysis for {symbol}")
+                logger.info(f"Completed comprehensive temporal analysis for {symbol}")
 
         except Exception as e:
-            logger.error(f"Error analyzing entry timing: {e}")
+            logger.error(f"Error in comprehensive temporal analysis: {e}")
+
+    def _analyze_hourly_patterns(self, cursor, symbol: str, trades_df: pd.DataFrame):
+        """Analyze hourly trading patterns"""
+        try:
+            hourly_performance = trades_df.groupby('hour').agg({
+                'profit': ['count', 'mean', lambda x: (x > 0).mean()],
+                'profit_pct': 'mean'
+            }).round(4)
+
+            hourly_performance.columns = ['total_trades', 'avg_profit', 'win_rate', 'avg_profit_pct']
+            hourly_performance = hourly_performance.reset_index()
+
+            for _, row in hourly_performance.iterrows():
+                if row['total_trades'] >= 5:  # Minimum trades per hour
+                    cursor.execute('''
+                        INSERT OR REPLACE INTO entry_timing_analysis
+                        (symbol, hour_of_day, day_of_week, market_volatility, spread_pips,
+                         total_trades, profitable_trades, avg_profit, win_rate, last_updated)
+                        VALUES (?, ?, -1, 0, 0, ?, ?, ?, ?, ?)
+                    ''', (
+                        symbol, int(row['hour']), int(row['total_trades']),
+                        int(row['total_trades'] * row['win_rate']),
+                        row['avg_profit'], row['win_rate'], datetime.now()
+                    ))
+
+        except Exception as e:
+            logger.error(f"Error analyzing hourly patterns for {symbol}: {e}")
+
+    def _analyze_daily_patterns(self, cursor, symbol: str, trades_df: pd.DataFrame):
+        """Analyze daily trading patterns"""
+        try:
+            # Group by day of month, month, and year
+            daily_performance = trades_df.groupby(['day_of_month', 'month_of_year', 'year']).agg({
+                'profit': ['count', 'mean', 'sum', lambda x: (x > 0).mean()],
+                'profit_pct': 'mean'
+            }).round(4)
+
+            daily_performance.columns = ['total_trades', 'avg_profit', 'total_profit', 'win_rate', 'avg_profit_pct']
+            daily_performance = daily_performance.reset_index()
+
+            # Calculate additional metrics
+            daily_performance['sharpe_ratio'] = daily_performance.apply(
+                lambda row: self._calculate_sharpe_ratio(trades_df, row.name), axis=1
+            )
+            daily_performance['max_drawdown'] = daily_performance.apply(
+                lambda row: self._calculate_max_drawdown(trades_df, row.name), axis=1
+            )
+
+            for _, row in daily_performance.iterrows():
+                if row['total_trades'] >= 3:  # Minimum trades per day
+                    cursor.execute('''
+                        INSERT OR REPLACE INTO daily_temporal_analysis
+                        (symbol, day_of_month, month_of_year, year, total_trades,
+                         profitable_trades, avg_profit, win_rate, avg_volatility,
+                         avg_spread_pips, sharpe_ratio, max_drawdown, last_updated)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?)
+                    ''', (
+                        symbol, int(row['day_of_month']), int(row['month_of_year']),
+                        int(row['year']), int(row['total_trades']),
+                        int(row['total_trades'] * row['win_rate']),
+                        row['avg_profit'], row['win_rate'],
+                        row['sharpe_ratio'], row['max_drawdown'], datetime.now()
+                    ))
+
+        except Exception as e:
+            logger.error(f"Error analyzing daily patterns for {symbol}: {e}")
+
+    def _analyze_weekly_patterns(self, cursor, symbol: str, trades_df: pd.DataFrame):
+        """Analyze weekly trading patterns"""
+        try:
+            weekly_performance = trades_df.groupby(['week_of_year', 'year']).agg({
+                'profit': ['count', 'mean', 'sum', lambda x: (x > 0).mean()],
+                'profit_pct': 'mean'
+            }).round(4)
+
+            weekly_performance.columns = ['total_trades', 'avg_profit', 'total_profit', 'win_rate', 'avg_profit_pct']
+            weekly_performance = weekly_performance.reset_index()
+
+            weekly_performance['sharpe_ratio'] = weekly_performance.apply(
+                lambda row: self._calculate_sharpe_ratio(trades_df, row.name), axis=1
+            )
+            weekly_performance['max_drawdown'] = weekly_performance.apply(
+                lambda row: self._calculate_max_drawdown(trades_df, row.name), axis=1
+            )
+
+            for _, row in weekly_performance.iterrows():
+                if row['total_trades'] >= 5:  # Minimum trades per week
+                    cursor.execute('''
+                        INSERT OR REPLACE INTO weekly_temporal_analysis
+                        (symbol, week_of_year, year, total_trades, profitable_trades,
+                         avg_profit, win_rate, avg_volatility, avg_spread_pips,
+                         sharpe_ratio, max_drawdown, last_updated)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?)
+                    ''', (
+                        symbol, int(row['week_of_year']), int(row['year']),
+                        int(row['total_trades']),
+                        int(row['total_trades'] * row['win_rate']),
+                        row['avg_profit'], row['win_rate'],
+                        row['sharpe_ratio'], row['max_drawdown'], datetime.now()
+                    ))
+
+        except Exception as e:
+            logger.error(f"Error analyzing weekly patterns for {symbol}: {e}")
+
+    def _analyze_monthly_patterns(self, cursor, symbol: str, trades_df: pd.DataFrame):
+        """Analyze monthly trading patterns"""
+        try:
+            monthly_performance = trades_df.groupby(['month_of_year', 'year']).agg({
+                'profit': ['count', 'mean', 'sum', lambda x: (x > 0).mean()],
+                'profit_pct': 'mean'
+            }).round(4)
+
+            monthly_performance.columns = ['total_trades', 'avg_profit', 'total_profit', 'win_rate', 'avg_profit_pct']
+            monthly_performance = monthly_performance.reset_index()
+
+            monthly_performance['sharpe_ratio'] = monthly_performance.apply(
+                lambda row: self._calculate_sharpe_ratio(trades_df, row.name), axis=1
+            )
+            monthly_performance['max_drawdown'] = monthly_performance.apply(
+                lambda row: self._calculate_max_drawdown(trades_df, row.name), axis=1
+            )
+
+            for _, row in monthly_performance.iterrows():
+                if row['total_trades'] >= 10:  # Minimum trades per month
+                    cursor.execute('''
+                        INSERT OR REPLACE INTO monthly_temporal_analysis
+                        (symbol, month_of_year, year, total_trades, profitable_trades,
+                         avg_profit, win_rate, avg_volatility, avg_spread_pips,
+                         sharpe_ratio, max_drawdown, last_updated)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?)
+                    ''', (
+                        symbol, int(row['month_of_year']), int(row['year']),
+                        int(row['total_trades']),
+                        int(row['total_trades'] * row['win_rate']),
+                        row['avg_profit'], row['win_rate'],
+                        row['sharpe_ratio'], row['max_drawdown'], datetime.now()
+                    ))
+
+        except Exception as e:
+            logger.error(f"Error analyzing monthly patterns for {symbol}: {e}")
+
+    def _analyze_yearly_patterns(self, cursor, symbol: str, trades_df: pd.DataFrame):
+        """Analyze yearly trading patterns"""
+        try:
+            yearly_performance = trades_df.groupby('year').agg({
+                'profit': ['count', 'mean', 'sum', lambda x: (x > 0).mean()],
+                'profit_pct': 'mean'
+            }).round(4)
+
+            yearly_performance.columns = ['total_trades', 'avg_profit', 'total_profit', 'win_rate', 'avg_profit_pct']
+            yearly_performance = yearly_performance.reset_index()
+
+            yearly_performance['sharpe_ratio'] = yearly_performance.apply(
+                lambda row: self._calculate_sharpe_ratio(trades_df, row.name), axis=1
+            )
+            yearly_performance['max_drawdown'] = yearly_performance.apply(
+                lambda row: self._calculate_max_drawdown(trades_df, row.name), axis=1
+            )
+
+            for _, row in yearly_performance.iterrows():
+                if row['total_trades'] >= 20:  # Minimum trades per year
+                    cursor.execute('''
+                        INSERT OR REPLACE INTO yearly_temporal_analysis
+                        (symbol, year, total_trades, profitable_trades, avg_profit,
+                         win_rate, avg_volatility, avg_spread_pips, sharpe_ratio,
+                         max_drawdown, last_updated)
+                        VALUES (?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?)
+                    ''', (
+                        symbol, int(row['year']), int(row['total_trades']),
+                        int(row['total_trades'] * row['win_rate']),
+                        row['avg_profit'], row['win_rate'],
+                        row['sharpe_ratio'], row['max_drawdown'], datetime.now()
+                    ))
+
+        except Exception as e:
+            logger.error(f"Error analyzing yearly patterns for {symbol}: {e}")
+
+    def _calculate_sharpe_ratio(self, trades_df: pd.DataFrame, group_key) -> float:
+        """Calculate Sharpe ratio for a group of trades"""
+        try:
+            # This is a simplified Sharpe ratio calculation
+            # In practice, you'd want daily returns and risk-free rate
+            if len(trades_df) < 5:
+                return 0.0
+
+            returns = trades_df['profit_pct']
+            if returns.std() == 0:
+                return 0.0
+
+            return (returns.mean() / returns.std()) * np.sqrt(252)  # Annualized
+
+        except Exception:
+            return 0.0
+
+    def _calculate_max_drawdown(self, trades_df: pd.DataFrame, group_key) -> float:
+        """Calculate maximum drawdown for a group of trades"""
+        try:
+            if len(trades_df) < 3:
+                return 0.0
+
+            cumulative = (1 + trades_df['profit_pct']).cumprod()
+            running_max = cumulative.expanding().max()
+            drawdown = (cumulative - running_max) / running_max
+            return abs(drawdown.min()) if len(drawdown) > 0 else 0.0
+
+        except Exception:
+            return 0.0
 
     def optimize_symbol_sl_tp(self):
         """Optimize SL/TP parameters per symbol based on historical
@@ -1981,6 +2287,97 @@ class AdaptiveLearningManager:
             logger.error(f"Error getting recent trades for {symbol}: {e}")
             return pd.DataFrame()
 
+    def update_regime_data(self, symbol: str, regime_analysis):
+        """Update regime data for adaptive learning"""
+        if not self.regime_enabled:
+            return
+
+        try:
+            # Store regime history
+            if symbol not in self.regime_history:
+                self.regime_history[symbol] = []
+
+            self.regime_history[symbol].append({
+                'timestamp': datetime.now(),
+                'regime': regime_analysis.primary_regime.value,
+                'confidence': regime_analysis.confidence,
+                'adx': regime_analysis.adx_value,
+                'volatility_ratio': regime_analysis.volatility_ratio,
+                'trend_strength': regime_analysis.trend_strength,
+                'regime_score': regime_analysis.regime_score
+            })
+
+            # Keep only recent history
+            if len(self.regime_history[symbol]) > self.regime_history_length:
+                self.regime_history[symbol] = self.regime_history[symbol][-self.regime_history_length:]
+
+            # Update regime performance tracking
+            regime_key = (symbol, regime_analysis.primary_regime.value)
+            if regime_key not in self.regime_performance:
+                self.regime_performance[regime_key] = {
+                    'total_trades': 0,
+                    'profitable_trades': 0,
+                    'total_profit': 0.0,
+                    'win_rate': 0.0,
+                    'avg_profit': 0.0
+                }
+
+            logger.debug(f"Updated regime data for {symbol}: {regime_analysis.primary_regime.value}")
+
+        except Exception as e:
+            logger.error(f"Error updating regime data for {symbol}: {e}")
+
+    def get_regime_adapted_parameters(self, symbol: str, base_params: dict) -> dict:
+        """Get parameters adapted to current market regime"""
+        if not self.regime_enabled or symbol not in self.regime_history:
+            return base_params
+
+        try:
+            current_regime = self.regime_history[symbol][-1] if self.regime_history[symbol] else None
+            if not current_regime:
+                return base_params
+
+            regime_key = (symbol, current_regime['regime'])
+            performance = self.regime_performance.get(regime_key, {})
+
+            adapted_params = base_params.copy()
+
+            # Adapt based on regime performance
+            if performance.get('total_trades', 0) >= 10:
+                win_rate = performance.get('win_rate', 0.5)
+
+                # Adjust risk based on regime performance
+                if win_rate > 0.6:  # Good regime
+                    adapted_params['risk_multiplier'] = min(
+                        base_params.get('risk_multiplier', 1.0) * 1.2, 2.0)
+                elif win_rate < 0.4:  # Bad regime
+                    adapted_params['risk_multiplier'] = max(
+                        base_params.get('risk_multiplier', 1.0) * 0.8, 0.5)
+
+                # Adjust holding time based on regime
+                if current_regime['regime'] in ['trending_up', 'trending_down']:
+                    adapted_params['max_holding_hours'] = min(
+                        base_params.get('max_holding_hours', 4) * 1.5, 12)
+                elif current_regime['regime'] == 'high_volatility':
+                    adapted_params['max_holding_hours'] = max(
+                        base_params.get('max_holding_hours', 4) * 0.7, 1)
+
+            # Apply confidence-based adjustments
+            confidence = current_regime.get('confidence', 0.5)
+            if confidence > 0.8:
+                adapted_params['min_signal_strength'] = max(
+                    base_params.get('min_signal_strength', 0.6) * 0.9, 0.4)
+            elif confidence < 0.3:
+                adapted_params['min_signal_strength'] = min(
+                    base_params.get('min_signal_strength', 0.6) * 1.2, 0.9)
+
+            logger.debug(f"Adapted parameters for {symbol} in {current_regime['regime']} regime: {adapted_params}")
+            return adapted_params
+
+        except Exception as e:
+            logger.error(f"Error getting regime-adapted parameters for {symbol}: {e}")
+            return base_params
+
     # ===== GETTER METHODS FOR NEW FEATURES =====
 
     def get_entry_timing_recommendation(
@@ -2020,6 +2417,339 @@ class AdaptiveLearningManager:
                 'win_rate': 0.5,
                 'avg_profit': 0,
                 'total_trades': 0}
+
+    def get_daily_temporal_recommendation(self, symbol: str, day_of_month: int, month_of_year: int, year: int) -> dict:
+        """Get daily temporal recommendation for current date"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT * FROM daily_temporal_analysis
+                WHERE symbol = ? AND day_of_month = ? AND month_of_year = ? AND year = ?
+                ORDER BY last_updated DESC LIMIT 1
+            ''', (symbol, day_of_month, month_of_year, year))
+
+            row = cursor.fetchone()
+            conn.close()
+
+            if row and row[4] >= 3:  # Minimum 3 trades
+                win_rate = row[7]
+                sharpe_ratio = row[10] if row[10] else 0
+                max_drawdown = row[11] if row[11] else 0
+
+                # Recommend if win rate > 55% and Sharpe > 0.5 and drawdown < 10%
+                recommended = (win_rate > 0.55 and sharpe_ratio > 0.5 and max_drawdown < 0.1)
+
+                return {
+                    'recommended': recommended,
+                    'win_rate': win_rate,
+                    'avg_profit': row[6],
+                    'total_trades': row[4],
+                    'sharpe_ratio': sharpe_ratio,
+                    'max_drawdown': max_drawdown,
+                    'confidence': min(1.0, row[4] / 20)  # Confidence based on sample size
+                }
+
+            return {
+                'recommended': True,  # Default to allowing trades if no data
+                'win_rate': 0.5,
+                'avg_profit': 0,
+                'total_trades': 0,
+                'sharpe_ratio': 0,
+                'max_drawdown': 0,
+                'confidence': 0
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting daily temporal recommendation for {symbol}: {e}")
+            return {
+                'recommended': True,
+                'win_rate': 0.5,
+                'avg_profit': 0,
+                'total_trades': 0,
+                'sharpe_ratio': 0,
+                'max_drawdown': 0,
+                'confidence': 0
+            }
+
+    def get_weekly_temporal_recommendation(self, symbol: str, week_of_year: int, year: int) -> dict:
+        """Get weekly temporal recommendation for current week"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT * FROM weekly_temporal_analysis
+                WHERE symbol = ? AND week_of_year = ? AND year = ?
+                ORDER BY last_updated DESC LIMIT 1
+            ''', (symbol, week_of_year, year))
+
+            row = cursor.fetchone()
+            conn.close()
+
+            if row and row[3] >= 5:  # Minimum 5 trades
+                win_rate = row[6]
+                sharpe_ratio = row[9] if row[9] else 0
+                max_drawdown = row[10] if row[10] else 0
+
+                # Recommend if win rate > 52% and Sharpe > 0.3 and drawdown < 15%
+                recommended = (win_rate > 0.52 and sharpe_ratio > 0.3 and max_drawdown < 0.15)
+
+                return {
+                    'recommended': recommended,
+                    'win_rate': win_rate,
+                    'avg_profit': row[5],
+                    'total_trades': row[3],
+                    'sharpe_ratio': sharpe_ratio,
+                    'max_drawdown': max_drawdown,
+                    'confidence': min(1.0, row[3] / 50)  # Confidence based on sample size
+                }
+
+            return {
+                'recommended': True,
+                'win_rate': 0.5,
+                'avg_profit': 0,
+                'total_trades': 0,
+                'sharpe_ratio': 0,
+                'max_drawdown': 0,
+                'confidence': 0
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting weekly temporal recommendation for {symbol}: {e}")
+            return {
+                'recommended': True,
+                'win_rate': 0.5,
+                'avg_profit': 0,
+                'total_trades': 0,
+                'sharpe_ratio': 0,
+                'max_drawdown': 0,
+                'confidence': 0
+            }
+
+    def get_monthly_temporal_recommendation(self, symbol: str, month_of_year: int, year: int) -> dict:
+        """Get monthly temporal recommendation for current month"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT * FROM monthly_temporal_analysis
+                WHERE symbol = ? AND month_of_year = ? AND year = ?
+                ORDER BY last_updated DESC LIMIT 1
+            ''', (symbol, month_of_year, year))
+
+            row = cursor.fetchone()
+            conn.close()
+
+            if row and row[3] >= 10:  # Minimum 10 trades
+                win_rate = row[6]
+                sharpe_ratio = row[9] if row[9] else 0
+                max_drawdown = row[10] if row[10] else 0
+
+                # Recommend if win rate > 50% and Sharpe > 0.2 and drawdown < 20%
+                recommended = (win_rate > 0.5 and sharpe_ratio > 0.2 and max_drawdown < 0.2)
+
+                return {
+                    'recommended': recommended,
+                    'win_rate': win_rate,
+                    'avg_profit': row[5],
+                    'total_trades': row[3],
+                    'sharpe_ratio': sharpe_ratio,
+                    'max_drawdown': max_drawdown,
+                    'confidence': min(1.0, row[3] / 100)  # Confidence based on sample size
+                }
+
+            return {
+                'recommended': True,
+                'win_rate': 0.5,
+                'avg_profit': 0,
+                'total_trades': 0,
+                'sharpe_ratio': 0,
+                'max_drawdown': 0,
+                'confidence': 0
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting monthly temporal recommendation for {symbol}: {e}")
+            return {
+                'recommended': True,
+                'win_rate': 0.5,
+                'avg_profit': 0,
+                'total_trades': 0,
+                'sharpe_ratio': 0,
+                'max_drawdown': 0,
+                'confidence': 0
+            }
+
+    def get_yearly_temporal_recommendation(self, symbol: str, year: int) -> dict:
+        """Get yearly temporal recommendation for current year"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT * FROM yearly_temporal_analysis
+                WHERE symbol = ? AND year = ?
+                ORDER BY last_updated DESC LIMIT 1
+            ''', (symbol, year))
+
+            row = cursor.fetchone()
+            conn.close()
+
+            if row and row[2] >= 20:  # Minimum 20 trades
+                win_rate = row[5]
+                sharpe_ratio = row[8] if row[8] else 0
+                max_drawdown = row[9] if row[9] else 0
+
+                # Recommend if win rate > 48% and Sharpe > 0.1 and drawdown < 25%
+                recommended = (win_rate > 0.48 and sharpe_ratio > 0.1 and max_drawdown < 0.25)
+
+                return {
+                    'recommended': recommended,
+                    'win_rate': win_rate,
+                    'avg_profit': row[4],
+                    'total_trades': row[2],
+                    'sharpe_ratio': sharpe_ratio,
+                    'max_drawdown': max_drawdown,
+                    'confidence': min(1.0, row[2] / 200)  # Confidence based on sample size
+                }
+
+            return {
+                'recommended': True,
+                'win_rate': 0.5,
+                'avg_profit': 0,
+                'total_trades': 0,
+                'sharpe_ratio': 0,
+                'max_drawdown': 0,
+                'confidence': 0
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting yearly temporal recommendation for {symbol}: {e}")
+            return {
+                'recommended': True,
+                'win_rate': 0.5,
+                'avg_profit': 0,
+                'total_trades': 0,
+                'sharpe_ratio': 0,
+                'max_drawdown': 0,
+                'confidence': 0
+            }
+
+    def get_comprehensive_temporal_recommendation(self, symbol: str) -> dict:
+        """Get comprehensive temporal recommendation combining all timeframes"""
+        try:
+            # Check if temporal analysis is enabled
+            if not self.temporal_enabled:
+                return {
+                    'recommended': True,
+                    'confidence': 1.0,
+                    'reason': 'Temporal analysis disabled'
+                }
+
+            now = datetime.now()
+            current_hour = now.hour
+            current_day = now.day
+            current_month = now.month
+            current_year = now.year
+            current_week = now.isocalendar().week
+
+            # Get recommendations from enabled timeframes
+            recommendations = []
+            weights = []
+
+            # Hourly (always included if temporal enabled)
+            hourly_rec = self.get_entry_timing_recommendation(symbol, current_hour)
+            # Add confidence key for consistency (use win_rate as confidence proxy)
+            hourly_rec['confidence'] = hourly_rec.get('win_rate', 0.5)
+            recommendations.append(hourly_rec)
+            weights.append(0.3)
+
+            # Daily
+            if self.temporal_timeframes.get('daily', True):
+                daily_rec = self.get_daily_temporal_recommendation(symbol, current_day, current_month, current_year)
+                recommendations.append(daily_rec)
+                weights.append(0.25)
+
+            # Weekly
+            if self.temporal_timeframes.get('weekly', True):
+                weekly_rec = self.get_weekly_temporal_recommendation(symbol, current_week, current_year)
+                recommendations.append(weekly_rec)
+                weights.append(0.2)
+
+            # Monthly
+            if self.temporal_timeframes.get('monthly', True):
+                monthly_rec = self.get_monthly_temporal_recommendation(symbol, current_month, current_year)
+                recommendations.append(monthly_rec)
+                weights.append(0.15)
+
+            # Yearly
+            if self.temporal_timeframes.get('yearly', True):
+                yearly_rec = self.get_yearly_temporal_recommendation(symbol, current_year)
+                recommendations.append(yearly_rec)
+                weights.append(0.1)
+
+            # Calculate weighted recommendation using configured weights
+            weighted_score = 0
+            total_weight = 0
+            confidence_sum = 0
+
+            for rec, weight in zip(recommendations, weights):
+                if rec['confidence'] > 0:  # Only include if we have data
+                    weighted_score += (1 if rec['recommended'] else 0) * weight * rec['confidence']
+                    total_weight += weight * rec['confidence']
+                    confidence_sum += rec['confidence']
+
+            if total_weight > 0:
+                final_score = weighted_score / total_weight
+                overall_recommended = final_score > 0.5
+                avg_confidence = confidence_sum / len([r for r in recommendations if r['confidence'] > 0])
+            else:
+                overall_recommended = True  # Default to allowing trades if no data
+                avg_confidence = 0
+                final_score = 0.5
+
+            # Apply confidence threshold
+            if avg_confidence < self.temporal_confidence_threshold:
+                overall_recommended = True  # Allow trades if confidence is too low
+
+            return {
+                'recommended': overall_recommended,
+                'confidence': avg_confidence,
+                'confidence_score': final_score,
+                'reason': self._get_recommendation_reason(
+                    recommendations, overall_recommended)
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting comprehensive temporal recommendation for {symbol}: {e}")
+            return {
+                'recommended': True,
+                'confidence': 0,
+                'reason': f'Error: {str(e)}'
+            }
+
+    def _get_recommendation_reason(self, recommendations: list, overall_recommended: bool) -> str:
+        """Generate human-readable reason for the recommendation"""
+        try:
+            reasons = []
+
+            timeframe_names = ['hourly', 'daily', 'weekly', 'monthly', 'yearly']
+            for rec, name in zip(recommendations, timeframe_names):
+                if rec['confidence'] > 0:
+                    status = "favorable" if rec['recommended'] else "unfavorable"
+                    win_rate = rec['win_rate'] * 100
+                    reasons.append(f"{name}: {status} ({win_rate:.1f}% win rate)")
+
+            if overall_recommended:
+                return f"Overall favorable for trading. {', '.join(reasons)}"
+            else:
+                return f"Overall unfavorable for trading. {', '.join(reasons)}"
+
+        except Exception:
+            return "Recommendation based on temporal analysis"
 
     def get_symbol_sl_tp_params(self, symbol: str) -> dict:
         """Get optimized SL/TP parameters for a symbol"""
