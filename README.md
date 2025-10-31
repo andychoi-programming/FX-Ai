@@ -1242,7 +1242,7 @@ You can force a time synchronization check by accessing the clock synchronizer t
 
 #### No Trading Signals
 
-- Check market is open (Sun 5PM - Fri 5PM EST)
+- Check market is open (Sun 5PM - Fri 11:30PM EST)
 - Verify data sources are accessible
 - Review signal strength threshold
 
@@ -1288,7 +1288,7 @@ This tool will identify and help resolve common issues including:
 #### Signal Generation Issues
 
 - Verify MT5 account is logged in
-- Check market hours (Forex: Sun 5PM - Fri 5PM EST)
+- Check market hours (Forex: Sun 5PM - Fri 11:30PM EST)
 - Review configuration in `config/config.json`
 
 #### Import Errors

@@ -191,10 +191,13 @@ class TradingEngine:
 
                 min_stop_distance = min_stop_pips * pip_size
 
+
                 logger.info(
-                    f"Symbol {symbol}: stops_level={stops_level}, pip_size={pip_size}, min_stop_pips={min_stop_pips}, min_stop_distance={min_stop_distance}")
+                    f"Symbol {symbol}: stops_level={stops_level}, pip_size={pip_size}, "
+                    f"min_stop_pips={min_stop_pips}, min_stop_distance={min_stop_distance}")
                 logger.info(
-                    f"Order {order_type} {symbol}: price={price}, original_sl={stop_loss}, min_distance={min_stop_distance}")
+                    f"Order {order_type} {symbol}: price={price}, original_sl={stop_loss}, "
+                    f"min_distance={min_stop_distance}")
 
                 if order_type.lower() in ['buy', 'buy_limit', 'buy_stop']:
                     # For buy orders, stop loss should be below price
@@ -253,7 +256,8 @@ class TradingEngine:
                 min_stop_distance = min_stop_pips * pip_size
 
                 logger.info(
-                    f"Order {order_type} {symbol}: price={price}, original_tp={take_profit}, min_distance={min_stop_distance}")
+                    f"Order {order_type} {symbol}: price={price}, original_tp={take_profit}, "
+                    f"min_distance={min_stop_distance}")
 
                 if order_type.lower() in ['buy', 'buy_limit', 'buy_stop']:
                     # For buy orders, take profit should be above price
@@ -337,7 +341,7 @@ class TradingEngine:
 
             # CRITICAL DEBUG: Enhanced diagnostic for EURJPY SL bug
             if "EURJPY" in symbol and stop_loss is not None:
-                logger.debug(f"\n{'='*60}")
+                logger.debug(f"\n{'=' * 60}")
                 logger.debug("🚨 CRITICAL DEBUG: EURJPY ORDER PLACEMENT")
                 logger.debug(f"Symbol: {symbol}")
                 logger.debug(f"Order Type: {order_type}")
@@ -357,7 +361,7 @@ class TradingEngine:
                 logger.debug(f"Expected SL Pips: {expected_pips:.1f}")
                 logger.debug(f"Symbol Digits: {symbol_info.digits}")
                 logger.debug(f"Symbol Point: {symbol_info.point}")
-                logger.debug(f"{'='*60}")
+                logger.debug(f"{'=' * 60}")
 
             # Debug before sending to MT5
             logger.debug("=== SENDING TO MT5 ===")
@@ -490,7 +494,8 @@ class TradingEngine:
                             else:
                                 actual_pips = sl_mismatch / 0.0001
                             logger.debug(
-                                f"This equals ~{actual_pips:.1f} pips difference")
+                                f"This equals ~{
+                                    actual_pips:.1f} pips difference")
 
                             logger.error(
                                 f"Stop loss mismatch for {symbol}: expected "
@@ -585,7 +590,7 @@ class TradingEngine:
                                 f"{position.symbol} position "
                                 f"{position.ticket} "
                                 f"(appears manually modified "
-                                f"{time_since_update/3600:.1f} hours ago)")
+                                f"{time_since_update / 3600:.1f} hours ago)")
                             continue
 
                         # Update take profit based on new analysis first
@@ -649,7 +654,7 @@ class TradingEngine:
             for i in range(1, len(bars)):
                 high = bars[i]['high']
                 low = bars[i]['low']
-                prev_close = bars[i-1]['close']
+                prev_close = bars[i - 1]['close']
                 tr = max(high - low, abs(high - prev_close),
                          abs(low - prev_close))
                 atr_values.append(tr)
@@ -801,7 +806,7 @@ class TradingEngine:
             for i in range(atr_period, len(bars)):
                 high = bars[i]['high']
                 low = bars[i]['low']
-                prev_close = bars[i-1]['close']
+                prev_close = bars[i - 1]['close']
                 tr = max(high - low, abs(high - prev_close),
                          abs(low - prev_close))
                 atr_values.append(tr)
@@ -810,7 +815,8 @@ class TradingEngine:
                 await self._basic_trailing_stop(position, current_price, base_activation_pips, base_trail_distance_pips)
                 return
 
-            current_atr = sum(atr_values[-10:]) / len(atr_values[-10:])  # Recent ATR
+            current_atr = sum(atr_values[-10:]) / \
+                len(atr_values[-10:])  # Recent ATR
             avg_atr = sum(atr_values) / len(atr_values)  # Average ATR
 
             # Adaptive adjustments based on volatility
@@ -1074,8 +1080,11 @@ class TradingEngine:
                     result = mt5.order_send(request)
                     if result.retcode == mt5.TRADE_RETCODE_DONE:
                         logger.info(
-                            f"Basic trailing stop updated for {position.symbol} position {position.ticket}: "
-                            f"SL moved to {new_sl:.5f} (profit: {profit_pips:.1f} pips)")
+                            f"Basic trailing stop updated for {
+                                position.symbol} position {
+                                position.ticket}: " f"SL moved to {
+                                new_sl:.5f} (profit: {
+                                profit_pips:.1f} pips)")
                     else:
                         logger.warning(
                             f"Failed to update trailing stop for "
@@ -1087,7 +1096,7 @@ class TradingEngine:
 
     async def update_take_profit(self, position) -> bool:
         """Update take profit based on new market analysis - ASYNC
-        
+
         Returns:
             bool: True if take profit was increased, False otherwise
         """
@@ -1111,7 +1120,7 @@ class TradingEngine:
             for i in range(atr_period, len(bars)):
                 high = bars[i]['high']
                 low = bars[i]['low']
-                prev_close = bars[i-1]['close']
+                prev_close = bars[i - 1]['close']
                 tr = max(high - low, abs(high - prev_close),
                          abs(low - prev_close))
                 atr_values.append(tr)
@@ -1119,13 +1128,16 @@ class TradingEngine:
             if not atr_values:
                 return
 
-            current_atr = sum(atr_values[-10:]) / len(atr_values[-10:])  # Recent ATR
+            current_atr = sum(atr_values[-10:]) / \
+                len(atr_values[-10:])  # Recent ATR
 
             # Calculate current profit in pips
             if position.type == mt5.ORDER_TYPE_BUY:
-                profit_pips = (current_price - position.price_open) / mt5.symbol_info(position.symbol).point
+                profit_pips = (current_price - position.price_open) / \
+                    mt5.symbol_info(position.symbol).point
             else:  # SELL
-                profit_pips = (position.price_open - current_price) / mt5.symbol_info(position.symbol).point
+                profit_pips = (position.price_open - current_price) / \
+                    mt5.symbol_info(position.symbol).point
 
             # Convert to pips (handle JPY pairs)
             if 'JPY' in position.symbol:
@@ -1136,10 +1148,10 @@ class TradingEngine:
             if original_sl > 0:
                 if position.type == mt5.ORDER_TYPE_BUY:
                     risk_pips = abs(original_sl - position.price_open) / \
-                                    mt5.symbol_info(position.symbol).point
+                        mt5.symbol_info(position.symbol).point
                 else:  # SELL
                     risk_pips = abs(position.price_open - original_sl) / \
-                                    mt5.symbol_info(position.symbol).point
+                        mt5.symbol_info(position.symbol).point
 
                 if 'JPY' in position.symbol:
                     risk_pips = risk_pips / 100
@@ -1148,8 +1160,10 @@ class TradingEngine:
                 # reasonable
                 if risk_pips <= 0:
                     logger.error(
-                        f"🚨 RISK CALCULATION ERROR: Negative risk {risk_pips:.1f} pips for "
-                        f"{position.symbol} position {position.ticket}")
+                        f"🚨 RISK CALCULATION ERROR: Negative risk {
+                            risk_pips:.1f} pips for " f"{
+                            position.symbol} position {
+                            position.ticket}")
                     logger.error(
                         "Skipping position management to prevent corruption")
                     return False
@@ -1213,14 +1227,18 @@ class TradingEngine:
 
                 # Only update if new TP is significantly better (at least 10
                 # pips improvement)
-                tp_improvement = abs(new_tp - current_tp) / (100 if 'JPY' in position.symbol else 0.0001)
+                tp_improvement = abs(new_tp - current_tp) / \
+                    (100 if 'JPY' in position.symbol else 0.0001)
 
                 # Add minimum difference check
                 if tp_improvement >= 10 and abs(
                         new_tp - current_tp) > symbol_info.point * 2:
                     logger.debug(
-                        f"Updating TP for {position.symbol}: current={current_tp:.5f}, new={new_tp:.5f}, "
-                        f"improvement={tp_improvement:.1f} pips")
+                        f"Updating TP for {
+                            position.symbol}: current={
+                            current_tp:.5f}, new={
+                            new_tp:.5f}, " f"improvement={
+                            tp_improvement:.1f} pips")
                     # Update take profit
                     request = {
                         "action": mt5.TRADE_ACTION_SLTP,
@@ -1234,12 +1252,18 @@ class TradingEngine:
                     result = mt5.order_send(request)
                     if result.retcode == mt5.TRADE_RETCODE_DONE:
                         logger.info(
-                            f"Take profit adjusted for {position.symbol} position {position.ticket}: "
-                            f"TP moved to {new_tp:.5f} (ATR: {current_atr:.5f}, multiplier: {base_tp_multiplier:.1f})")
+                            f"Take profit adjusted for {
+                                position.symbol} position {
+                                position.ticket}: " f"TP moved to {
+                                new_tp:.5f} (ATR: {
+                                current_atr:.5f}, multiplier: {
+                                base_tp_multiplier:.1f})")
                         return new_tp > current_tp  # Return True if TP was increased
                     else:
                         logger.warning(
-                            f"Failed to update take profit for {position.symbol}: {result.comment}")
+                            f"Failed to update take profit for {
+                                position.symbol}: {
+                                result.comment}")
                         return False
                 else:
                     logger.debug(
@@ -1285,8 +1309,10 @@ class TradingEngine:
                 if current_price >= breakeven_level and position.sl < breakeven_level:
                     new_sl = breakeven_level
                     logger.info(
-                        f"Breakeven activated for {position.symbol} BUY position {position.ticket}: "
-                        f"SL moved to {new_sl:.5f}")
+                        f"Breakeven activated for {
+                            position.symbol} BUY position {
+                            position.ticket}: " f"SL moved to {
+                            new_sl:.5f}")
             else:  # SELL
                 # For SELL: breakeven at entry - buffer
                 breakeven_level = position.price_open - \
@@ -1325,8 +1351,10 @@ class TradingEngine:
                 if trail_level > new_sl:
                     new_sl = trail_level
                     logger.info(
-                        f"Trailing stop activated for {position.symbol} BUY position {position.ticket}: "
-                        f"SL moved to {new_sl:.5f}")
+                        f"Trailing stop activated for {
+                            position.symbol} BUY position {
+                            position.ticket}: " f"SL moved to {
+                            new_sl:.5f}")
             else:  # SELL
                 trail_level = current_price + \
                     (trail_distance_pips * symbol_info.point)
@@ -1368,10 +1396,15 @@ class TradingEngine:
                 result = mt5.order_send(request)
                 if result.retcode == mt5.TRADE_RETCODE_DONE:
                     logger.info(
-                        f"Stop loss updated for {position.symbol} position {position.ticket}: SL = {new_sl:.5f}")
+                        f"Stop loss updated for {
+                            position.symbol} position {
+                            position.ticket}: SL = {
+                            new_sl:.5f}")
                 else:
                     logger.warning(
-                        f"Failed to update stop loss for {position.symbol}: {result.comment}")
+                        f"Failed to update stop loss for {
+                            position.symbol}: {
+                            result.comment}")
 
         except Exception as e:
             logger.error(f"Error applying breakeven/trailing stops: {e}")
@@ -1432,7 +1465,9 @@ class TradingEngine:
 
             if result.retcode == mt5.TRADE_RETCODE_DONE:
                 logger.info(
-                    f"Position closed: {position.symbol} ticket {position.ticket}")
+                    f"Position closed: {
+                        position.symbol} ticket {
+                        position.ticket}")
 
                 # Remove from active positions
                 if position.ticket in self.active_positions:

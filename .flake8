@@ -1,0 +1,7 @@
+[flake8]
+max-line-length = 120
+ignore = W503,E203,E501
+exclude = .git,__pycache__,venv,env,logs,data,models,mt5_ea
+per-file-ignores = 
+    */trading_engine.py: E501
+    */technical_analyzer.py: E501

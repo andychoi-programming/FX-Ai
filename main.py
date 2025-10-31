@@ -163,7 +163,7 @@ class FXAiApplication:
             # Start continuous learning thread
             if self.learning_enabled:
                 self.logger.info("Starting continuous learning thread...")
-                self.adaptive_learning.run_continuous_learning()
+                # Note: Thread is already started in AdaptiveLearningManager.__init__()
 
             # 10. Trading Engine
             self.logger.info("Initializing trading engine...")
@@ -269,10 +269,12 @@ class FXAiApplication:
                         'overall_score', 0.5)
 
                     # ML prediction
-                    ml_prediction = await self.ml_predictor.predict(symbol, bars, technical_signals)
+                    ml_prediction = await self.ml_predictor.predict(
+                        symbol, bars, technical_signals)
 
                     # Sentiment analysis
-                    sentiment_result = await self.sentiment_analyzer.analyze_sentiment(symbol)
+                    sentiment_result = await self.sentiment_analyzer.analyze_sentiment(
+                        symbol)
                     sentiment_score = sentiment_result.get(
                         'overall_score', 0.5)
 
@@ -316,7 +318,7 @@ class FXAiApplication:
                     )
 
                     # Apply adaptive minimum threshold
-                    min_threshold = 0.5  # Temporarily override adaptive threshold for testing
+                    min_threshold = 0.5  # Override adaptive threshold for testing
                     self.logger.debug(
                         f"{symbol}: threshold={min_threshold:.3f}, "
                         f"strength={signal_strength:.3f}")
@@ -342,8 +344,9 @@ class FXAiApplication:
                         # 1. Check entry timing recommendation
                         if self.adaptive_learning:
                             current_hour = datetime.now().hour
-                            timing_recommendation = self.adaptive_learning.get_entry_timing_recommendation(
-                                symbol, current_hour)
+                            timing_recommendation = (
+                                self.adaptive_learning.get_entry_timing_recommendation(
+                                    symbol, current_hour))
                             if not timing_recommendation['recommended']:
                                 self.logger.debug(
                                     f"{symbol}: Skipping - poor timing "
@@ -360,8 +363,9 @@ class FXAiApplication:
                                 'spread': current_data.get(
                                     'spread', 0)
                             }
-                            should_enter = self.adaptive_learning.should_enter_based_on_filters(
-                                symbol, current_conditions)
+                            should_enter = (
+                                self.adaptive_learning.should_enter_based_on_filters(
+                                    symbol, current_conditions))
                             if not should_enter:
                                 self.logger.debug(
                                     f"{symbol}: Skipping - entry filter triggered")
@@ -388,7 +392,8 @@ class FXAiApplication:
                                 hours_ahead=24)
                             if events_to_avoid:
                                 self.logger.debug(
-                                    f"{symbol}: Skipping - upcoming high-impact events: {events_to_avoid}")
+                                    f"{symbol}: Skipping - upcoming high-impact events: "
+                                    f"{events_to_avoid}")
                                 continue
 
                         # 5. Apply optimized technical indicator parameters
@@ -399,7 +404,8 @@ class FXAiApplication:
                                 # Update technical analyzer with optimized
                                 # parameters
                                 for param_key, param_value in optimized_tech_params.items():
-                                    # This would require extending technical_analyzer to accept dynamic params
+                                    # This would require extending technical_analyzer to accept
+                                    # dynamic params
                                     # For now, just log the optimized
                                     # parameters
                                     self.logger.debug(
@@ -407,24 +413,26 @@ class FXAiApplication:
 
                         # 6. Apply optimized fundamental weights
                         if self.adaptive_learning:
-                            optimized_fundamental_weights = self.adaptive_learning.get_optimized_fundamental_weights()
+                            optimized_fundamental_weights = (
+                                self.adaptive_learning.get_optimized_fundamental_weights())
                             if optimized_fundamental_weights:
                                 # Update fundamental collector with optimized weights
                                 # This would require extending
                                 # fundamental_collector to accept dynamic
                                 # weights
                                 self.logger.debug(
-                                    f"{symbol}: Using optimized fundamental weights: {optimized_fundamental_weights}")
+                                    f"{symbol}: Using optimized fundamental weights: "
+                                    f"{optimized_fundamental_weights}")
 
                         # 7. Apply optimized sentiment parameters
-                        if self.adaptive_learning:
-                            optimized_sentiment_params = self.adaptive_learning.get_optimized_sentiment_params()
-                            if optimized_sentiment_params:
-                                # Update sentiment analyzer with optimized parameters
-                                # This would require extending
-                                # sentiment_analyzer to accept dynamic params
-                                self.logger.debug(
-                                    f"{symbol}: Using optimized sentiment params: {optimized_sentiment_params}")
+                        # TODO: Implement get_optimized_sentiment_params method in AdaptiveLearningManager
+                        # if self.adaptive_learning:
+                        #     optimized_sentiment_params = self.adaptive_learning.get_optimized_sentiment_params()
+                        #     if optimized_sentiment_params:
+                        #         # Update sentiment analyzer with optimized parameters
+                        #         # This would require extending sentiment_analyzer to accept dynamic params
+                        #         self.logger.debug(
+                        #             f"{symbol}: Using optimized sentiment params: {optimized_sentiment_params}")
 
                         # 8. Check interest rate impact expectations
                         if self.adaptive_learning:
@@ -448,7 +456,8 @@ class FXAiApplication:
 
                                 if base_corr > 0.7 and quote_corr > 0.7:
                                     self.logger.debug(
-                                        f"{symbol}: Skipping - high interest rate correlation ({base_corr:.2f}, {quote_corr:.2f})")
+                                        f"{symbol}: Skipping - high interest rate "
+                                        f"correlation ({base_corr:.2f}, {quote_corr:.2f})")
                                     continue
 
                         # ===== END NEW LEARNING FEATURES =====
@@ -559,18 +568,21 @@ class FXAiApplication:
 
                             if original_tp_distance != take_profit_distance:
                                 self.logger.info(
-                                    f"{symbol} take profit adjusted from "
-                                    f"{original_tp_distance:.5f} to "
-                                    f"{take_profit_distance:.5f} "
-                                    f"(min {min_tp_distance:.5f} for 1:3 ratio)")
+                                    f"{symbol} take profit adjusted from " f"{
+                                        original_tp_distance:.5f} to " f"{
+                                        take_profit_distance:.5f} " f"(min {
+                                        min_tp_distance:.5f} for 1:3 ratio)")
 
                             if ml_prediction.get('direction') == 1:  # BUY
                                 take_profit = entry_price + take_profit_distance
                             else:  # SELL
                                 take_profit = entry_price - take_profit_distance
                             self.logger.debug(
-                                f"{symbol} take profit: ATR={atr_value:.5f}, multiplier={tp_atr_multiplier:.1f}, "
-                                f"distance={take_profit_distance:.5f}, level={take_profit:.5f}")
+                                f"{symbol} take profit: ATR={
+                                    atr_value:.5f}, multiplier={
+                                    tp_atr_multiplier:.1f}, " f"distance={
+                                    take_profit_distance:.5f}, level={
+                                    take_profit:.5f}")
                         else:
                             # Fallback take profit: 6% of entry price (3x the
                             # 2% stop loss fallback)
@@ -585,12 +597,13 @@ class FXAiApplication:
                             else:  # SELL
                                 take_profit = entry_price - take_profit_distance
                             self.logger.debug(
-                                f"{symbol} fallback take profit: 6% of entry = "
-                                f"{take_profit_distance:.5f}, "
-                                f"level={take_profit:.5f}")
+                                f"{symbol} fallback take profit: 6% of entry = " f"{
+                                    take_profit_distance:.5f}, " f"level={
+                                    take_profit:.5f}")
 
                         # Format take profit for logging
-                        tp_display = f"{take_profit:.5f}" if take_profit is not None else "None"
+                        tp_display = f"{
+                            take_profit:.5f}" if take_profit is not None else "None"
 
                         # Validate risk-reward ratio before proceeding
                         if stop_loss is not None and take_profit is not None:
@@ -602,9 +615,8 @@ class FXAiApplication:
 
                             if actual_ratio < 2.9:
                                 self.logger.debug(
-                                    f"{symbol} {action} rejected: insufficient "
-                                    f"reward ratio {actual_ratio:.2f}:1 "
-                                    f"(required: 2.9:1)")
+                                    f"{symbol} {action} rejected: insufficient " f"reward ratio {
+                                        actual_ratio:.2f}:1 " f"(required: 2.9:1)")
                                 continue  # Skip this trade
 
                             self.logger.debug(
@@ -624,18 +636,18 @@ class FXAiApplication:
                             'technical_score': technical_score,
                             'sentiment_score': sentiment_score,
                             'timestamp': datetime.now(),
-                            'adaptive_params': adaptive_params
-                        }
+                            'adaptive_params': adaptive_params}
                         signals.append(signal)
 
                         self.logger.info(
-                            f"Signal generated for {symbol}: {signal['action']} "
-                            f"(strength: {signal_strength:.3f}, "
-                            f"threshold: {min_threshold:.3f}) "
-                            f"Entry: {entry_price:.5f}, "
-                            f"SL: {stop_loss:.5f} ({sl_atr_multiplier:.1f}x ATR), "
-                            f"TP: {tp_display} ({tp_atr_multiplier:.1f}x ATR)"
-                        )
+                            f"Signal generated for {symbol}: {
+                                signal['action']} " f"(strength: {
+                                signal_strength:.3f}, " f"threshold: {
+                                min_threshold:.3f}) " f"Entry: {
+                                entry_price:.5f}, " f"SL: {
+                                stop_loss:.5f} ({
+                                sl_atr_multiplier:.1f}x ATR), " f"TP: {tp_display} ({
+                                tp_atr_multiplier:.1f}x ATR)")
 
                 # 4. Execute trades with risk management
                 for signal in signals:
@@ -663,15 +675,18 @@ class FXAiApplication:
                     # Check risk limits with adaptive multiplier
                     risk_check = self.risk_manager.can_trade(signal['symbol'])
                     self.logger.info(
-                        f"Risk check for {signal['symbol']} {signal['action']}: {risk_check}")
+                        f"Risk check for {
+                            signal['symbol']} {
+                            signal['action']}: {risk_check}")
                     if risk_check:
                         # Check free margin percentage
                         account_info = mt5.account_info()
                         if account_info and account_info.margin_free < 0.20 * account_info.equity:
                             self.logger.warning(
-                                f"Free margin ${account_info.margin_free:.2f} is "
-                                f"less than 20% of equity ${account_info.equity:.2f}, "
-                                f"skipping trade for {signal['symbol']}")
+                                f"Free margin ${
+                                    account_info.margin_free:.2f} is " f"less than 20% of equity ${
+                                    account_info.equity:.2f}, " f"skipping trade for {
+                                    signal['symbol']}")
                             continue
 
                         # Calculate stop loss pips from signal
@@ -688,7 +703,8 @@ class FXAiApplication:
                             point = symbol_info.point
                             digits = symbol_info.digits
                             # Determine pip size correctly for each symbol type
-                            if 'XAU' in signal['symbol'] or 'XAG' in signal['symbol'] or 'GOLD' in signal['symbol']:
+                            metal_symbols = ['XAU', 'XAG', 'GOLD']
+                            if any(metal in signal['symbol'] for metal in metal_symbols):
                                 # Metals: 1 pip = 10 points (0.1 for 2-digit
                                 # symbols)
                                 pip_size = point * 10
@@ -710,10 +726,12 @@ class FXAiApplication:
                             'risk_management', {}).get('minimum_sl_pips', 25)
 
                         # Use appropriate minimum SL for metals with $50 risk
-                        if 'XAU' in signal['symbol'] or 'XAG' in signal['symbol'] or 'GOLD' in signal['symbol']:
+                        metal_symbols = ['XAU', 'XAG', 'GOLD']
+                        if any(metal in signal['symbol'] for metal in metal_symbols):
                             # With $50 risk and 0.01 min lot, we can use reasonable SL
                             # 0.01 lots * pip_value * pips = $50
-                            # For XAUUSD: pip_value ≈ $10, so pips = 50/10 = 5, but we need minimum for stability
+                            # For XAUUSD: pip_value ≈ $10, so pips = 50/10 = 5, but we need
+                            # minimum for stability
                             # At least 50 pips for metals with $50 risk
                             min_sl_pips = max(min_sl_pips, 50)
 
@@ -723,7 +741,8 @@ class FXAiApplication:
                         # volatile symbols
                         min_lot_size = self.config.get(
                             'trading', {}).get('min_lot_size', 0.01)
-                        if 'XAU' in signal['symbol'] or 'XAG' in signal['symbol'] or 'GOLD' in signal['symbol']:
+                        metal_symbols = ['XAU', 'XAG', 'GOLD']
+                        if any(metal in signal['symbol'] for metal in metal_symbols):
                             # Calculate risk with minimum lot size
                             min_lot_risk = self.risk_manager.calculate_risk_for_lot_size(
                                 signal['symbol'], min_lot_size, stop_loss_pips)
@@ -732,22 +751,26 @@ class FXAiApplication:
                                 'trading', {}).get('risk_per_trade', 50.0)
                             if min_lot_risk > max_risk_limit * 1.05:  # Allow 5% tolerance
                                 self.logger.warning(
-                                    f"Skipping {signal['symbol']} - even minimum lot size {min_lot_size} "
-                                    f"would risk ${min_lot_risk:.2f} (limit: ${max_risk_limit:.2f})"
+                                    f"Skipping {signal['symbol']} - even minimum lot size "
+                                    f"{min_lot_size} would risk ${min_lot_risk:.2f} "
+                                    f"(limit: ${max_risk_limit:.2f})"
                                 )
                                 continue
 
                         # Calculate position size with risk amount adjusted for
                         # metals
                         base_risk_amount = 50  # Fixed $50 risk per trade for forex
-                        if 'XAU' in signal['symbol'] or 'XAG' in signal['symbol'] or 'GOLD' in signal['symbol']:
+                        metal_symbols = ['XAU', 'XAG', 'GOLD']
+                        if any(metal in signal['symbol'] for metal in metal_symbols):
                             risk_amount = base_risk_amount  # Keep $50 risk for metals
                             self.logger.debug(
-                                f"Metal detected: {signal['symbol']}, using $50 risk")
+                                f"Metal detected: {
+                                    signal['symbol']}, using $50 risk")
                         else:
                             risk_amount = base_risk_amount
                             self.logger.debug(
-                                f"Forex detected: {signal['symbol']}, using $50 risk")
+                                f"Forex detected: {
+                                    signal['symbol']}, using $50 risk")
 
                         position_size = self.risk_manager.calculate_position_size(
                             signal['symbol'], stop_loss_pips, risk_amount)
@@ -767,7 +790,9 @@ class FXAiApplication:
                             stop_loss=signal.get('stop_loss'),
                             # Now using calculated take profit
                             take_profit=signal.get('take_profit'),
-                            comment=f"FX-Ai {signal['action']} {signal_strength:.3f}"
+                            comment=f"FX-Ai {
+                                signal['action']} {
+                                signal_strength:.3f}"
                         )
 
                         if trade_result.get('success', False):
@@ -787,8 +812,7 @@ class FXAiApplication:
                                     'technical_score': signal['technical_score'],
                                     'sentiment_score': signal['sentiment_score'],
                                     'model_version': self.ml_predictor.get_model_version(
-                                        signal['symbol'])
-                                }
+                                        signal['symbol'])}
 
                                 # Start monitoring thread for this trade
                                 threading.Thread(
@@ -811,15 +835,23 @@ class FXAiApplication:
                     performance = self.adaptive_learning.get_performance_summary()
 
                     self.logger.info(
-                        f"Performance Update - Win Rate: {performance['performance_metrics'].get('overall_win_rate', 0):.2%}, "
-                        f"Total Trades: {performance['total_trades']}")
+                        f"Performance Update - Win Rate: {
+                            performance['performance_metrics'].get(
+                                'overall_win_rate',
+                                0):.2%}, " f"Total Trades: {
+                            performance['total_trades']}")
 
                     # Log adapted weights
                     self.logger.info(
-                        f"Current Signal Weights: {json.dumps(performance['signal_weights'], indent=2)}")
+                        f"Current Signal Weights: {
+                            json.dumps(
+                                performance['signal_weights'],
+                                indent=2)}")
                     self.logger.info(
-                        f"Adaptive Parameters: "
-                        f"{json.dumps(performance['adaptive_params'], indent=2)}")
+                        f"Adaptive Parameters: " f"{
+                            json.dumps(
+                                performance['adaptive_params'],
+                                indent=2)}")
 
                     self.session_stats['models_retrained'] += 1
 
@@ -863,8 +895,10 @@ class FXAiApplication:
 
             # Log symbol-specific parameters
             self.logger.info(
-                f"Monitoring {symbol} with optimal holding: {optimal_holding_hours:.1f}h "
-                f"(max: {max_holding_minutes}min, confidence: {confidence_score:.2f})")
+                f"Monitoring {symbol} with optimal holding: "
+                f"{optimal_holding_hours:.1f}h "
+                f"(max: {max_holding_minutes}min, confidence: "
+                f"{confidence_score:.2f})")
 
             # Wait for trade to complete
             while True:
@@ -1008,7 +1042,8 @@ class FXAiApplication:
                 return
 
             current_time = datetime.now().time()
-            close_time = time(17, 0)  # 5 PM ET - End of NY forex session
+            # 11:30 PM - Latest time for trades to close
+            close_time = time(23, 30)
 
             # Only close once per day - check if we haven't already closed
             # today
@@ -1134,14 +1169,21 @@ class FXAiApplication:
             self.logger.info(
                 f"Models Retrained: {self.session_stats['models_retrained']}")
             self.logger.info(
-                f"Parameters Optimized: {self.session_stats['parameters_optimized']}")
+                f"Parameters Optimized: {
+                    self.session_stats['parameters_optimized']}")
 
             if self.adaptive_learning:
                 performance = self.adaptive_learning.get_performance_summary()
                 self.logger.info(
-                    f"Final Signal Weights: {json.dumps(performance['signal_weights'], indent=2)}")
+                    f"Final Signal Weights: {
+                        json.dumps(
+                            performance['signal_weights'],
+                            indent=2)}")
                 self.logger.info(
-                    f"Final Adaptive Parameters: {json.dumps(performance['adaptive_params'], indent=2)}")
+                    f"Final Adaptive Parameters: {
+                        json.dumps(
+                            performance['adaptive_params'],
+                            indent=2)}")
 
         self.logger.info("=" * 60)
 
