@@ -21,7 +21,7 @@ class ClockSynchronizer:
     Maintains accurate time alignment between local system, NTP servers, and MT5 platform.
     """
 
-    def __init__(self, mt5_connector=None, sync_interval: int = 300, max_drift: float = 1.0):
+    def __init__(self, mt5_connector=None, sync_interval: int = 300, max_drift: float = 1.0, mt5_timezone_tolerance: float = 43200.0):
         """
         Initialize clock synchronizer
 
@@ -29,10 +29,13 @@ class ClockSynchronizer:
             mt5_connector: MT5 connector instance for server time checks
             sync_interval: Seconds between synchronization checks (default: 5 minutes)
             max_drift: Maximum allowed time drift in seconds before correction (default: 1.0s)
+            mt5_timezone_tolerance: Maximum allowed MT5 time difference in seconds (default: 12 hours)
+                                   since MT5 might report times in broker's local timezone
         """
         self.mt5_connector = mt5_connector
         self.sync_interval = sync_interval
         self.max_drift = max_drift
+        self.mt5_timezone_tolerance = mt5_timezone_tolerance
 
         # NTP servers (reliable public NTP servers)
         self.ntp_servers = [
@@ -121,25 +124,29 @@ class ClockSynchronizer:
                     drift_mt5 = abs((results['local_time'] - mt5_time).total_seconds())
                     results['drift_mt5'] = drift_mt5
 
-                    if drift_mt5 > self.max_drift:
-                        logger.warning(f"MT5 time drift detected: {drift_mt5:.3f}s")
+                    # Check if MT5 drift exceeds timezone tolerance (MT5 might be in different timezone)
+                    if drift_mt5 > self.mt5_timezone_tolerance:
+                        logger.warning(f"MT5 time significantly different (possible timezone issue): {drift_mt5:.1f}s")
+                    elif drift_mt5 > self.max_drift:
+                        logger.info(f"MT5 time drift detected: {drift_mt5:.3f}s")
 
-            # Determine overall sync status
-            max_drift = max(
-                results['drift_ntp'] or 0,
-                results['drift_mt5'] or 0
-            )
+            # Determine overall sync status - based primarily on NTP
+            # MT5 time is used for informational purposes only since it might be in different timezone
+            ntp_drift = results['drift_ntp'] or float('inf')
+            results['is_synced'] = ntp_drift <= self.max_drift
 
-            results['is_synced'] = max_drift <= self.max_drift
+            # Store the effective drift (NTP only)
+            self.time_drift = ntp_drift if ntp_drift != float('inf') else 0
             self.is_synchronized = results['is_synced']
             self.last_sync_time = results['timestamp']
-            self.time_drift = max_drift
 
             # Log sync status
             if results['is_synced']:
-                logger.info(f"Clock synchronized - Max drift: {max_drift:.3f}s")
+                drift_msg = f"NTP drift: {ntp_drift:.3f}s" if ntp_drift != float('inf') else "NTP unavailable"
+                logger.info(f"Clock synchronized - {drift_msg}")
             else:
-                logger.warning(f"Clock out of sync - Max drift: {max_drift:.3f}s")
+                drift_msg = f"NTP drift: {ntp_drift:.3f}s" if ntp_drift != float('inf') else "NTP unavailable"
+                logger.warning(f"Clock out of sync - {drift_msg}")
 
         except Exception as e:
             logger.error(f"Sync check failed: {e}")
@@ -193,23 +200,18 @@ class ClockSynchronizer:
 
     def get_synced_time(self) -> datetime:
         """
-        Get the most accurate available time (NTP > MT5 > Local)
+        Get the most accurate available time (NTP > Local, MT5 used only for validation)
 
         Returns:
             Most accurate UTC datetime available
         """
-        # Try NTP first
+        # Try NTP first (most reliable)
         ntp_time = self._get_ntp_time()
         if ntp_time:
             return ntp_time
 
-        # Fall back to MT5 server time
-        if self.mt5_connector:
-            mt5_time = self.mt5_connector.get_server_time()
-            if mt5_time:
-                return mt5_time
-
-        # Last resort: local system time
+        # Fall back to local system time
+        # Note: MT5 time not used here as it might be in different timezone
         return datetime.now(timezone.utc)
 
     def get_sync_status(self) -> Dict:
@@ -224,6 +226,7 @@ class ClockSynchronizer:
             'last_sync_time': self.last_sync_time,
             'time_drift': self.time_drift,
             'max_allowed_drift': self.max_drift,
+            'mt5_timezone_tolerance': self.mt5_timezone_tolerance,
             'sync_interval': self.sync_interval,
             'thread_running': self.sync_thread.is_alive() if self.sync_thread else False
         }
