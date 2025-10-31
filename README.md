@@ -31,6 +31,7 @@ I've created the complete FX-Ai trading system with the following components:
 - [File Locations Summary](#file-locations-summary)
 - [System Features](#system-features)
 - [Risk Management](#risk-management)
+- [Clock Synchronization](#clock-synchronization)
 - [Trading Pairs](#trading-pairs)
 - [System Workflow](#system-workflow)
 - [Expected Performance](#expected-performance)
@@ -723,7 +724,7 @@ This comprehensive diagnostic tool will test:
 - Historical data access
 - File system permissions for MT5-EA communication
 
-### Step 4: Start Trading
+### 5️⃣ Start Trading
 
 ```bash
 python main.py
@@ -749,6 +750,7 @@ python main.py
 ✅ Sentiment analysis
 ✅ Fundamental data collection
 ✅ Risk management
+✅ Clock synchronization (NTP + MT5)
 ✅ MT5 communication bridge
 ✅ Comprehensive logging
 
@@ -776,7 +778,7 @@ FX-Ai Python ←→ CSV Files ←→ MT5 EA
 - **fxai_signals.txt** - Trading signals from Python
 - **FXAi_MarketData.csv** - Real-time market prices
 - **FXAi_Status.csv** - EA status and account info
-- **FXAi_TimeSync.csv** - Time synchronization data
+- **FXAi_TimeSync.csv** - Time synchronization data (handled internally by Python clock sync)
 
 ### Trading Workflow
 
@@ -938,6 +940,7 @@ Risk_Config.bat
 ```
 
 The interactive configuration allows you to:
+
 - View current risk settings
 - Modify risk dollar amount per trade
 - Adjust maximum daily loss limit
@@ -945,6 +948,35 @@ The interactive configuration allows you to:
 - Save changes to configuration file
 
 **⚠️ Important**: Always test risk changes on a demo account first!
+
+## Clock Synchronization
+
+The FX-Ai system maintains accurate time synchronization between:
+
+- **Local System Time** - Your computer clock
+- **NTP Network Time** - Synchronized with internet time servers
+- **MT5 Server Time** - Broker platform time
+
+### Features
+
+- **Automatic NTP Sync**: Connects to reliable NTP servers (pool.ntp.org, time.google.com, etc.)
+- **MT5 Time Validation**: Cross-checks with MT5 server time for accuracy
+- **Background Monitoring**: Continuous time drift monitoring every 5 minutes
+- **Drift Detection**: Alerts when time drift exceeds 1 second threshold
+- **Fallback System**: Uses best available time source (NTP > MT5 > Local)
+
+### Synchronization Status
+
+The system automatically starts time synchronization when FX-Ai begins and runs continuously in the background. Time accuracy is critical for:
+
+- Precise trade timing
+- Signal execution timing
+- Historical data alignment
+- Multi-timeframe analysis
+
+### Manual Time Check
+
+You can force a time synchronization check by accessing the clock synchronizer through the main application logs, which will show sync status and any drift warnings.
 
 ## Trading Pairs
 

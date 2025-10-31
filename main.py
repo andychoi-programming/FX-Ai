@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from core.mt5_connector import MT5Connector
 from core.trading_engine import TradingEngine
 from core.risk_manager import RiskManager
+from core.clock_sync import ClockSynchronizer
 from data.market_data_manager import MarketDataManager
 from analysis.fundamental_analyzer import FundamentalAnalyzer as FundamentalDataCollector
 from analysis.technical_analyzer import TechnicalAnalyzer
@@ -87,7 +88,12 @@ class FXAiApplication:
             if not self.mt5.connect():
                 raise Exception("Failed to connect to MT5")
             
-            # 2. Risk Manager
+            # 2. Clock Synchronization
+            self.logger.info("Initializing clock synchronizer...")
+            self.clock_sync = ClockSynchronizer(self.mt5)
+            self.clock_sync.start_sync_thread()
+            
+            # 3. Risk Manager
             self.logger.info("Initializing risk manager...")
             self.risk_manager = RiskManager(self.config)
             
@@ -111,17 +117,11 @@ class FXAiApplication:
             self.logger.info("Initializing ML predictor...")
             self.ml_predictor = MLPredictor(self.config)
             
-            # Models will be loaded on-demand during prediction
+            # 9. Adaptive Learning Manager
+            self.logger.info("Initializing Adaptive Learning Manager...")
+            self.adaptive_learning = AdaptiveLearningManager(self.config)
             
-            # 8. Adaptive Learning Manager (NEW)
-            if self.learning_enabled:
-                self.logger.info("Initializing Adaptive Learning Manager...")
-                self.adaptive_learning = AdaptiveLearningManager(self.config, mt5_connector=self.mt5)
-                self.logger.info("  Adaptive Learning enabled - System will improve over time")
-            else:
-                self.adaptive_learning = None
-            
-            # 11. Trading Engine with adaptive components
+            # 10. Trading Engine
             self.logger.info("Initializing trading engine...")
             self.trading_engine = TradingEngine(
                 self.mt5,
@@ -748,6 +748,10 @@ class FXAiApplication:
                     self.logger.warning('No close_all_positions method on trading_engine')
             except Exception as e:
                 self.logger.error(f"Error scheduling close_all_positions on shutdown: {e}")
+        
+        # Stop clock synchronization
+        if self.clock_sync:
+            self.clock_sync.stop_sync_thread()
         
         # Disconnect from MT5
         if self.mt5:
