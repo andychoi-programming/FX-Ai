@@ -216,6 +216,20 @@ class AdaptiveLearningManager:
             )
         ''')
 
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS symbol_holding_times (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT UNIQUE,
+                optimal_holding_hours REAL,
+                max_holding_minutes INTEGER,
+                min_holding_minutes INTEGER,
+                avg_profit_by_duration TEXT,  -- JSON string of duration buckets and avg profit
+                total_trades INTEGER,
+                last_updated DATETIME,
+                confidence_score REAL
+            )
+        ''')
+
         conn.commit()
         conn.close()
 
@@ -232,6 +246,9 @@ class AdaptiveLearningManager:
 
         # Signal weight adjustment
         schedule.every(4).hours.do(self.adjust_signal_weights)
+
+        # Symbol-specific holding time optimization
+        schedule.every(24).hours.do(self.update_all_symbol_holding_times)
 
         # Clean old data
         schedule.every().day.at("00:00").do(self.clean_old_data)
@@ -955,6 +972,266 @@ class AdaptiveLearningManager:
             return avg_return / volatility
         except Exception:
             return 0.0
+
+    def analyze_symbol_holding_performance(self, symbol: str, min_trades: int = 20) -> Optional[dict]:
+        """Analyze trade performance by holding duration for a specific symbol"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Get trades for this symbol
+            cursor.execute('''
+                SELECT duration_minutes, profit_pct
+                FROM trades
+                WHERE symbol = ? AND profit_pct IS NOT NULL
+                ORDER BY timestamp DESC
+                LIMIT 500
+            ''', (symbol,))
+
+            trades = cursor.fetchall()
+            conn.close()
+
+            if len(trades) < min_trades:
+                return None
+
+            # Group trades by duration buckets (in hours)
+            duration_buckets = {
+                '0-1h': [], '1-2h': [], '2-3h': [], '3-4h': [], '4-6h': [],
+                '6-8h': [], '8-12h': [], '12-24h': [], '24h+': []
+            }
+
+            for duration_min, profit_pct in trades:
+                duration_hours = duration_min / 60.0
+
+                if duration_hours < 1:
+                    duration_buckets['0-1h'].append(profit_pct)
+                elif duration_hours < 2:
+                    duration_buckets['1-2h'].append(profit_pct)
+                elif duration_hours < 3:
+                    duration_buckets['2-3h'].append(profit_pct)
+                elif duration_hours < 4:
+                    duration_buckets['3-4h'].append(profit_pct)
+                elif duration_hours < 6:
+                    duration_buckets['4-6h'].append(profit_pct)
+                elif duration_hours < 8:
+                    duration_buckets['6-8h'].append(profit_pct)
+                elif duration_hours < 12:
+                    duration_buckets['8-12h'].append(profit_pct)
+                elif duration_hours < 24:
+                    duration_buckets['12-24h'].append(profit_pct)
+                else:
+                    duration_buckets['24h+'].append(profit_pct)
+
+            # Calculate average profit for each bucket (only if bucket has enough trades)
+            avg_profit_by_duration = {}
+            for bucket, profits in duration_buckets.items():
+                if len(profits) >= 5:  # Minimum 5 trades per bucket
+                    avg_profit_by_duration[bucket] = sum(profits) / len(profits)
+
+            return {
+                'symbol': symbol,
+                'total_trades': len(trades),
+                'avg_profit_by_duration': avg_profit_by_duration,
+                'best_bucket': max(avg_profit_by_duration.items(), key=lambda x: x[1]) if avg_profit_by_duration else None
+            }
+
+        except Exception as e:
+            logger.error(f"Error analyzing symbol holding performance for {symbol}: {e}")
+            return None
+
+    def calculate_optimal_holding_times(self, symbol: str) -> Optional[dict]:
+        """Calculate optimal holding times for a specific symbol"""
+        try:
+            analysis = self.analyze_symbol_holding_performance(symbol)
+            if not analysis or not analysis['best_bucket']:
+                return None
+
+            best_bucket = analysis['best_bucket'][0]
+            best_avg_profit = analysis['best_bucket'][1]
+
+            # Convert bucket to optimal holding hours
+            bucket_ranges = {
+                '0-1h': (0.5, 60, 15),    # optimal: 0.5h, max: 1h, min: 15min
+                '1-2h': (1.5, 120, 30),   # optimal: 1.5h, max: 2h, min: 30min
+                '2-3h': (2.5, 180, 60),   # optimal: 2.5h, max: 3h, min: 1h
+                '3-4h': (3.5, 240, 90),   # optimal: 3.5h, max: 4h, min: 1.5h
+                '4-6h': (5.0, 360, 120),  # optimal: 5h, max: 6h, min: 2h
+                '6-8h': (7.0, 480, 180),  # optimal: 7h, max: 8h, min: 3h
+                '8-12h': (10.0, 720, 240), # optimal: 10h, max: 12h, min: 4h
+                '12-24h': (18.0, 1440, 360), # optimal: 18h, max: 24h, min: 6h
+                '24h+': (36.0, 2880, 720)  # optimal: 36h, max: 48h, min: 12h
+            }
+
+            if best_bucket in bucket_ranges:
+                optimal_hours, max_minutes, min_minutes = bucket_ranges[best_bucket]
+
+                # Calculate confidence score based on profit difference and sample size
+                all_profits = list(analysis['avg_profit_by_duration'].values())
+                if len(all_profits) > 1:
+                    profit_std = np.std(all_profits)
+                    confidence = min(1.0, best_avg_profit / (profit_std + 0.01))
+                else:
+                    confidence = 0.5
+
+                return {
+                    'symbol': symbol,
+                    'optimal_holding_hours': optimal_hours,
+                    'max_holding_minutes': max_minutes,
+                    'min_holding_minutes': min_minutes,
+                    'best_bucket': best_bucket,
+                    'best_avg_profit': best_avg_profit,
+                    'total_trades': analysis['total_trades'],
+                    'confidence_score': confidence,
+                    'avg_profit_by_duration': json.dumps(analysis['avg_profit_by_duration'])
+                }
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error calculating optimal holding times for {symbol}: {e}")
+            return None
+
+    def update_symbol_holding_times(self, symbol: str):
+        """Update optimal holding times for a symbol in the database"""
+        try:
+            optimal_times = self.calculate_optimal_holding_times(symbol)
+            if not optimal_times:
+                return
+
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Insert or replace symbol holding times
+            cursor.execute('''
+                INSERT OR REPLACE INTO symbol_holding_times
+                (symbol, optimal_holding_hours, max_holding_minutes, min_holding_minutes,
+                 avg_profit_by_duration, total_trades, last_updated, confidence_score)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                optimal_times['symbol'],
+                optimal_times['optimal_holding_hours'],
+                optimal_times['max_holding_minutes'],
+                optimal_times['min_holding_minutes'],
+                optimal_times['avg_profit_by_duration'],
+                optimal_times['total_trades'],
+                datetime.now(),
+                optimal_times['confidence_score']
+            ))
+
+            conn.commit()
+            conn.close()
+
+            logger.info(f"Updated optimal holding times for {symbol}: {optimal_times['optimal_holding_hours']}h "
+                       f"(confidence: {optimal_times['confidence_score']:.2f})")
+
+        except Exception as e:
+            logger.error(f"Error updating symbol holding times for {symbol}: {e}")
+
+    def get_symbol_optimal_holding_time(self, symbol: str) -> dict:
+        """Get optimal holding times for a specific symbol"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT optimal_holding_hours, max_holding_minutes, min_holding_minutes,
+                       confidence_score, total_trades
+                FROM symbol_holding_times
+                WHERE symbol = ?
+            ''', (symbol,))
+
+            result = cursor.fetchone()
+            conn.close()
+
+            if result:
+                optimal_hours, max_minutes, min_minutes, confidence, total_trades = result
+                return {
+                    'optimal_holding_hours': optimal_hours,
+                    'max_holding_minutes': max_minutes,
+                    'min_holding_minutes': min_minutes,
+                    'confidence_score': confidence,
+                    'total_trades': total_trades,
+                    'found': True
+                }
+            else:
+                # Return default global parameters if no symbol-specific data
+                return {
+                    'optimal_holding_hours': self.adaptive_params.get('optimal_holding_hours', 4.0),
+                    'max_holding_minutes': self.adaptive_params.get('max_holding_minutes', 480),
+                    'min_holding_minutes': self.adaptive_params.get('min_holding_minutes', 15),
+                    'confidence_score': 0.0,
+                    'total_trades': 0,
+                    'found': False
+                }
+
+        except Exception as e:
+            logger.error(f"Error getting symbol optimal holding time for {symbol}: {e}")
+            return {
+                'optimal_holding_hours': self.adaptive_params.get('optimal_holding_hours', 4.0),
+                'max_holding_minutes': self.adaptive_params.get('max_holding_minutes', 480),
+                'min_holding_minutes': self.adaptive_params.get('min_holding_minutes', 15),
+                'confidence_score': 0.0,
+                'total_trades': 0,
+                'found': False
+            }
+
+    def update_all_symbol_holding_times(self):
+        """Update optimal holding times for all symbols with sufficient trade history"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Get all symbols with at least 20 trades
+            cursor.execute('''
+                SELECT symbol, COUNT(*) as trade_count
+                FROM trades
+                GROUP BY symbol
+                HAVING trade_count >= 20
+            ''')
+
+            symbols = cursor.fetchall()
+            conn.close()
+
+            for symbol, trade_count in symbols:
+                logger.info(f"Updating holding times for {symbol} ({trade_count} trades)")
+                self.update_symbol_holding_times(symbol)
+
+        except Exception as e:
+            logger.error(f"Error updating all symbol holding times: {e}")
+
+    def get_all_symbol_holding_times(self) -> dict:
+        """Get optimal holding times for all symbols"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT symbol, optimal_holding_hours, max_holding_minutes, min_holding_minutes,
+                       confidence_score, total_trades, last_updated
+                FROM symbol_holding_times
+                ORDER BY confidence_score DESC, total_trades DESC
+            ''')
+
+            results = cursor.fetchall()
+            conn.close()
+
+            symbol_times = {}
+            for row in results:
+                symbol, opt_hours, max_min, min_min, confidence, trades, last_updated = row
+                symbol_times[symbol] = {
+                    'optimal_holding_hours': opt_hours,
+                    'max_holding_minutes': max_min,
+                    'min_holding_minutes': min_min,
+                    'confidence_score': confidence,
+                    'total_trades': trades,
+                    'last_updated': last_updated
+                }
+
+            return symbol_times
+
+        except Exception as e:
+            logger.error(f"Error getting all symbol holding times: {e}")
+            return {}
 
     def get_performance_summary(self) -> dict:
         """Get performance summary with current weights and parameters"""
