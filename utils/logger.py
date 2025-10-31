@@ -8,11 +8,46 @@ import logging.handlers
 import os
 import sys
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
+
+class MT5TimeFormatter(logging.Formatter):
+    """
+    Custom logging formatter that uses MT5 server time instead of local time
+    """
+
+    def __init__(self, fmt=None, datefmt=None, mt5_connector=None):
+        super().__init__(fmt, datefmt)
+        self.mt5_connector = mt5_connector
+
+    def formatTime(self, record, datefmt=None):
+        """
+        Override formatTime to use MT5 server time
+        """
+        if self.mt5_connector:
+            try:
+                # Get MT5 server time
+                mt5_time = self.mt5_connector.get_server_time()
+                if mt5_time:
+                    # Format according to datefmt or default
+                    if datefmt:
+                        return mt5_time.strftime(datefmt)
+                    else:
+                        return mt5_time.strftime('%Y-%m-%d %H:%M:%S')
+            except Exception as e:
+                # If MT5 time fails, log the error and fall back to local time
+                print(f"Warning: Failed to get MT5 time for logging: {e}")
+
+        # Fallback to local time if MT5 connector not available or fails
+        ct = datetime.fromtimestamp(record.created)
+        if datefmt:
+            return ct.strftime(datefmt)
+        else:
+            return ct.strftime('%Y-%m-%d %H:%M:%S')
 
 def setup_logger(name: str = 'FX-Ai', level: str = 'INFO',
                 log_file: Optional[str] = None, max_bytes: int = 10485760,
-                backup_count: int = 5, rotation_type: str = 'size') -> logging.Logger:
+                backup_count: int = 5, rotation_type: str = 'size',
+                mt5_connector: Optional[Any] = None) -> logging.Logger:
     """
     Set up logger with file and console handlers
 
@@ -23,6 +58,7 @@ def setup_logger(name: str = 'FX-Ai', level: str = 'INFO',
         max_bytes: Maximum log file size in bytes (for size-based rotation)
         backup_count: Number of backup log files to keep
         rotation_type: 'size' for RotatingFileHandler or 'time' for TimedRotatingFileHandler
+        mt5_connector: MT5 connector instance for server time logging
 
     Returns:
         logging.Logger: Configured logger
@@ -36,11 +72,13 @@ def setup_logger(name: str = 'FX-Ai', level: str = 'INFO',
         logger.removeHandler(handler)
 
     # Create formatters
-    file_formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
+    file_formatter = MT5TimeFormatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s',
+        mt5_connector=mt5_connector
     )
-    console_formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)s - %(message)s'
+    console_formatter = MT5TimeFormatter(
+        '%(asctime)s - %(levelname)s - %(message)s',
+        mt5_connector=mt5_connector
     )
 
     # Console handler

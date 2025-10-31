@@ -127,6 +127,7 @@ I've created the complete FX-Ai trading system with the following components:
 - **Format**: YYYY-MM-DD date format (e.g., `fxai_2024-12-19.log`)
 - **Rotation**: Time-based daily rotation at midnight
 - **Retention**: Configurable log retention period
+- **MT5 Time**: All log timestamps use MT5 server time instead of local computer time
 - **Performance**: Optimized for better log analysis and system monitoring
 
 ## Adaptive Learning System - Complete Implementation Guide
@@ -516,7 +517,7 @@ FX-Ai/
 │   │
 │   ├── utils/                     # Utility modules
 │   │   ├── config_loader.py       # Configuration management
-│   │   ├── logger.py               # Logging system (UPDATED: YYYY-MM-DD format)
+│   │   ├── logger.py               # Logging system (UPDATED: YYYY-MM-DD format, MT5 server time)
 │   │   ├── mt5_ea_communicator.py # MT5 EA communication (OPTIONAL)
 │   │   └── __init__.py
 │   │
@@ -549,7 +550,7 @@ FX-Ai/
 │   └── web_scraping/             # Web scraping utilities
 │
 ├── 📝 Logs & Environment
-│   ├── logs/                      # Log files (UPDATED: YYYY-MM-DD format, time-based rotation)
+│   ├── logs/                      # Log files (UPDATED: YYYY-MM-DD format, time-based rotation, MT5 server time)
 │   ├── venv/                      # Python virtual environment
 │   └── .vscode/                   # VS Code settings
 │
