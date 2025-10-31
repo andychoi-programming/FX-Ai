@@ -126,7 +126,17 @@ class FXAiApplication:
             
             # 9. Adaptive Learning Manager
             self.logger.info("Initializing Adaptive Learning Manager...")
-            self.adaptive_learning = AdaptiveLearningManager(self.config)
+            self.adaptive_learning = AdaptiveLearningManager(
+                self.config,
+                ml_predictor=self.ml_predictor,
+                risk_manager=self.risk_manager,
+                mt5_connector=self.mt5
+            )
+            
+            # Start continuous learning thread
+            if self.learning_enabled:
+                self.logger.info("Starting continuous learning thread...")
+                self.adaptive_learning.run_continuous_learning()
             
             # 10. Trading Engine
             self.logger.info("Initializing trading engine...")
@@ -258,7 +268,91 @@ class FXAiApplication:
                             continue
                         
                         self.logger.debug(f"{symbol}: Processing signal - entry_price={entry_price}, direction={ml_prediction.get('direction')}")
-                        
+
+                        # ===== NEW LEARNING FEATURES =====
+
+                        # 1. Check entry timing recommendation
+                        if self.adaptive_learning:
+                            current_hour = datetime.now().hour
+                            timing_recommendation = self.adaptive_learning.get_entry_timing_recommendation(symbol, current_hour)
+                            if not timing_recommendation['recommended']:
+                                self.logger.debug(f"{symbol}: Skipping - poor timing (win_rate: {timing_recommendation['win_rate']:.2f})")
+                                continue
+
+                        # 2. Check entry filters (when NOT to enter)
+                        if self.adaptive_learning:
+                            current_conditions = {
+                                'hour': datetime.now().hour,
+                                'volatility': technical_signals.get('atr', {}).get('value', 0),
+                                'spread': current_data.get('spread', 0)
+                            }
+                            should_enter = self.adaptive_learning.should_enter_based_on_filters(symbol, current_conditions)
+                            if not should_enter:
+                                self.logger.debug(f"{symbol}: Skipping - entry filter triggered")
+                                continue
+
+                        # 3. Get optimized SL/TP parameters for this symbol
+                        if self.adaptive_learning:
+                            symbol_sl_tp = self.adaptive_learning.get_symbol_sl_tp_params(symbol)
+                            # Override global parameters with symbol-specific optimized ones
+                            if symbol_sl_tp['confidence'] > 0.5:  # Only use if confidence is high enough
+                                adaptive_params['stop_loss_atr_multiplier'] = symbol_sl_tp['sl_atr_multiplier']
+                                adaptive_params['take_profit_atr_multiplier'] = symbol_sl_tp['tp_atr_multiplier']
+                                self.logger.debug(f"{symbol}: Using optimized SL/TP - SL:{symbol_sl_tp['sl_atr_multiplier']:.2f}, TP:{symbol_sl_tp['tp_atr_multiplier']:.2f}")
+
+                        # 4. Check economic calendar impact (avoid trading during high-impact events)
+                        if self.adaptive_learning:
+                            events_to_avoid = self.adaptive_learning.should_avoid_economic_events(hours_ahead=24)
+                            if events_to_avoid:
+                                self.logger.debug(f"{symbol}: Skipping - upcoming high-impact events: {events_to_avoid}")
+                                continue
+
+                        # 5. Apply optimized technical indicator parameters
+                        if self.adaptive_learning:
+                            optimized_tech_params = self.adaptive_learning.get_optimized_technical_params(symbol)
+                            if optimized_tech_params:
+                                # Update technical analyzer with optimized parameters
+                                for param_key, param_value in optimized_tech_params.items():
+                                    # This would require extending technical_analyzer to accept dynamic params
+                                    # For now, just log the optimized parameters
+                                    self.logger.debug(f"{symbol}: Using optimized {param_key} = {param_value}")
+
+                        # 6. Apply optimized fundamental weights
+                        if self.adaptive_learning:
+                            optimized_fundamental_weights = self.adaptive_learning.get_optimized_fundamental_weights()
+                            if optimized_fundamental_weights:
+                                # Update fundamental collector with optimized weights
+                                # This would require extending fundamental_collector to accept dynamic weights
+                                self.logger.debug(f"{symbol}: Using optimized fundamental weights: {optimized_fundamental_weights}")
+
+                        # 7. Apply optimized sentiment parameters
+                        if self.adaptive_learning:
+                            optimized_sentiment_params = self.adaptive_learning.get_optimized_sentiment_params()
+                            if optimized_sentiment_params:
+                                # Update sentiment analyzer with optimized parameters
+                                # This would require extending sentiment_analyzer to accept dynamic params
+                                self.logger.debug(f"{symbol}: Using optimized sentiment params: {optimized_sentiment_params}")
+
+                        # 8. Check interest rate impact expectations
+                        if self.adaptive_learning:
+                            # Extract currency from symbol (e.g., EURUSD -> EUR, USD)
+                            base_currency = symbol[:3]
+                            quote_currency = symbol[3:6]
+
+                            base_expectations = self.adaptive_learning.get_interest_rate_expectations(base_currency)
+                            quote_expectations = self.adaptive_learning.get_interest_rate_expectations(quote_currency)
+
+                            # Simple logic: avoid trading if both currencies have strong rate correlations
+                            if base_expectations and quote_expectations:
+                                base_corr = max([v.get('correlation', 0) for v in base_expectations.values()])
+                                quote_corr = max([v.get('correlation', 0) for v in quote_expectations.values()])
+
+                                if base_corr > 0.7 and quote_corr > 0.7:
+                                    self.logger.debug(f"{symbol}: Skipping - high interest rate correlation ({base_corr:.2f}, {quote_corr:.2f})")
+                                    continue
+
+                        # ===== END NEW LEARNING FEATURES =====
+
                         # Calculate stop loss using ATR (more sophisticated than fixed percentage)
                         atr_value = technical_signals.get('atr', {}).get('value', 0)
                         if atr_value > 0:

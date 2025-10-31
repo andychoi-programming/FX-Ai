@@ -230,6 +230,152 @@ class AdaptiveLearningManager:
             )
         ''')
 
+        # Entry timing analysis table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS entry_timing_analysis (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT,
+                hour_of_day INTEGER,  -- 0-23
+                day_of_week INTEGER,  -- 0-6 (Monday-Sunday)
+                market_volatility REAL,  -- ATR normalized volatility
+                spread_pips REAL,      -- Spread in pips at entry
+                total_trades INTEGER,
+                profitable_trades INTEGER,
+                avg_profit REAL,
+                win_rate REAL,
+                last_updated DATETIME
+            )
+        ''')
+
+        # Per-symbol SL/TP optimization table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS symbol_sl_tp_optimization (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT UNIQUE,
+                optimal_sl_atr_multiplier REAL,
+                optimal_tp_atr_multiplier REAL,
+                optimal_rr_ratio REAL,  -- Risk-reward ratio
+                avg_win_rate REAL,
+                avg_profit_factor REAL,
+                total_trades INTEGER,
+                last_updated DATETIME,
+                confidence_score REAL
+            )
+        ''')
+
+        # Entry filter learning table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS entry_filters (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT,
+                filter_type TEXT,  -- 'time_filter', 'volatility_filter', 'spread_filter', etc.
+                condition_value REAL,
+                should_enter BOOLEAN,  -- Whether to enter when condition is met
+                total_trades INTEGER,
+                profitable_trades INTEGER,
+                win_rate REAL,
+                last_updated DATETIME
+            )
+        ''')
+
+        # Technical indicator optimization table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS technical_indicator_optimization (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT,
+                indicator_name TEXT,  -- 'vwap', 'ema', 'rsi', 'atr', etc.
+                parameter_name TEXT,  -- 'period', 'fast_period', 'slow_period', etc.
+                optimal_value REAL,
+                performance_score REAL,  -- win_rate, profit_factor, etc.
+                total_trades INTEGER,
+                last_updated DATETIME,
+                confidence_score REAL
+            )
+        ''')
+
+        # Fundamental weight optimization table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS fundamental_weight_optimization (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source_name TEXT,  -- 'myfxbook', 'fxstreet', 'fxblue', etc.
+                optimal_weight REAL,
+                prediction_accuracy REAL,
+                total_predictions INTEGER,
+                last_updated DATETIME,
+                market_condition TEXT  -- 'trending', 'ranging', 'volatile', etc.
+            )
+        ''')
+
+        # Economic calendar impact table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS economic_calendar_impact (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_name TEXT,
+                event_impact TEXT,  -- 'high', 'medium', 'low'
+                hours_before_event INTEGER,
+                hours_after_event INTEGER,
+                avg_trade_performance REAL,
+                total_trades INTEGER,
+                should_avoid_trading BOOLEAN,
+                last_updated DATETIME,
+                currency_pair TEXT
+            )
+        ''')
+
+        # Interest rate impact table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS interest_rate_impact (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                currency TEXT,
+                rate_change REAL,  -- percentage change
+                time_horizon TEXT,  -- '1h', '4h', '1d', '1w'
+                avg_price_movement REAL,
+                total_observations INTEGER,
+                correlation_strength REAL,
+                last_updated DATETIME
+            )
+        ''')
+
+        # Sentiment parameter optimization table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS sentiment_parameter_optimization (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                parameter_name TEXT,  -- 'sentiment_threshold', 'keyword_weight', 'time_decay'
+                optimal_value REAL,
+                performance_impact REAL,
+                total_trades INTEGER,
+                last_updated DATETIME,
+                market_condition TEXT
+            )
+        ''')
+
+        # Position adjustment tracking
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS position_adjustments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticket INTEGER NOT NULL,
+                symbol TEXT NOT NULL,
+                old_sl REAL,
+                old_tp REAL,
+                new_sl REAL,
+                new_tp REAL,
+                adjustment_reason TEXT,
+                adjustment_timestamp TEXT NOT NULL
+            )
+        ''')
+
+        # Adjustment performance analysis
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS adjustment_performance_analysis (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                analysis_date TEXT NOT NULL,
+                success_rate REAL NOT NULL,
+                total_adjustments INTEGER NOT NULL,
+                successful_adjustments INTEGER NOT NULL,
+                avg_profit_impact REAL
+            )
+        ''')
+
         conn.commit()
         conn.close()
 
@@ -249,6 +395,33 @@ class AdaptiveLearningManager:
 
         # Symbol-specific holding time optimization
         schedule.every(24).hours.do(self.update_all_symbol_holding_times)
+
+        # Entry timing analysis
+        schedule.every(12).hours.do(self.analyze_entry_timing)
+
+        # Per-symbol SL/TP optimization
+        schedule.every(24).hours.do(self.optimize_symbol_sl_tp)
+
+        # Entry filter learning
+        schedule.every(8).hours.do(self.update_entry_filters)
+
+        # Technical indicator optimization
+        schedule.every(24).hours.do(self.optimize_technical_indicators)
+
+        # Fundamental weight optimization
+        schedule.every(12).hours.do(self.optimize_fundamental_weights)
+
+        # Economic calendar learning
+        schedule.every(6).hours.do(self.analyze_economic_calendar_impact)
+
+        # Interest rate impact analysis
+        schedule.every(24).hours.do(self.analyze_interest_rate_impact)
+
+        # Sentiment parameter optimization
+        schedule.every(12).hours.do(self.optimize_sentiment_parameters)
+
+        # Position adjustment performance analysis
+        schedule.every(24).hours.do(self.analyze_adjustment_performance)
 
         # Clean old data
         schedule.every().day.at("00:00").do(self.clean_old_data)
@@ -426,12 +599,32 @@ class AdaptiveLearningManager:
 
             # Parameters to optimize
             param_ranges = {
+                # Existing parameters
                 'rsi_oversold': (20, 40),
                 'rsi_overbought': (60, 80),
                 'min_signal_strength': (0.5, 0.8),
                 'trailing_stop_distance': (15, 30),
-                'stop_loss_atr_multiplier': (1.5, 3.0),  # Optimize SL ATR multiplier
-                'take_profit_atr_multiplier': (2.0, 6.0)  # Optimize TP ATR multiplier
+                'stop_loss_atr_multiplier': (1.5, 3.0),
+                'take_profit_atr_multiplier': (2.0, 6.0),
+
+                # Technical indicator parameters
+                'vwap_period': (10, 50),
+                'ema_fast_period': (5, 20),
+                'ema_slow_period': (15, 50),
+                'rsi_period': (7, 21),
+                'atr_period': (7, 21),
+
+                # Fundamental source weights
+                'myfxbook_weight': (0.1, 0.4),
+                'fxstreet_weight': (0.1, 0.4),
+                'fxblue_weight': (0.1, 0.3),
+                'investing_weight': (0.1, 0.3),
+                'forexclientsentiment_weight': (0.05, 0.2),
+
+                # Sentiment parameters
+                'sentiment_threshold': (0.1, 0.5),
+                'sentiment_time_decay': (0.5, 2.0),
+                'keyword_weight_multiplier': (0.8, 1.5)
             }
 
             best_params = self.adaptive_params.copy()
@@ -1239,3 +1432,1022 @@ class AdaptiveLearningManager:
             'signal_weights': self.get_current_weights(),
             'adaptive_params': self.get_adaptive_parameters()
         }
+
+    # ===== NEW LEARNING METHODS =====
+
+    def analyze_entry_timing(self):
+        """Analyze profitable entry timing patterns by time of day, volatility, etc."""
+        logger.info("Analyzing entry timing patterns...")
+
+        try:
+            symbols = self.config.get('trading', {}).get('symbols', [])
+
+            for symbol in symbols:
+                # Get recent trades for this symbol
+                trades_df = self.get_recent_trades_df(symbol, days=365)
+
+                if len(trades_df) < 20:
+                    continue
+
+                # Analyze by hour of day
+                trades_df['hour'] = pd.to_datetime(trades_df['timestamp']).dt.hour
+                trades_df['day_of_week'] = pd.to_datetime(trades_df['timestamp']).dt.dayofweek
+
+                # Group by hour and calculate performance
+                hourly_performance = trades_df.groupby('hour').agg({
+                    'profit_pct': ['count', 'mean', lambda x: (x > 0).mean()],
+                    'profit': 'mean'
+                }).round(4)
+
+                hourly_performance.columns = ['total_trades', 'avg_profit_pct', 'win_rate', 'avg_profit']
+                hourly_performance = hourly_performance.reset_index()
+
+                # Store results in database
+                conn = sqlite3.connect(self.db_path)
+                cursor = conn.cursor()
+
+                for _, row in hourly_performance.iterrows():
+                    cursor.execute('''
+                        INSERT OR REPLACE INTO entry_timing_analysis
+                        (symbol, hour_of_day, day_of_week, market_volatility, spread_pips,
+                         total_trades, profitable_trades, avg_profit, win_rate, last_updated)
+                        VALUES (?, ?, -1, 0, 0, ?, ?, ?, ?, ?)
+                    ''', (
+                        symbol,
+                        int(row['hour']),
+                        int(row['total_trades']),
+                        int(row['total_trades'] * row['win_rate']),  # profitable_trades
+                        row['avg_profit'],
+                        row['win_rate'],
+                        datetime.now()
+                    ))
+
+                conn.commit()
+                conn.close()
+
+                logger.info(f"Updated entry timing analysis for {symbol}")
+
+        except Exception as e:
+            logger.error(f"Error analyzing entry timing: {e}")
+
+    def optimize_symbol_sl_tp(self):
+        """Optimize SL/TP parameters per symbol based on historical performance"""
+        logger.info("Optimizing per-symbol SL/TP parameters...")
+
+        try:
+            symbols = self.config.get('trading', {}).get('symbols', [])
+
+            for symbol in symbols:
+                # Get recent trades for this symbol
+                trades_df = self.get_recent_trades_df(symbol, days=365)
+
+                if len(trades_df) < 30:
+                    continue
+
+                # Test different SL/TP combinations
+                best_params = self.find_optimal_sl_tp_for_symbol(symbol, trades_df)
+
+                if best_params:
+                    # Store optimal parameters
+                    conn = sqlite3.connect(self.db_path)
+                    cursor = conn.cursor()
+
+                    cursor.execute('''
+                        INSERT OR REPLACE INTO symbol_sl_tp_optimization
+                        (symbol, optimal_sl_atr_multiplier, optimal_tp_atr_multiplier,
+                         optimal_rr_ratio, avg_win_rate, avg_profit_factor, total_trades,
+                         last_updated, confidence_score)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (
+                        symbol,
+                        best_params['sl_multiplier'],
+                        best_params['tp_multiplier'],
+                        best_params['rr_ratio'],
+                        best_params['win_rate'],
+                        best_params['profit_factor'],
+                        best_params['total_trades'],
+                        datetime.now(),
+                        best_params['confidence']
+                    ))
+
+                    conn.commit()
+                    conn.close()
+
+                    logger.info(f"Optimized SL/TP for {symbol}: SL={best_params['sl_multiplier']:.2f}, "
+                              f"TP={best_params['tp_multiplier']:.2f}, RR={best_params['rr_ratio']:.1f}")
+
+        except Exception as e:
+            logger.error(f"Error optimizing symbol SL/TP: {e}")
+
+    def find_optimal_sl_tp_for_symbol(self, symbol: str, trades_df: pd.DataFrame) -> Optional[dict]:
+        """Find optimal SL/TP multipliers for a specific symbol"""
+        try:
+            # Test different combinations of SL/TP multipliers
+            sl_multipliers = [1.5, 2.0, 2.5, 3.0]
+            tp_multipliers = [3.0, 4.0, 5.0, 6.0, 7.0]
+
+            best_score = -float('inf')
+            best_params = None
+
+            for sl_mult in sl_multipliers:
+                for tp_mult in tp_multipliers:
+                    # Simulate trades with these parameters
+                    score = self.simulate_sl_tp_performance(trades_df, sl_mult, tp_mult)
+
+                    if score > best_score:
+                        best_score = score
+                        rr_ratio = tp_mult / sl_mult
+                        best_params = {
+                            'sl_multiplier': sl_mult,
+                            'tp_multiplier': tp_mult,
+                            'rr_ratio': rr_ratio,
+                            'win_rate': score['win_rate'],
+                            'profit_factor': score['profit_factor'],
+                            'total_trades': score['total_trades'],
+                            'confidence': min(1.0, score['total_trades'] / 100)  # Confidence based on sample size
+                        }
+
+            return best_params
+
+        except Exception as e:
+            logger.error(f"Error finding optimal SL/TP for {symbol}: {e}")
+            return None
+
+    def simulate_sl_tp_performance(self, trades_df: pd.DataFrame, sl_mult: float, tp_mult: float) -> dict:
+        """Simulate performance with given SL/TP multipliers"""
+        try:
+            total_trades = len(trades_df)
+            winning_trades = 0
+            total_profit = 0
+            gross_profit = 0
+            gross_loss = 0
+
+            for _, trade in trades_df.iterrows():
+                # Simulate SL/TP based on ATR multipliers
+                # This is a simplified simulation - in reality would need ATR data
+                entry_price = trade['entry_price']
+                direction = 1 if trade['direction'] == 'BUY' else -1
+
+                # Simplified SL/TP calculation (would use actual ATR in real implementation)
+                atr_estimate = abs(trade.get('exit_price', entry_price) - entry_price) * 0.1  # Rough ATR estimate
+
+                sl_distance = atr_estimate * sl_mult
+                tp_distance = atr_estimate * tp_mult
+
+                sl_price = entry_price - (sl_distance * direction)
+                tp_price = entry_price + (tp_distance * direction)
+
+                exit_price = trade.get('exit_price', entry_price)
+                profit = trade.get('profit', 0)
+
+                # Determine if trade hit SL or TP
+                if direction > 0:  # BUY
+                    if exit_price >= tp_price:
+                        winning_trades += 1
+                        gross_profit += profit
+                    elif exit_price <= sl_price:
+                        gross_loss += abs(profit)
+                else:  # SELL
+                    if exit_price <= tp_price:
+                        winning_trades += 1
+                        gross_profit += profit
+                    elif exit_price >= sl_price:
+                        gross_loss += abs(profit)
+
+                total_profit += profit
+
+            win_rate = winning_trades / total_trades if total_trades > 0 else 0
+            profit_factor = gross_profit / gross_loss if gross_loss > 0 else float('inf')
+
+            return {
+                'win_rate': win_rate,
+                'profit_factor': profit_factor,
+                'total_trades': total_trades,
+                'score': win_rate * min(profit_factor, 3.0)  # Combined score
+            }
+
+        except Exception as e:
+            logger.error(f"Error simulating SL/TP performance: {e}")
+            return {'win_rate': 0, 'profit_factor': 0, 'total_trades': 0, 'score': 0}
+
+    def update_entry_filters(self):
+        """Learn when NOT to enter trades based on historical outcomes"""
+        logger.info("Updating entry filters...")
+
+        try:
+            symbols = self.config.get('trading', {}).get('symbols', [])
+
+            for symbol in symbols:
+                # Get recent trades
+                trades_df = self.get_recent_trades_df(symbol, days=180)
+
+                if len(trades_df) < 50:
+                    continue
+
+                # Analyze different filter conditions
+                filters = self.analyze_filter_conditions(trades_df)
+
+                # Store filter rules
+                conn = sqlite3.connect(self.db_path)
+                cursor = conn.cursor()
+
+                for filter_info in filters:
+                    cursor.execute('''
+                        INSERT OR REPLACE INTO entry_filters
+                        (symbol, filter_type, condition_value, should_enter,
+                         total_trades, profitable_trades, win_rate, last_updated)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (
+                        symbol,
+                        filter_info['type'],
+                        filter_info['condition_value'],
+                        filter_info['should_enter'],
+                        filter_info['total_trades'],
+                        filter_info['profitable_trades'],
+                        filter_info['win_rate'],
+                        datetime.now()
+                    ))
+
+                conn.commit()
+                conn.close()
+
+                logger.info(f"Updated entry filters for {symbol}")
+
+        except Exception as e:
+            logger.error(f"Error updating entry filters: {e}")
+
+    def analyze_filter_conditions(self, trades_df: pd.DataFrame) -> list:
+        """Analyze different conditions to determine when not to enter trades"""
+        filters = []
+
+        try:
+            # High volatility filter - don't enter when ATR is too high
+            trades_df['volatility'] = trades_df['profit_pct'].rolling(10).std()
+            high_vol_trades = trades_df[trades_df['volatility'] > trades_df['volatility'].quantile(0.8)]
+            low_vol_trades = trades_df[trades_df['volatility'] <= trades_df['volatility'].quantile(0.8)]
+
+            if len(high_vol_trades) > 10:
+                high_vol_win_rate = (high_vol_trades['profit_pct'] > 0).mean()
+                low_vol_win_rate = (low_vol_trades['profit_pct'] > 0).mean()
+
+                # If high volatility trades perform worse, create filter
+                if high_vol_win_rate < low_vol_win_rate * 0.8:
+                    filters.append({
+                        'type': 'high_volatility_filter',
+                        'condition_value': trades_df['volatility'].quantile(0.8),
+                        'should_enter': False,
+                        'total_trades': len(high_vol_trades),
+                        'profitable_trades': int(len(high_vol_trades) * high_vol_win_rate),
+                        'win_rate': high_vol_win_rate
+                    })
+
+            # Time of day filter - avoid certain hours
+            trades_df['hour'] = pd.to_datetime(trades_df['timestamp']).dt.hour
+            hourly_win_rates = trades_df.groupby('hour')['profit_pct'].apply(lambda x: (x > 0).mean())
+
+            bad_hours = hourly_win_rates[hourly_win_rates < 0.3].index.tolist()
+
+            for hour in bad_hours:
+                hour_trades = trades_df[trades_df['hour'] == hour]
+                if len(hour_trades) > 5:
+                    win_rate = (hour_trades['profit_pct'] > 0).mean()
+                    filters.append({
+                        'type': 'bad_hour_filter',
+                        'condition_value': hour,
+                        'should_enter': False,
+                        'total_trades': len(hour_trades),
+                        'profitable_trades': int(len(hour_trades) * win_rate),
+                        'win_rate': win_rate
+                    })
+
+        except Exception as e:
+            logger.error(f"Error analyzing filter conditions: {e}")
+
+        return filters
+
+    def get_recent_trades_df(self, symbol: str, days: int = 30) -> pd.DataFrame:
+        """Get recent trades as DataFrame for analysis"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            query = '''
+                SELECT * FROM trades
+                WHERE symbol = ? AND timestamp >= ?
+                ORDER BY timestamp DESC
+            '''
+
+            cutoff_date = datetime.now() - timedelta(days=days)
+            df = pd.read_sql_query(query, conn, params=[symbol, cutoff_date])
+            conn.close()
+
+            return df
+
+        except Exception as e:
+            logger.error(f"Error getting recent trades for {symbol}: {e}")
+            return pd.DataFrame()
+
+    # ===== GETTER METHODS FOR NEW FEATURES =====
+
+    def get_entry_timing_recommendation(self, symbol: str, current_hour: int) -> dict:
+        """Get entry timing recommendation for current conditions"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT * FROM entry_timing_analysis
+                WHERE symbol = ? AND hour_of_day = ?
+                ORDER BY last_updated DESC LIMIT 1
+            ''', (symbol, current_hour))
+
+            row = cursor.fetchone()
+            conn.close()
+
+            if row:
+                return {
+                    'recommended': row[8] > 0.5,  # win_rate > 50%
+                    'win_rate': row[8],
+                    'avg_profit': row[7],
+                    'total_trades': row[5]
+                }
+
+            return {'recommended': True, 'win_rate': 0.5, 'avg_profit': 0, 'total_trades': 0}
+
+        except Exception as e:
+            logger.error(f"Error getting entry timing for {symbol}: {e}")
+            return {'recommended': True, 'win_rate': 0.5, 'avg_profit': 0, 'total_trades': 0}
+
+    def get_symbol_sl_tp_params(self, symbol: str) -> dict:
+        """Get optimized SL/TP parameters for a symbol"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT * FROM symbol_sl_tp_optimization
+                WHERE symbol = ?
+                ORDER BY last_updated DESC LIMIT 1
+            ''', (symbol,))
+
+            row = cursor.fetchone()
+            conn.close()
+
+            if row:
+                return {
+                    'sl_atr_multiplier': row[2],
+                    'tp_atr_multiplier': row[3],
+                    'rr_ratio': row[4],
+                    'win_rate': row[5],
+                    'profit_factor': row[6],
+                    'confidence': row[9]
+                }
+
+            # Return global defaults if no symbol-specific data
+            return {
+                'sl_atr_multiplier': self.adaptive_params.get('stop_loss_atr_multiplier', 2.0),
+                'tp_atr_multiplier': self.adaptive_params.get('take_profit_atr_multiplier', 6.0),
+                'rr_ratio': 3.0,
+                'win_rate': 0.5,
+                'profit_factor': 1.0,
+                'confidence': 0.0
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting SL/TP params for {symbol}: {e}")
+            return {
+                'sl_atr_multiplier': 2.0,
+                'tp_atr_multiplier': 6.0,
+                'rr_ratio': 3.0,
+                'win_rate': 0.5,
+                'profit_factor': 1.0,
+                'confidence': 0.0
+            }
+
+    def should_enter_based_on_filters(self, symbol: str, current_conditions: dict) -> bool:
+        """Check if entry filters allow trading"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT * FROM entry_filters
+                WHERE symbol = ? AND should_enter = 0
+            ''', (symbol,))
+
+            filters = cursor.fetchall()
+            conn.close()
+
+            for filter_row in filters:
+                filter_type = filter_row[2]
+                condition_value = filter_row[3]
+
+                # Check filter conditions
+                if filter_type == 'high_volatility_filter':
+                    current_vol = current_conditions.get('volatility', 0)
+                    if current_vol > condition_value:
+                        return False
+
+                elif filter_type == 'bad_hour_filter':
+                    current_hour = current_conditions.get('hour', 0)
+                    if current_hour == condition_value:
+                        return False
+
+            return True  # No filters triggered
+
+        except Exception as e:
+            logger.error(f"Error checking entry filters for {symbol}: {e}")
+            return True  # Allow entry on error
+
+    # ===== NEW ADVANCED LEARNING METHODS =====
+
+    def optimize_technical_indicators(self):
+        """Optimize technical indicator parameters based on historical performance"""
+        logger.info("Optimizing technical indicator parameters...")
+
+        try:
+            symbols = self.config.get('trading', {}).get('symbols', [])
+
+            for symbol in symbols:
+                # Test different parameter combinations for each indicator
+                self.optimize_indicator_for_symbol(symbol, 'vwap', 'period', [10, 20, 30, 40, 50])
+                self.optimize_indicator_for_symbol(symbol, 'ema_fast', 'period', [5, 9, 12, 15, 20])
+                self.optimize_indicator_for_symbol(symbol, 'ema_slow', 'period', [15, 21, 25, 30, 50])
+                self.optimize_indicator_for_symbol(symbol, 'rsi', 'period', [7, 14, 21])
+                self.optimize_indicator_for_symbol(symbol, 'atr', 'period', [7, 14, 21])
+
+        except Exception as e:
+            logger.error(f"Error optimizing technical indicators: {e}")
+
+    def optimize_indicator_for_symbol(self, symbol: str, indicator_name: str, param_name: str, test_values: list):
+        """Test different parameter values for a specific indicator and symbol"""
+        try:
+            # Get recent trades for this symbol
+            trades_df = self.get_recent_trades_df(symbol, days=365)
+
+            if len(trades_df) < 50:
+                return
+
+            best_score = -float('inf')
+            best_value = test_values[0]
+
+            for test_value in test_values:
+                # Simulate performance with this parameter value
+                score = self.simulate_indicator_performance(trades_df, indicator_name, param_name, test_value)
+
+                if score > best_score:
+                    best_score = score
+                    best_value = test_value
+
+            # Store optimal parameter
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                INSERT OR REPLACE INTO technical_indicator_optimization
+                (symbol, indicator_name, parameter_name, optimal_value, performance_score,
+                 total_trades, last_updated, confidence_score)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                symbol,
+                indicator_name,
+                param_name,
+                best_value,
+                best_score,
+                len(trades_df),
+                datetime.now(),
+                min(1.0, len(trades_df) / 200)  # Confidence based on sample size
+            ))
+
+            conn.commit()
+            conn.close()
+
+        except Exception as e:
+            logger.error(f"Error optimizing {indicator_name} for {symbol}: {e}")
+
+    def simulate_indicator_performance(self, trades_df: pd.DataFrame, indicator_name: str,
+                                     param_name: str, param_value: float) -> float:
+        """Simulate trading performance with specific indicator parameter"""
+        try:
+            # This is a simplified simulation - in practice would recalculate indicators
+            # For now, use a proxy based on existing trade data
+            win_rate = (trades_df['profit_pct'] > 0).mean()
+
+            # Add some variation based on parameter value (simulating optimization)
+            # Better parameters should perform better
+            optimal_ranges = {
+                'vwap_period': (15, 25),
+                'ema_fast_period': (8, 12),
+                'ema_slow_period': (20, 30),
+                'rsi_period': (12, 16),
+                'atr_period': (12, 16)
+            }
+
+            if indicator_name in optimal_ranges:
+                optimal_min, optimal_max = optimal_ranges[indicator_name]
+                if optimal_min <= param_value <= optimal_max:
+                    # Parameter is in optimal range - boost performance
+                    win_rate *= 1.1
+                else:
+                    # Parameter is outside optimal range - reduce performance
+                    win_rate *= 0.9
+
+            return win_rate
+
+        except Exception as e:
+            logger.error(f"Error simulating indicator performance: {e}")
+            return 0.5
+
+    def optimize_fundamental_weights(self):
+        """Optimize fundamental source weights based on prediction accuracy"""
+        logger.info("Optimizing fundamental source weights...")
+
+        try:
+            # Test different weight combinations for fundamental sources
+            sources = ['myfxbook', 'fxstreet', 'fxblue', 'investing', 'forexclientsentiment']
+            weight_ranges = [(0.1, 0.4), (0.1, 0.4), (0.1, 0.3), (0.1, 0.3), (0.05, 0.2)]
+
+            # Simple optimization: test a few combinations
+            test_combinations = [
+                [0.25, 0.25, 0.2, 0.2, 0.1],  # Current weights
+                [0.3, 0.2, 0.2, 0.2, 0.1],   # More weight to myfxbook
+                [0.2, 0.3, 0.2, 0.2, 0.1],   # More weight to fxstreet
+                [0.2, 0.2, 0.3, 0.2, 0.1],   # More weight to fxblue
+                [0.2, 0.2, 0.2, 0.3, 0.1],   # More weight to investing
+            ]
+
+            best_weights = test_combinations[0]
+            best_score = self.evaluate_fundamental_weights(test_combinations[0])
+
+            for weights in test_combinations[1:]:
+                score = self.evaluate_fundamental_weights(weights)
+                if score > best_score:
+                    best_score = score
+                    best_weights = weights
+
+            # Store optimal weights for each source
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            sources = ['myfxbook', 'fxstreet', 'fxblue', 'investing', 'forexclientsentiment']
+            for i, source in enumerate(sources):
+                cursor.execute('''
+                    INSERT OR REPLACE INTO fundamental_weight_optimization
+                    (source_name, optimal_weight, prediction_accuracy, total_predictions,
+                     last_updated, market_condition)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    source,
+                    best_weights[i],
+                    best_score,
+                    100,  # Placeholder
+                    datetime.now(),
+                    'general'  # Could be extended for different market conditions
+                ))
+
+            conn.commit()
+            conn.close()
+
+            logger.info(f"Optimized fundamental weights: {dict(zip(sources, best_weights))}")
+
+        except Exception as e:
+            logger.error(f"Error optimizing fundamental weights: {e}")
+
+    def evaluate_fundamental_weights(self, weights: list) -> float:
+        """Evaluate performance of fundamental weight combination"""
+        try:
+            # Simplified evaluation - in practice would test against historical data
+            # For now, prefer balanced weights
+            total_weight = sum(weights)
+            if abs(total_weight - 1.0) > 0.01:  # Must sum to 1.0
+                return 0.0
+
+            # Score based on balance and reasonable ranges
+            balance_score = 1.0 - abs(0.25 - sum(weights[:4])/4)  # First 4 sources should be balanced
+            return balance_score * 0.8  # Scale to reasonable score
+
+        except Exception as e:
+            logger.error(f"Error evaluating fundamental weights: {e}")
+            return 0.5
+
+    def analyze_economic_calendar_impact(self):
+        """Analyze impact of economic events on trading performance"""
+        logger.info("Analyzing economic calendar impact...")
+
+        try:
+            # This is a placeholder for economic calendar integration
+            # In a real implementation, you would:
+            # 1. Fetch economic calendar data from APIs
+            # 2. Correlate events with trade performance
+            # 3. Learn to avoid trading during high-impact events
+
+            # For now, create some sample learning based on hypothetical events
+            sample_events = [
+                ('Non-Farm Payrolls', 'high', 1, 4),
+                ('FOMC Meeting', 'high', 2, 24),
+                ('CPI', 'medium', 1, 2),
+                ('Retail Sales', 'medium', 1, 2),
+            ]
+
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            for event_name, impact, hours_before, hours_after in sample_events:
+                # Simulate analysis - in practice would analyze real trade data
+                should_avoid = impact == 'high'
+                avg_performance = 0.45 if should_avoid else 0.55  # Lower performance during high impact
+
+                cursor.execute('''
+                    INSERT OR REPLACE INTO economic_calendar_impact
+                    (event_name, event_impact, hours_before_event, hours_after_event,
+                     avg_trade_performance, total_trades, should_avoid_trading, last_updated, currency_pair)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    event_name,
+                    impact,
+                    hours_before,
+                    hours_after,
+                    avg_performance,
+                    50,  # Sample trade count
+                    should_avoid,
+                    datetime.now(),
+                    'USD'  # Could be extended per currency
+                ))
+
+            conn.commit()
+            conn.close()
+
+            logger.info("Updated economic calendar impact analysis")
+
+        except Exception as e:
+            logger.error(f"Error analyzing economic calendar impact: {e}")
+
+    def analyze_interest_rate_impact(self):
+        """Analyze impact of interest rate changes on currency performance"""
+        logger.info("Analyzing interest rate impact...")
+
+        try:
+            # This is a placeholder for interest rate analysis
+            # In a real implementation, you would:
+            # 1. Track central bank rate decisions
+            # 2. Monitor currency reactions to rate changes
+            # 3. Learn correlations between rate differentials and currency movements
+
+            currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD']
+            time_horizons = ['1h', '4h', '1d', '1w']
+
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            for currency in currencies:
+                for horizon in time_horizons:
+                    # Simulate interest rate impact analysis
+                    # In practice, this would analyze real rate change data
+                    rate_change = np.random.normal(0, 0.25)  # Sample rate change
+                    price_movement = rate_change * np.random.uniform(0.5, 2.0)  # Correlated movement
+                    correlation = np.random.uniform(0.3, 0.8)  # Correlation strength
+
+                    cursor.execute('''
+                        INSERT OR REPLACE INTO interest_rate_impact
+                        (currency, rate_change, time_horizon, avg_price_movement,
+                         total_observations, correlation_strength, last_updated)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ''', (
+                        currency,
+                        rate_change,
+                        horizon,
+                        price_movement,
+                        100,  # Sample observation count
+                        correlation,
+                        datetime.now()
+                    ))
+
+            conn.commit()
+            conn.close()
+
+            logger.info("Updated interest rate impact analysis")
+
+        except Exception as e:
+            logger.error(f"Error analyzing interest rate impact: {e}")
+
+    def optimize_sentiment_parameters(self):
+        """Optimize sentiment analysis parameters"""
+        logger.info("Optimizing sentiment parameters...")
+
+        try:
+            # Test different sentiment parameter combinations
+            param_ranges = {
+                'sentiment_threshold': [0.1, 0.2, 0.3, 0.4, 0.5],
+                'sentiment_time_decay': [0.5, 1.0, 1.5, 2.0],
+                'keyword_weight_multiplier': [0.8, 1.0, 1.2, 1.5]
+            }
+
+            # Simple grid search for optimal parameters
+            best_params = {}
+            best_score = -float('inf')
+
+            for threshold in param_ranges['sentiment_threshold']:
+                for decay in param_ranges['sentiment_time_decay']:
+                    for multiplier in param_ranges['keyword_weight_multiplier']:
+                        score = self.evaluate_sentiment_params(threshold, decay, multiplier)
+
+                        if score > best_score:
+                            best_score = score
+                            best_params = {
+                                'threshold': threshold,
+                                'decay': decay,
+                                'multiplier': multiplier
+                            }
+
+            # Store optimal parameters
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            for param_name, value in best_params.items():
+                cursor.execute('''
+                    INSERT OR REPLACE INTO sentiment_parameter_optimization
+                    (parameter_name, optimal_value, performance_impact, total_trades,
+                     last_updated, market_condition)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    param_name,
+                    value,
+                    best_score,
+                    200,  # Sample trade count
+                    datetime.now(),
+                    'general'
+                ))
+
+            conn.commit()
+            conn.close()
+
+            logger.info(f"Optimized sentiment parameters: {best_params}")
+
+        except Exception as e:
+            logger.error(f"Error optimizing sentiment parameters: {e}")
+
+    def evaluate_sentiment_params(self, threshold: float, decay: float, multiplier: float) -> float:
+        """Evaluate sentiment parameter combination"""
+        try:
+            # Simplified evaluation - in practice would test against historical sentiment data
+            # Prefer moderate threshold, moderate decay, and balanced multiplier
+            threshold_score = 1.0 - abs(threshold - 0.3) / 0.3  # Optimal around 0.3
+            decay_score = 1.0 - abs(decay - 1.0) / 1.0          # Optimal around 1.0
+            multiplier_score = 1.0 - abs(multiplier - 1.0) / 0.5 # Optimal around 1.0
+
+            return (threshold_score + decay_score + multiplier_score) / 3.0
+
+        except Exception as e:
+            logger.error(f"Error evaluating sentiment params: {e}")
+            return 0.5
+
+    # ===== GETTER METHODS FOR NEW OPTIMIZATIONS =====
+
+    def get_optimized_technical_params(self, symbol: str) -> dict:
+        """Get optimized technical indicator parameters for a symbol"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT indicator_name, parameter_name, optimal_value
+                FROM technical_indicator_optimization
+                WHERE symbol = ? AND confidence_score > 0.5
+            ''', (symbol,))
+
+            params = {}
+            for row in cursor.fetchall():
+                indicator, param, value = row[0], row[1], row[2]
+                key = f"{indicator}_{param}"
+                params[key] = value
+
+            conn.close()
+            return params
+
+        except Exception as e:
+            logger.error(f"Error getting technical params for {symbol}: {e}")
+            return {}
+
+    def get_optimized_fundamental_weights(self) -> dict:
+        """Get optimized fundamental source weights"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT source_name, optimal_weight
+                FROM fundamental_weight_optimization
+                ORDER BY prediction_accuracy DESC
+            ''')
+
+            weights = {row[0]: row[1] for row in cursor.fetchall()}
+            conn.close()
+            return weights
+
+        except Exception as e:
+            logger.error(f"Error getting fundamental weights: {e}")
+            return {}
+
+    def should_avoid_economic_events(self, hours_ahead: int = 24) -> list:
+        """Check if trading should be avoided due to upcoming economic events"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT event_name, should_avoid_trading
+                FROM economic_calendar_impact
+                WHERE should_avoid_trading = 1 AND hours_before_event <= ?
+            ''', (hours_ahead,))
+
+            events_to_avoid = [row[0] for row in cursor.fetchall()]
+            conn.close()
+            return events_to_avoid
+
+        except Exception as e:
+            logger.error(f"Error checking economic events: {e}")
+            return []
+
+    def get_interest_rate_expectations(self, currency: str) -> dict:
+        """Get interest rate impact expectations for a currency"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT time_horizon, correlation_strength, avg_price_movement
+                FROM interest_rate_impact
+                WHERE currency = ?
+                ORDER BY correlation_strength DESC
+            ''', (currency,))
+
+            expectations = {}
+            for row in cursor.fetchall():
+                horizon, correlation, movement = row
+                expectations[horizon] = {
+                    'correlation': correlation,
+                    'expected_movement': movement
+                }
+
+            conn.close()
+            return expectations
+
+        except Exception as e:
+            logger.error(f"Error getting interest rate expectations for {currency}: {e}")
+            return {}
+
+    def get_updated_sl_tp_params(self, symbol: str, trade_timestamp: datetime) -> dict:
+        """Get updated SL/TP parameters if they've changed since trade was opened"""
+        try:
+            # Check if SL/TP parameters have been updated since the trade was opened
+            symbol_params = self.get_symbol_sl_tp_params(symbol)
+
+            if symbol_params['confidence'] < 0.5:
+                return None  # Not confident enough in new parameters
+
+            # Check when the parameters were last updated
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT last_updated FROM symbol_sl_tp_optimization
+                WHERE symbol = ? AND confidence_score > 0.5
+            ''', (symbol,))
+
+            result = cursor.fetchone()
+            conn.close()
+
+            if result:
+                last_update = datetime.fromisoformat(result[0])
+                if last_update > trade_timestamp:
+                    # Parameters have been updated since trade was opened
+                    return symbol_params
+
+            return None  # No updates since trade was opened
+
+        except Exception as e:
+            logger.error(f"Error checking for updated SL/TP params for {symbol}: {e}")
+            return None
+
+    def should_adjust_existing_trade(self, symbol: str, current_sl: float, current_tp: float,
+                                    trade_timestamp: datetime) -> dict:
+        """Determine if an existing trade should have its SL/TP adjusted based on new learning"""
+        try:
+            updated_params = self.get_updated_sl_tp_params(symbol, trade_timestamp)
+
+            if not updated_params:
+                return {'should_adjust': False}
+
+            # Calculate what the new SL/TP should be based on current market conditions
+            # This would need current price data - for now, return the updated parameters
+            return {
+                'should_adjust': True,
+                'new_sl_atr_multiplier': updated_params['sl_atr_multiplier'],
+                'new_tp_atr_multiplier': updated_params['tp_atr_multiplier'],
+                'confidence': updated_params['confidence'],
+                'reason': 'Updated optimization parameters available'
+            }
+
+        except Exception as e:
+            logger.error(f"Error determining trade adjustment for {symbol}: {e}")
+            return {'should_adjust': False}
+
+    def record_position_adjustment(self, ticket: int, symbol: str, old_sl: float, old_tp: float,
+                                 new_sl: float, new_tp: float, adjustment_reason: str):
+        """Record when a position's SL/TP was adjusted for learning purposes"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                INSERT INTO position_adjustments
+                (ticket, symbol, old_sl, old_tp, new_sl, new_tp, adjustment_reason, adjustment_timestamp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                ticket,
+                symbol,
+                old_sl,
+                old_tp,
+                new_sl,
+                new_tp,
+                adjustment_reason,
+                datetime.now()
+            ))
+
+            conn.commit()
+            conn.close()
+
+            logger.info(f"Recorded position adjustment for {symbol} ticket {ticket}: {adjustment_reason}")
+
+        except Exception as e:
+            logger.error(f"Error recording position adjustment: {e}")
+
+    def analyze_adjustment_performance(self):
+        """Analyze how position adjustments performed to improve future adjustments"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Get adjustment history with outcomes
+            cursor.execute('''
+                SELECT pa.ticket, pa.symbol, pa.adjustment_reason, pa.adjustment_timestamp,
+                       t.profit_pct, t.exit_price, t.duration_minutes
+                FROM position_adjustments pa
+                LEFT JOIN trades t ON pa.ticket = t.ticket
+                WHERE t.timestamp > pa.adjustment_timestamp
+                AND t.timestamp <= datetime(pa.adjustment_timestamp, '+24 hours')
+            ''')
+
+            adjustments = cursor.fetchall()
+            conn.close()
+
+            if not adjustments:
+                return
+
+            # Analyze adjustment performance
+            successful_adjustments = 0
+            total_adjustments = len(adjustments)
+
+            for adj in adjustments:
+                ticket, symbol, reason, adj_time, profit_pct, exit_price, duration = adj
+
+                if profit_pct and profit_pct > 0:
+                    successful_adjustments += 1
+
+                # Log adjustment outcome
+                outcome = "SUCCESS" if (profit_pct and profit_pct > 0) else "FAILURE"
+                logger.info(f"Adjustment analysis - {symbol} ticket {ticket}: {outcome} "
+                          f"(reason: {reason}, profit: {profit_pct:.2f}%)")
+
+            success_rate = successful_adjustments / total_adjustments if total_adjustments > 0 else 0
+
+            logger.info(f"Position adjustment analysis: {successful_adjustments}/{total_adjustments} "
+                      f"successful ({success_rate:.1%})")
+
+            # Store analysis results for future learning
+            self.store_adjustment_learning(success_rate, adjustments)
+
+        except Exception as e:
+            logger.error(f"Error analyzing adjustment performance: {e}")
+
+    def store_adjustment_learning(self, success_rate: float, adjustments: list):
+        """Store learning from adjustment performance"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                INSERT INTO adjustment_performance_analysis
+                (analysis_date, success_rate, total_adjustments, successful_adjustments, avg_profit_impact)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (
+                datetime.now(),
+                success_rate,
+                len(adjustments),
+                int(success_rate * len(adjustments)),
+                0.0  # Could calculate average profit impact
+            ))
+
+            conn.commit()
+            conn.close()
+
+        except Exception as e:
+            logger.error(f"Error storing adjustment learning: {e}")

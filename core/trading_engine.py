@@ -511,6 +511,9 @@ class TradingEngine:
                         # Update take profit based on new analysis first
                         tp_increased = await self.update_take_profit(position)
 
+                        # Check for adaptive learning updates to SL/TP
+                        await self.check_adaptive_sl_tp_adjustment(position)
+
                         # Only apply breakeven and trailing stops if TP was increased
                         if tp_increased:
                             # Apply breakeven if enabled
@@ -524,6 +527,137 @@ class TradingEngine:
 
         except Exception as e:
             logger.error(f"Error managing positions: {e}")
+
+    async def check_adaptive_sl_tp_adjustment(self, position):
+        """Check if position SL/TP should be adjusted based on adaptive learning"""
+        try:
+            if not hasattr(self, 'adaptive_learning') or not self.adaptive_learning:
+                return
+
+            # Convert position time to datetime
+            trade_timestamp = datetime.fromtimestamp(position.time)
+
+            # Check if there are updated SL/TP parameters for this symbol
+            adjustment_needed = self.adaptive_learning.should_adjust_existing_trade(
+                position.symbol,
+                position.sl,
+                position.tp,
+                trade_timestamp
+            )
+
+            if not adjustment_needed.get('should_adjust', False):
+                return
+
+            logger.info(f"Adaptive learning suggests SL/TP adjustment for {position.symbol} position {position.ticket}")
+
+            # Get current market data to calculate new SL/TP levels
+            tick = mt5.symbol_info_tick(position.symbol)
+            if tick is None:
+                return
+
+            current_price = tick.bid if position.type == mt5.ORDER_TYPE_BUY else tick.ask
+
+            # Get ATR for calculating new levels
+            bars = mt5.copy_rates_from_pos(position.symbol, mt5.TIMEFRAME_H1, 0, 20)
+            if bars is None or len(bars) < 14:
+                return
+
+            # Calculate current ATR
+            atr_values = []
+            for i in range(1, len(bars)):
+                high = bars[i]['high']
+                low = bars[i]['low']
+                prev_close = bars[i-1]['close']
+                tr = max(high - low, abs(high - prev_close), abs(low - prev_close))
+                atr_values.append(tr)
+
+            if not atr_values:
+                return
+
+            current_atr = sum(atr_values) / len(atr_values)
+
+            # Calculate new SL/TP using optimized multipliers
+            sl_multiplier = adjustment_needed['new_sl_atr_multiplier']
+            tp_multiplier = adjustment_needed['new_tp_atr_multiplier']
+
+            if position.type == mt5.ORDER_TYPE_BUY:
+                new_sl = position.price_open - (current_atr * sl_multiplier)
+                new_tp = position.price_open + (current_atr * tp_multiplier)
+            else:  # SELL
+                new_sl = position.price_open + (current_atr * sl_multiplier)
+                new_tp = position.price_open - (current_atr * tp_multiplier)
+
+            # Validate new levels meet broker requirements
+            symbol_info = mt5.symbol_info(position.symbol)
+            if symbol_info:
+                min_stop_distance = symbol_info.trade_stops_level * symbol_info.point
+
+                # Ensure SL is not too close to current price
+                if position.type == mt5.ORDER_TYPE_BUY:
+                    min_sl = current_price - min_stop_distance
+                    if new_sl >= min_sl:
+                        logger.debug(f"New SL {new_sl:.5f} too close to current price {current_price:.5f}, skipping adjustment")
+                        return
+                else:  # SELL
+                    max_sl = current_price + min_stop_distance
+                    if new_sl <= max_sl:
+                        logger.debug(f"New SL {new_sl:.5f} too close to current price {current_price:.5f}, skipping adjustment")
+                        return
+
+                # Ensure TP is not too close to current price
+                if position.type == mt5.ORDER_TYPE_BUY:
+                    min_tp = current_price + min_stop_distance
+                    if new_tp <= min_tp:
+                        logger.debug(f"New TP {new_tp:.5f} too close to current price {current_price:.5f}, skipping adjustment")
+                        return
+                else:  # SELL
+                    max_tp = current_price - min_stop_distance
+                    if new_tp >= max_tp:
+                        logger.debug(f"New TP {new_tp:.5f} too close to current price {current_price:.5f}, skipping adjustment")
+                        return
+
+            # Only adjust if the new levels are significantly different
+            sl_change = abs(new_sl - position.sl)
+            tp_change = abs(new_tp - position.tp)
+
+            min_change_pips = 10  # Minimum 10 pips change to warrant adjustment
+            min_change_distance = min_change_pips * (100 if 'JPY' in position.symbol else 0.0001)
+
+            if sl_change < min_change_distance and tp_change < min_change_distance:
+                logger.debug(f"SL/TP changes too small for {position.symbol}: SL Δ{sl_change:.5f}, TP Δ{tp_change:.5f}")
+                return
+
+            # Record the adjustment before making it
+            self.adaptive_learning.record_position_adjustment(
+                position.ticket,
+                position.symbol,
+                position.sl,
+                position.tp,
+                new_sl,
+                new_tp,
+                f"Adaptive learning update (confidence: {adjustment_needed['confidence']:.2f})"
+            )
+
+            # Apply the adjustment
+            request = {
+                "action": mt5.TRADE_ACTION_SLTP,
+                "symbol": position.symbol,
+                "position": position.ticket,
+                "sl": new_sl,
+                "tp": new_tp,
+                "magic": self.magic_number
+            }
+
+            result = mt5.order_send(request)
+            if result.retcode == mt5.TRADE_RETCODE_DONE:
+                logger.info(f"Adaptive SL/TP adjustment applied for {position.symbol} position {position.ticket}: "
+                          f"SL: {position.sl:.5f} → {new_sl:.5f}, TP: {position.tp:.5f} → {new_tp:.5f} "
+                          f"(ATR: {current_atr:.5f}, SL mult: {sl_multiplier:.2f}, TP mult: {tp_multiplier:.2f})")
+            else:
+                logger.warning(f"Failed to apply adaptive SL/TP adjustment for {position.symbol}: {result.comment}")
+
+        except Exception as e:
+            logger.error(f"Error in adaptive SL/TP adjustment for {position.symbol}: {e}")
 
     async def update_trailing_stop(self, position) -> None:
         """Update trailing stop for a position with adaptive logic - ASYNC"""
