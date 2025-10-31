@@ -555,11 +555,25 @@ class FXAiApplication:
     def monitor_trade(self, ticket: int, trade_data: dict):
         """Monitor trade outcome for learning with time-based exits"""
         try:
-            # Get adaptive parameters for time-based exits
-            adaptive_params = self.adaptive_learning.get_adaptive_parameters() if self.adaptive_learning else {}
-            max_holding_minutes = adaptive_params.get('max_holding_minutes', 480)  # Default 8 hours
-            optimal_holding_hours = adaptive_params.get('optimal_holding_hours', 4.0)
+            # Get symbol-specific optimal holding times
+            symbol = trade_data['symbol']
+            if self.adaptive_learning:
+                symbol_params = self.adaptive_learning.get_symbol_optimal_holding_time(symbol)
+                optimal_holding_hours = symbol_params['optimal_holding_hours']
+                max_holding_minutes = symbol_params['max_holding_minutes']
+                confidence_score = symbol_params['confidence_score']
+            else:
+                # Fallback to global parameters
+                adaptive_params = self.adaptive_learning.get_adaptive_parameters() if self.adaptive_learning else {}
+                optimal_holding_hours = adaptive_params.get('optimal_holding_hours', 4.0)
+                max_holding_minutes = adaptive_params.get('max_holding_minutes', 480)
+                confidence_score = 0.0
+
             optimal_holding_minutes = optimal_holding_hours * 60
+
+            # Log symbol-specific parameters
+            self.logger.info(f"Monitoring {symbol} with optimal holding: {optimal_holding_hours:.1f}h "
+                           f"(max: {max_holding_minutes}min, confidence: {confidence_score:.2f})")
 
             # Wait for trade to complete
             while True:
@@ -674,7 +688,7 @@ class FXAiApplication:
                 return
 
             current_time = datetime.now().time()
-            close_time = time(21, 0)  # 9 PM
+            close_time = time(17, 0)  # 5 PM ET - End of NY forex session
 
             # Only close once per day - check if we haven't already closed today
             if current_time >= close_time:
