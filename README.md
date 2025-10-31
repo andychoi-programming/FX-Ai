@@ -869,8 +869,6 @@ This comprehensive diagnostic tool will test:
 - Historical data access
 - File system permissions for MT5-EA communication
 
-### 5️⃣ Start Trading
-
 ```bash
 python main.py
 ```
