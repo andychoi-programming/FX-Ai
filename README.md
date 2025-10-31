@@ -44,6 +44,23 @@ I've created the complete FX-Ai trading system with the following components:
 
 ## Recent Updates
 
+### v1.4.1 - Trading Hours & Risk Management Fixes (October 31, 2025)
+
+- **⏰ FIXED TRADE CLOSING TIME**: Corrected position closure from 23:30 to 22:30 MT5 platform time
+- **🚫 TRADING TIME RESTRICTIONS**: Implemented complete trade prevention between 22:30 and 24:00
+- **⚡ CONFIGURABLE TRADING HOURS**: Added `close_hour` and `close_minute` settings in config.json
+- **🛡️ ENHANCED RISK VALIDATION**: Improved position validation with metal-specific risk requirements (50 pips minimum)
+- **📊 POSITION MONITORING**: Enhanced position change detection and automated risk assessment
+- **🔧 SYSTEM HEALTH OPTIMIZATION**: Cleaned up temporary test files and optimized file structure
+
+**Key Fixes:**
+
+- Trade closing time corrected from 23:30 to 22:30 MT5 time
+- No trades can be placed after 22:30 (complete restriction)
+- Metal positions require minimum 50 pips risk (XAUUSD, XAGUSD)
+- Configurable trading hours via `config/config.json`
+- Enhanced position validation and monitoring
+
 ### v1.4.0 - Complete Adaptive Learning System (October 31, 2025)
 
 - **🚀 COMPREHENSIVE LEARNING SYSTEM**: Implemented full optimization across all analysis components
@@ -173,6 +190,7 @@ graph TD
 #### 1. **Signal Generation Optimization**
 
 **Technical Indicator Optimization** (Every 24 hours)
+
 - VWAP periods: 10-50 (optimal: 15-25)
 - EMA Fast periods: 5-20 (optimal: 8-12)
 - EMA Slow periods: 15-50 (optimal: 20-30)
@@ -180,6 +198,7 @@ graph TD
 - ATR periods: 7-21 (optimal: 12-16)
 
 **Fundamental Weight Optimization** (Every 12 hours)
+
 - myfxbook: 0.1-0.4 (news sentiment)
 - fxstreet: 0.1-0.4 (market analysis)
 - fxblue: 0.1-0.3 (technical analysis)
@@ -187,6 +206,7 @@ graph TD
 - forexclientsentiment: 0.05-0.2 (retail positioning)
 
 **Sentiment Parameter Optimization** (Every 12 hours)
+
 - Sentiment threshold: 0.1-0.5 (optimal: ~0.3)
 - Time decay factor: 0.5-2.0 (optimal: ~1.0)
 - Keyword weight multiplier: 0.8-1.5 (optimal: ~1.0)
@@ -194,11 +214,13 @@ graph TD
 #### 2. **Market Condition Analysis**
 
 **Economic Calendar Impact** (Every 6 hours)
+
 - High-impact events: Avoid trading 1-4 hours before/after
 - Medium-impact events: Avoid trading 1-2 hours before/after
 - Performance correlation: Tracks win rates during events
 
 **Interest Rate Impact** (Every 24 hours)
+
 - Currency-specific rate change correlations
 - Time horizons: 1h, 4h, 1d, 1w
 - Price movement predictions based on rate differentials
@@ -206,29 +228,34 @@ graph TD
 #### 3. **Entry & Exit Optimization**
 
 **Entry Timing Analysis** (Every 12 hours)
+
 - Optimal trading hours per symbol
 - Win rate analysis by hour of day
 - Market session preferences
 
 **SL/TP Ratio Optimization** (Every 24 hours)
+
 - Per-symbol optimal SL/TP ATR multipliers
 - Risk-reward ratio optimization (target: 1:3)
 - Confidence scoring based on sample size
 
 **Entry Filters** (Every 8 hours)
+
 - Volatility thresholds
 - Spread limits
 - Market condition filters
 
 #### 4. **Dynamic Position Management**
 
-**Real-Time Position Adjustments**
+### Real-Time Position Adjustments
+
 - Monitors for updated optimization parameters
 - Adjusts existing trades when confidence > 50%
 - Minimum 10-pip change threshold
 - Records all adjustments for learning
 
 **Adjustment Performance Analysis** (Every 24 hours)
+
 - Success rate tracking for SL/TP modifications
 - Profit impact analysis
 - Optimal adjustment timing patterns
@@ -308,6 +335,7 @@ adaptive_params = {
 ### Learning Algorithms
 
 #### 1. **Grid Search Optimization**
+
 ```python
 # Example: Technical indicator optimization
 for period in range(10, 51, 5):  # VWAP periods 10-50
@@ -317,6 +345,7 @@ for period in range(10, 51, 5):  # VWAP periods 10-50
 ```
 
 #### 2. **Performance-Based Weight Adjustment**
+
 ```python
 # Adjust weights based on correlation with profits
 correlation = calculate_signal_profit_correlation(signal, profits)
@@ -324,6 +353,7 @@ new_weight = old_weight * (1 + correlation * learning_rate)
 ```
 
 #### 3. **Confidence Scoring**
+
 ```python
 # Higher confidence with more data
 confidence = min(1.0, sample_size / 200)
@@ -334,12 +364,14 @@ if confidence > 0.5:
 ### Real-Time Adaptation Features
 
 #### Position Adjustment Logic
+
 - Checks for parameter updates since trade opened
 - Validates broker requirements (min stops, spreads)
 - Applies minimum change thresholds (10 pips)
 - Records adjustments for outcome analysis
 
 #### Market Condition Filters
+
 - Economic calendar: Avoids high-impact events
 - Interest rates: Considers currency correlations
 - Volatility: Adapts to market conditions
@@ -348,12 +380,14 @@ if confidence > 0.5:
 ### Performance Monitoring
 
 #### Learning Effectiveness Metrics
+
 - Parameter optimization improvement rates
 - Adjustment success percentages
 - Signal weight adaptation results
 - Overall system performance trends
 
 #### System Health Checks
+
 - Database integrity validation
 - Learning thread status monitoring
 - Parameter application verification
@@ -379,6 +413,13 @@ if confidence > 0.5:
 ---
 
 **The FX-Ai system now features enterprise-grade adaptive learning capabilities that continuously optimize every aspect of trading performance while maintaining strict risk management and operational reliability.**
+
+#### Signal Weights (Optimized)
+
+```python
+signal_weights = {
+    'ml_score': 0.35,           # Based on ML model accuracy
+    'technical_score': 0.25,    # Based on technical analysis
     'sentiment_score': 0.20,    # Based on sentiment correlation
     'fundamental_score': 0.15,  # Based on fundamental impact
     'support_resistance': 0.10  # Based on S/R effectiveness
@@ -1096,6 +1137,32 @@ python main.py
 - **Max Positions**: 5 concurrent trades
 - **Breakeven**: Move SL at 20 pips profit
 - **Trailing Stop**: Trail by 30 pips after 40 pips
+- **Trading Hours**: 24/5 operation with 22:30 MT5 time closure
+- **Post-Close Restriction**: No new trades after 22:30 until next session
+
+### Trading Hours & Time-Based Controls
+
+#### Automated Position Closure
+- **Close Time**: 22:30 MT5 platform time (configurable)
+- **Action**: All open positions automatically closed
+- **Scope**: Applies to all symbols and position types
+
+#### Trade Prevention After Hours
+- **Restriction Period**: 22:30 to 24:00 MT5 time
+- **Prevention**: No new trades can be placed
+- **Monitoring**: System continues market analysis
+- **Reset**: Trading resumes normally next session
+
+#### Configuration Options
+```json
+{
+  "trading": {
+    "day_trading_only": true,
+    "close_hour": 22,
+    "close_minute": 30
+  }
+}
+```
 
 ### Risk Management Tools
 
