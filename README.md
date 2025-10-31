@@ -1409,6 +1409,12 @@ before considering live trading with real money.
 
 ---
 
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
 ## Happy Trading! 🚀📈
 
 *FX-Ai Development Team*
