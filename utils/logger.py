@@ -104,8 +104,7 @@ def setup_logger(name: str = 'FX-Ai', level: str = 'INFO',
                     backupCount=backup_count
                 )
                 # Set custom suffix to include underscore and .log extension
-                file_handler.suffix = "_%Y-%m-%d.log"
-                file_handler.extMatch = r"^\d{4}-\d{2}-\d{2}\.log$"
+                file_handler.suffix = "_%Y_%m_%d.log"
             else:
                 # Rotating file handler (size-based rotation)
                 file_handler = logging.handlers.RotatingFileHandler(
@@ -186,8 +185,7 @@ def add_file_handler(logger: logging.Logger, log_file: str,
                 backupCount=backup_count
             )
             # Set custom suffix to include underscore and .log extension
-            file_handler.suffix = "_%Y-%m-%d.log"
-            file_handler.extMatch = r"^\d{4}-\d{2}-\d{2}\.log$"
+            file_handler.suffix = "_%Y_%m_%d.log"
         else:
             # Rotating file handler (size-based rotation)
             file_handler = logging.handlers.RotatingFileHandler(
@@ -226,40 +224,3 @@ def log_function_call(logger: logging.Logger):
                 raise
         return wrapper
     return decorator
-
-class TradingLogger:
-    """Specialized logger for trading activities"""
-
-    def __init__(self, name: str = 'Trading', log_file: Optional[str] = None):
-        """
-        Initialize trading logger
-
-        Args:
-            name: Logger name
-            log_file: Log file path
-        """
-        self.logger = setup_logger(name, 'INFO', log_file)
-
-    def log_signal(self, symbol: str, signal: dict):
-        """Log trading signal"""
-        self.logger.info(f"SIGNAL - {symbol}: {signal}")
-
-    def log_trade(self, symbol: str, action: str, volume: float, price: float):
-        """Log trade execution"""
-        self.logger.info(f"TRADE - {symbol}: {action.upper()} {volume} lots @ {price}")
-
-    def log_pnl(self, symbol: str, pnl: float, balance: float):
-        """Log profit/loss"""
-        pnl_str = f"+{pnl:.2f}" if pnl >= 0 else f"{pnl:.2f}"
-        self.logger.info(f"PNL - {symbol}: {pnl_str}, Balance: {balance:.2f}")
-
-    def log_error(self, symbol: str, error: str):
-        """Log trading error"""
-        self.logger.error(f"ERROR - {symbol}: {error}")
-
-    def log_performance(self, metrics: dict):
-        """Log performance metrics"""
-        self.logger.info(f"PERFORMANCE: {metrics}")
-
-# Global trading logger instance
-trading_logger = TradingLogger('FX-Trading', 'logs/trading.log')

@@ -34,7 +34,7 @@ class RiskManager:
         self.symbol_cooldowns = {}  # symbol -> cooldown_end_time
         self.cooldown_minutes = config.get('risk_management', {}).get('symbol_cooldown_minutes', 5)  # 5 minute cooldown
         
-        logger.info(f"Risk Manager initialized with ${self.risk_per_trade} risk per trade")
+        logger.info(f"Risk Manager initialized with ${self.risk_per_trade} risk per trade, max_positions={self.max_positions}")
     
     def calculate_position_size(self, 
                                symbol: str, 
@@ -66,114 +66,69 @@ class RiskManager:
             # Use override risk or default
             risk_amount = risk_override if risk_override else self.risk_per_trade
             
-            # Get account currency
-            account_info = mt5.account_info()
-            if account_info is None:
-                logger.error("Cannot get account info")
-                return 0.01
-            
-            account_currency = account_info.currency
-            
             # Get current price for calculations
             tick = mt5.symbol_info_tick(symbol)
             if tick is None:
                 logger.error(f"Cannot get tick for {symbol}")
                 return 0.01
             
-            # FIXED CALCULATION METHOD
-            # This is the correct way to calculate position size for fixed dollar risk
+            # FIXED CALCULATION METHOD FOR CROSS PAIRS
+            # Calculate pip value correctly for all pair types
             
-            # Step 1: Determine pip value per standard lot
-            contract_size = symbol_info.trade_contract_size
-            point = symbol_info.point
-            digits = symbol_info.digits
-            
-            # Determine if it's a 4 or 5 digit broker (or 2/3 for JPY pairs)
-            if "XAU" in symbol or "GOLD" in symbol or "XAG" in symbol:
-                pip_size = point * 10  # Metals: 1 pip = 10 points (0.1 for 2-digit symbols)
-            elif digits == 3 or digits == 5:
-                pip_size = point * 10
-            else:
-                pip_size = point
-            
-            # Step 2: Calculate pip value in account currency
-            # For different symbol types:
-            if "JPY" in symbol and symbol.endswith("JPY"):
-                # JPY is quote currency - pip value in JPY
-                pip_value_per_lot = pip_size * contract_size
+            if symbol.endswith("USD"):
+                # Direct pairs (EURUSD, GBPUSD, etc.)
+                pip_value_per_lot = 10.0  # $10 per pip for 1 lot
+                
             elif symbol.startswith("USD"):
-                # USD is base currency
-                pip_value_per_lot = pip_size * contract_size
-            elif symbol.endswith("USD"):
-                # USD is quote currency (direct quote)
-                pip_value_per_lot = pip_size * contract_size
-            elif "XAU" in symbol or "GOLD" in symbol:
-                # Gold - special calculation
-                pip_value_per_lot = pip_size * contract_size
+                # Inverse pairs (USDCHF, USDJPY, etc.)
+                if "JPY" in symbol:
+                    pip_value_per_lot = (0.01 * 100000) / tick.bid
+                else:
+                    pip_value_per_lot = (0.0001 * 100000) / tick.bid
+                    
             else:
-                # Cross pairs - need conversion through USD
-                # Simplified calculation
-                pip_value_per_lot = (pip_size * contract_size) / tick.bid
+                # CROSS PAIRS (EURGBP, EURJPY, GBPJPY, etc.)
+                # Need to convert through the quote currency
+                quote_currency = symbol[-3:]  # Last 3 chars (GBP, JPY, etc.)
+                
+                # Get conversion rate
+                if quote_currency == "JPY":
+                    # For XXX/JPY crosses
+                    usdjpy_tick = mt5.symbol_info_tick("USDJPY")
+                    if usdjpy_tick:
+                        pip_value_per_lot = (0.01 * 100000) / usdjpy_tick.bid
+                    else:
+                        pip_value_per_lot = 6.5  # Fallback estimate
+                        
+                else:
+                    # For other crosses like EURGBP
+                    # Need GBP/USD rate to convert GBP pips to USD
+                    conversion_symbol = f"{quote_currency}USD"
+                    conversion_tick = mt5.symbol_info_tick(conversion_symbol)
+                    
+                    if conversion_tick:
+                        # EURGBP pip value = 10 GBP × GBPUSD rate
+                        pip_value_per_lot = 10.0 * conversion_tick.bid
+                    else:
+                        # Fallback if can't get conversion
+                        logger.warning(f"Can't get {conversion_symbol} rate, using estimate")
+                        pip_value_per_lot = 13.0  # Rough estimate
             
-            # Convert to account currency if needed
-            if "JPY" in symbol and symbol.endswith("JPY") and account_currency == "USD":
-                usdjpy_tick = mt5.symbol_info_tick("USDJPY")
-                if usdjpy_tick:
-                    pip_value_per_lot = pip_value_per_lot / usdjpy_tick.bid
-            elif symbol.endswith("CAD") and account_currency == "USD":
-                cadusd_tick = mt5.symbol_info_tick("USDCAD")
-                if cadusd_tick:
-                    pip_value_per_lot = pip_value_per_lot / cadusd_tick.bid
-            elif symbol.endswith("CHF") and account_currency == "USD":
-                chfusd_tick = mt5.symbol_info_tick("USDCHF")
-                if chfusd_tick:
-                    pip_value_per_lot = pip_value_per_lot / chfusd_tick.bid
-            elif symbol.endswith("GBP") and account_currency == "USD":
-                gbpusd_tick = mt5.symbol_info_tick("GBPUSD")
-                if gbpusd_tick:
-                    pip_value_per_lot = pip_value_per_lot / gbpusd_tick.bid
-            elif symbol.endswith("AUD") and account_currency == "USD":
-                audusd_tick = mt5.symbol_info_tick("AUDUSD")
-                if audusd_tick:
-                    pip_value_per_lot = pip_value_per_lot / audusd_tick.bid
-            elif symbol.endswith("NZD") and account_currency == "USD":
-                nzdusd_tick = mt5.symbol_info_tick("NZDUSD")
-                if nzdusd_tick:
-                    pip_value_per_lot = pip_value_per_lot / nzdusd_tick.bid
-            
-            # Step 3: Convert pip value to account currency if needed
-            if account_currency != "USD":
-                # Need to convert (simplified - should use proper conversion rate)
-                if account_currency == "EUR":
-                    # Get EURUSD rate
-                    eurusd_tick = mt5.symbol_info_tick("EURUSD")
-                    if eurusd_tick:
-                        pip_value_per_lot = pip_value_per_lot / eurusd_tick.bid
-                elif account_currency == "GBP":
-                    # Get GBPUSD rate
-                    gbpusd_tick = mt5.symbol_info_tick("GBPUSD")
-                    if gbpusd_tick:
-                        pip_value_per_lot = pip_value_per_lot / gbpusd_tick.bid
-            
-            # Step 4: Calculate lot size based on risk
-            # Formula: Lot Size = Risk Amount / (Stop Loss in Pips × Pip Value per Lot)
-            
+            # Calculate lot size
             if stop_loss_pips <= 0:
                 logger.warning(f"Invalid stop loss pips: {stop_loss_pips}, using default 20")
                 stop_loss_pips = 20
-            
-            # CRITICAL FIX: Proper lot size calculation
+                
             lot_size = risk_amount / (stop_loss_pips * pip_value_per_lot)
             
-            # Step 5: Round to broker's lot step
+            # Round to lot step
             lot_step = symbol_info.volume_step
             lot_size = round(lot_size / lot_step) * lot_step
             
-            # Step 6: Apply broker limits
+            # Apply broker limits
             min_lot = symbol_info.volume_min
             max_lot = symbol_info.volume_max
             
-            # Apply limits
             if lot_size < min_lot:
                 logger.warning(f"Calculated lot size {lot_size:.4f} below minimum {min_lot}")
                 lot_size = min_lot
@@ -181,25 +136,16 @@ class RiskManager:
                 logger.warning(f"Calculated lot size {lot_size:.4f} above maximum {max_lot}")
                 lot_size = max_lot
             
-            # Step 7: Additional safety check - ensure we don't exceed risk
-            # Calculate actual risk with the final lot size
+            # Verify the calculation
             actual_risk = lot_size * stop_loss_pips * pip_value_per_lot
+            logger.info(f"{symbol}: {lot_size:.2f} lots × {stop_loss_pips} pips × ${pip_value_per_lot:.2f} = ${actual_risk:.2f} risk")
             
+            # Safety check
             if actual_risk > risk_amount * 1.1:  # Allow 10% tolerance
-                # Reduce lot size to stay within risk
+                # Reduce lot size
                 lot_size = (risk_amount * 0.95) / (stop_loss_pips * pip_value_per_lot)
                 lot_size = round(lot_size / lot_step) * lot_step
                 lot_size = max(min_lot, lot_size)
-            
-            # Log the calculation details
-            logger.info(f"""
-Position Size Calculation for {symbol}:
-- Risk Amount: ${risk_amount:.2f}
-- Stop Loss: {stop_loss_pips:.1f} pips
-- Pip Value/Lot: ${pip_value_per_lot:.4f}
-- Calculated Lots: {lot_size:.4f}
-- Actual Risk: ${lot_size * stop_loss_pips * pip_value_per_lot:.2f}
-            """)
             
             return lot_size
             
@@ -429,6 +375,7 @@ Position Size Calculation for {symbol}:
         from datetime import datetime
         
         logger.debug(f"Checking if can trade {symbol}: daily_loss={self.daily_loss}, max_daily_loss={self.max_daily_loss}")
+        logger.debug(f"Max positions: {self.max_positions}, current positions: {position_count if 'position_count' in locals() else 'not yet calculated'}")
         
         if self.daily_loss >= self.max_daily_loss:
             logger.warning(f"Daily loss limit reached: ${self.daily_loss:.2f}")
@@ -569,7 +516,7 @@ Position Size Calculation for {symbol}:
         return {
             'daily_loss': self.daily_loss,
             'max_daily_loss': self.max_daily_loss,
-            'current_positions': current_positions,
+            'current_positions': len(positions) if positions else 0,
             'max_positions': self.max_positions,
             'total_exposure': total_exposure,
             'risk_per_trade': self.risk_per_trade,

@@ -79,7 +79,7 @@ class ConfigLoader:
 
                 # Merge with defaults
                 self.config = self._merge_configs(self.defaults, user_config)
-                self.logger.info(f"Configuration loaded from {self.config_path}")
+                self.logger.info(f"Configuration loaded from {self.config_path}, trading.max_positions={self.config.get('trading', {}).get('max_positions', 'NOT_FOUND')}")
             else:
                 # Use defaults and create config file
                 self.config = self.defaults.copy()

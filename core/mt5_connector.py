@@ -484,6 +484,14 @@ class MT5Connector:
                 except Exception:
                     pass
 
+            # Final fallback: use symbol tick time (server time)
+            try:
+                tick = mt5.symbol_info_tick('EURUSD')
+                if tick and hasattr(tick, 'time') and tick.time > 0:
+                    return datetime.fromtimestamp(tick.time, tz=timezone.utc)
+            except Exception:
+                pass
+
         except Exception as e:
             self.logger.debug(f"get_server_time error: {e}")
 

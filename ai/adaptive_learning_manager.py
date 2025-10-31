@@ -10,7 +10,8 @@ import threading
 import time
 from datetime import datetime, timedelta
 
-# Lightweight schedule shim: use real 'schedule' package if installed, otherwise provide minimal compatibility.
+# Lightweight schedule shim: use real 'schedule' package if installed,
+# otherwise provide minimal compatibility.
 try:
     import schedule as _real_schedule  # type: ignore
     schedule = _real_schedule
@@ -43,7 +44,10 @@ except Exception:
                 if self.unit == 'hours':
                     interval_seconds = float(self.interval) * 3600.0
                     next_run = time.time() + interval_seconds
-                    schedule_jobs.append({'func': job, 'interval': interval_seconds, 'next_run': next_run, 'type': 'interval'})
+                    schedule_jobs.append({
+                        'func': job, 'interval': interval_seconds,
+                        'next_run': next_run, 'type': 'interval'
+                    })
                 elif self.unit == 'day':
                     at = self.at_time or "00:00"
                     try:
@@ -51,14 +55,25 @@ except Exception:
                     except Exception:
                         h, m = 0, 0
                     now_dt = datetime.now()
-                    next_run_dt = now_dt.replace(hour=h, minute=m, second=0, microsecond=0)
+                    next_run_dt = now_dt.replace(
+                        hour=h, minute=m, second=0, microsecond=0
+                    )
                     if next_run_dt <= now_dt:
                         next_run_dt = next_run_dt + timedelta(days=1)
-                    schedule_jobs.append({'func': job, 'interval': 24*3600, 'next_run': next_run_dt.timestamp(), 'type': 'daily'})
+                    schedule_jobs.append({
+                        'func': job, 'interval': 24 * 3600,
+                        'next_run': next_run_dt.timestamp(), 'type': 'daily'
+                    })
                 else:
-                    interval_seconds = float(self.interval) if self.interval is not None else 1.0
+                    interval_seconds = (
+                        float(self.interval)
+                        if self.interval is not None else 1.0
+                    )
                     next_run = time.time() + interval_seconds
-                    schedule_jobs.append({'func': job, 'interval': interval_seconds, 'next_run': next_run, 'type': 'interval'})
+                    schedule_jobs.append({
+                        'func': job, 'interval': interval_seconds,
+                        'next_run': next_run, 'type': 'interval'
+                    })
             return True
 
     def every(interval=None):
@@ -70,16 +85,19 @@ except Exception:
             for job in list(schedule_jobs):
                 if now >= job['next_run']:
                     try:
-                        threading.Thread(target=job['func'], daemon=True).start()
+                        threading.Thread(
+                            target=job['func'], daemon=True).start()
                     except Exception:
                         pass
                     if job['type'] == 'interval':
                         job['next_run'] = now + job['interval']
                     elif job['type'] == 'daily':
-                        job['next_run'] = job['next_run'] + 24*3600
+                        job['next_run'] = job['next_run'] + 24 * 3600
 
     # expose a minimal module-like object compatible with usage in this file
-    schedule = type('ScheduleModule', (), {'every': every, 'run_pending': run_pending})
+    schedule = type(
+        'ScheduleModule', (), {
+            'every': every, 'run_pending': run_pending})
 from typing import Optional
 import pandas as pd
 import numpy as np
@@ -99,7 +117,13 @@ class AdaptiveLearningManager:
     - Trade feedback integration
     """
 
-    def __init__(self, config: dict, ml_predictor=None, backtest_engine=None, risk_manager=None, mt5_connector=None):
+    def __init__(
+            self,
+            config: dict,
+            ml_predictor=None,
+            backtest_engine=None,
+            risk_manager=None,
+            mt5_connector=None):
         """Initialize the adaptive learning system"""
         self.config = config
         self.ml_predictor = ml_predictor
@@ -108,10 +132,18 @@ class AdaptiveLearningManager:
         self.mt5 = mt5_connector
 
         # Learning configuration
-        self.retrain_interval = config.get('adaptive_learning', {}).get('retrain_interval_hours', 24)
-        self.min_trades_for_update = config.get('adaptive_learning', {}).get('min_trades_for_update', 50)
-        self.performance_window = config.get('adaptive_learning', {}).get('performance_window_days', 1825)
-        self.adaptation_rate = config.get('adaptive_learning', {}).get('adaptation_rate', 0.1)
+        self.retrain_interval = config.get(
+            'adaptive_learning', {}).get(
+            'retrain_interval_hours', 24)
+        self.min_trades_for_update = config.get(
+            'adaptive_learning', {}).get(
+            'min_trades_for_update', 50)
+        self.performance_window = config.get(
+            'adaptive_learning', {}).get(
+            'performance_window_days', 1825)
+        self.adaptation_rate = config.get(
+            'adaptive_learning', {}).get(
+            'adaptation_rate', 0.1)
 
         # Performance tracking
         self.trade_history = deque(maxlen=1000)
@@ -120,28 +152,34 @@ class AdaptiveLearningManager:
         self.parameter_history = []
 
         # Signal weights (will be adapted based on performance)
-        self.signal_weights = config.get('adaptive_learning', {}).get('signal_weights', {
-            'ml_prediction': 0.30,
-            'technical_score': 0.25,
-            'sentiment_score': 0.20,
-            'fundamental_score': 0.15,
-            'support_resistance': 0.10
-        })
+        self.signal_weights = config.get('adaptive_learning', {}).get(
+            'signal_weights', {
+                'ml_prediction': 0.30,
+                'technical_score': 0.25,
+                'sentiment_score': 0.20,
+                'fundamental_score': 0.15,
+                'support_resistance': 0.10
+            }
+        )
 
         # Trading parameters (will be optimized)
-        self.adaptive_params = config.get('adaptive_learning', {}).get('adaptive_params', {
-            'rsi_oversold': 30,
-            'rsi_overbought': 70,
-            'min_signal_strength': 0.6,
-            'max_correlation': 0.8,
-            'risk_multiplier': 1.0,
-            'trailing_stop_distance': 20,
-            'stop_loss_atr_multiplier': 2.0,  # ATR multiplier for stop loss
-            'take_profit_atr_multiplier': 6.0,  # ATR multiplier for take profit (1:3 ratio)
-            'max_holding_minutes': 480,  # Maximum holding time in minutes (8 hours)
-            'min_holding_minutes': 15,   # Minimum holding time in minutes
-            'optimal_holding_hours': 4.0  # Target optimal holding period
-        })
+        self.adaptive_params = config.get('adaptive_learning', {}).get(
+            'adaptive_params', {
+                'rsi_oversold': 30,
+                'rsi_overbought': 70,
+                'min_signal_strength': 0.6,
+                'max_correlation': 0.8,
+                'risk_multiplier': 1.0,
+                'trailing_stop_distance': 20,
+                'stop_loss_atr_multiplier': 2.0,  # ATR multiplier for SL
+                # ATR multiplier for take profit (1:3 ratio)
+                'take_profit_atr_multiplier': 6.0,
+                # Maximum holding time in minutes (8 hours)
+                'max_holding_minutes': 480,
+                'min_holding_minutes': 15,   # Minimum holding time in minutes
+                'optimal_holding_hours': 4.0  # Target optimal holding period
+            }
+        )
 
         # Force reset risk multiplier to prevent inflation
         self.adaptive_params['risk_multiplier'] = 1.0
@@ -153,7 +191,8 @@ class AdaptiveLearningManager:
         self.schedule_tasks()
 
         # Start background thread for continuous learning
-        self.learning_thread = threading.Thread(target=self.run_continuous_learning, daemon=True)
+        self.learning_thread = threading.Thread(
+            target=self.run_continuous_learning, daemon=True)
         self.learning_thread.start()
 
         logger.info("Adaptive Learning Manager initialized")
@@ -223,7 +262,7 @@ class AdaptiveLearningManager:
                 optimal_holding_hours REAL,
                 max_holding_minutes INTEGER,
                 min_holding_minutes INTEGER,
-                avg_profit_by_duration TEXT,  -- JSON string of duration buckets and avg profit
+                avg_profit_by_duration TEXT,  -- JSON duration buckets
                 total_trades INTEGER,
                 last_updated DATETIME,
                 confidence_score REAL
@@ -268,9 +307,9 @@ class AdaptiveLearningManager:
             CREATE TABLE IF NOT EXISTS entry_filters (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 symbol TEXT,
-                filter_type TEXT,  -- 'time_filter', 'volatility_filter', 'spread_filter', etc.
+                filter_type TEXT,  -- 'time_filter', 'volatility_filter', etc.
                 condition_value REAL,
-                should_enter BOOLEAN,  -- Whether to enter when condition is met
+                should_enter BOOLEAN,  -- Whether to enter when met
                 total_trades INTEGER,
                 profitable_trades INTEGER,
                 win_rate REAL,
@@ -284,7 +323,7 @@ class AdaptiveLearningManager:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 symbol TEXT,
                 indicator_name TEXT,  -- 'vwap', 'ema', 'rsi', 'atr', etc.
-                parameter_name TEXT,  -- 'period', 'fast_period', 'slow_period', etc.
+                parameter_name TEXT,  -- 'period', 'fast_period', etc.
                 optimal_value REAL,
                 performance_score REAL,  -- win_rate, profit_factor, etc.
                 total_trades INTEGER,
@@ -302,7 +341,7 @@ class AdaptiveLearningManager:
                 prediction_accuracy REAL,
                 total_predictions INTEGER,
                 last_updated DATETIME,
-                market_condition TEXT  -- 'trending', 'ranging', 'volatile', etc.
+                market_condition TEXT  -- 'trending', 'ranging', etc.
             )
         ''')
 
@@ -340,7 +379,7 @@ class AdaptiveLearningManager:
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS sentiment_parameter_optimization (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                parameter_name TEXT,  -- 'sentiment_threshold', 'keyword_weight', 'time_decay'
+                parameter_name TEXT,  -- 'sentiment_threshold', etc.
                 optimal_value REAL,
                 performance_impact REAL,
                 total_trades INTEGER,
@@ -493,12 +532,14 @@ class AdaptiveLearningManager:
                 # Fetch recent data (last 5 years)
                 market_data = self.fetch_recent_market_data(symbol, days=1825)
 
-                if market_data is not None and len(market_data) > self.min_trades_for_update:
+                if market_data is not None and len(
+                        market_data) > self.min_trades_for_update:
                     # Get recent trades for this symbol
                     recent_trades = self.get_recent_trades(symbol, days=1825)
 
                     # Prepare training data with trade outcomes
-                    training_data = self.prepare_training_data(market_data, recent_trades)
+                    training_data = self.prepare_training_data(
+                        market_data, recent_trades)
 
                     # Retrain the model
                     old_version = self.model_versions.get(symbol, 'v1')
@@ -508,19 +549,24 @@ class AdaptiveLearningManager:
                     self.backup_model(symbol, old_version)
 
                     # Train new model
-                    metrics = self.ml_predictor.update_models([symbol], {symbol: training_data})
+                    metrics = self.ml_predictor.update_models(
+                        [symbol], {symbol: training_data})
 
                     # Validate new model
                     if self.validate_new_model(symbol, metrics):
                         self.model_versions[symbol] = new_version
-                        logger.info(f"Model updated for {symbol}: {old_version} -> {new_version}")
+                        logger.info(
+                            f"Model updated for {symbol}: "
+                            f"{old_version} -> {new_version}")
 
                         # Record performance
                         self.record_model_performance(symbol, metrics)
                     else:
                         # Rollback to old model
                         self.rollback_model(symbol, old_version)
-                        logger.warning(f"Model validation failed for {symbol}, keeping {old_version}")
+                        logger.warning(
+                            f"Model validation failed for {symbol}, "
+                            f"keeping {old_version}")
 
         except Exception as e:
             logger.error(f"Error in model retraining: {e}")
@@ -547,41 +593,63 @@ class AdaptiveLearningManager:
                 # Convert timestamp and calculate recency weights
                 df['timestamp'] = pd.to_datetime(df['timestamp'])
                 df['days_old'] = (pd.Timestamp.now() - df['timestamp']).dt.days
-                
-                # Exponential decay weighting: more weight on recent trades (half-life ~30 days)
+
+                # Exponential decay weighting: more weight on recent trades
+                # (half-life ~30 days)
                 df['weight'] = np.exp(-df['days_old'] / 30.0)
-                
+
                 # Normalize weights for analysis
                 total_weight = df['weight'].sum()
-                
+
                 # Calculate weighted performance metrics
                 self.performance_metrics = {
-                    'overall_win_rate': ((df['profit_pct'] > 0).astype(int) * df['weight']).sum() / total_weight,
-                    'avg_profit': (df['profit_pct'] * df['weight']).sum() / total_weight,
+                    'overall_win_rate': (
+                        (df['profit_pct'] > 0).astype(int) *
+                        df['weight']).sum() /
+                    total_weight,
+                    'avg_profit': (
+                        df['profit_pct'] *
+                        df['weight']).sum() /
+                    total_weight,
                     'sharpe_ratio': self.calculate_weighted_sharpe(df),
-                    'max_drawdown': self.calculate_max_drawdown(df['profit_pct'].cumsum()),
+                    'max_drawdown': self.calculate_max_drawdown(
+                        df['profit_pct'].cumsum()),
                 }
 
                 # Analyze performance by signal strength with weighting
-                for component in ['ml_score', 'technical_score', 'sentiment_score']:
+                for component in [
+                    'ml_score',
+                    'technical_score',
+                        'sentiment_score']:
                     if component in df.columns:
                         # Group by signal strength quartiles
-                        df[f'{component}_quartile'] = pd.qcut(df[component], 4, labels=['Q1', 'Q2', 'Q3', 'Q4'])
-                        performance_by_quartile = df.groupby(f'{component}_quartile').apply(
+                        df[f'{component}_quartile'] = pd.qcut(
+                            df[component], 4, labels=['Q1', 'Q2', 'Q3', 'Q4'])
+                        performance_by_quartile = df.groupby(
+                            f'{component}_quartile'
+                        ).apply(
                             lambda x: pd.Series({
-                                'mean': (x['profit_pct'] * x['weight']).sum() / x['weight'].sum(),
+                                'mean': (
+                                    (x['profit_pct'] * x['weight']).sum() /
+                                    x['weight'].sum()
+                                ),
                                 'count': len(x),
                                 'weighted_count': x['weight'].sum()
                             })
                         )
 
                         # Store insights
-                        self.performance_metrics[f'{component}_performance'] = performance_by_quartile.to_dict()
+                        self.performance_metrics[
+                            f'{component}_performance'
+                        ] = performance_by_quartile.to_dict(
+                        )
 
                 # Identify best and worst performing setups
                 self.identify_patterns()
 
-                logger.info(f"Performance evaluation complete: Win rate={self.performance_metrics['overall_win_rate']:.2%}")
+                logger.info(
+                    f"Performance evaluation complete: Win rate={
+                        self.performance_metrics['overall_win_rate']:.2%}")
 
         except Exception as e:
             logger.error(f"Error evaluating performance: {e}")
@@ -628,7 +696,8 @@ class AdaptiveLearningManager:
             }
 
             best_params = self.adaptive_params.copy()
-            best_score = self.calculate_optimization_score(best_params, test_data)
+            best_score = self.calculate_optimization_score(
+                best_params, test_data)
 
             # Grid search with walk-forward validation
             for param_name, (min_val, max_val) in param_ranges.items():
@@ -639,7 +708,8 @@ class AdaptiveLearningManager:
                     test_params[param_name] = test_value
 
                     # Run backtest with new parameters
-                    score = self.calculate_optimization_score(test_params, test_data)
+                    score = self.calculate_optimization_score(
+                        test_params, test_data)
 
                     if score > best_score:
                         old_value = best_params[param_name]
@@ -647,9 +717,14 @@ class AdaptiveLearningManager:
                         best_score = score
 
                         # Record optimization
-                        self.record_parameter_change(param_name, old_value, test_value, score)
+                        self.record_parameter_change(
+                            param_name, old_value, test_value, score)
 
-                        logger.info(f"Optimized {param_name}: {old_value:.2f} -> {test_value:.2f} (score: {score:.4f})")
+                        logger.info(
+                            f"Optimized {param_name}: {
+                                old_value:.2f} -> {
+                                test_value:.2f} (score: {
+                                score:.4f})")
 
             # Apply optimized parameters with gradual adaptation
             self.apply_optimized_parameters(best_params)
@@ -666,16 +741,22 @@ class AdaptiveLearningManager:
                 return
 
             # Analyze correlation between signal components and outcomes
-            trades_df = pd.DataFrame(list(self.trade_history)[-200:])  # Last 200 trades
+            trades_df = pd.DataFrame(
+                list(self.trade_history)[-200:])  # Last 200 trades
 
             if 'profit_pct' not in trades_df.columns:
                 return
 
             correlations = {}
-            for component in ['ml_score', 'technical_score', 'sentiment_score']:
+            for component in [
+                'ml_score',
+                'technical_score',
+                    'sentiment_score']:
                 if component in trades_df.columns:
-                    correlation = trades_df[component].corr(trades_df['profit_pct'])
-                    correlations[component.replace('_score', '_prediction')] = abs(correlation)
+                    correlation = trades_df[component].corr(
+                        trades_df['profit_pct'])
+                    correlations[component.replace(
+                        '_score', '_prediction')] = abs(correlation)
 
             # Normalize correlations to sum to 1
             total_correlation = sum(correlations.values())
@@ -687,10 +768,14 @@ class AdaptiveLearningManager:
                         old_weight = self.signal_weights[component]
 
                         # Smooth adjustment
-                        adjusted_weight = old_weight * (1 - self.adaptation_rate) + new_weight * self.adaptation_rate
+                        adjusted_weight = old_weight * \
+                            (1 - self.adaptation_rate) + \
+                            new_weight * self.adaptation_rate
                         self.signal_weights[component] = adjusted_weight
 
-                        logger.info(f"Adjusted {component} weight: {old_weight:.3f} -> {adjusted_weight:.3f}")
+                        logger.info(
+                            f"Adjusted {component} weight: "
+                            f"{old_weight:.3f} -> {adjusted_weight:.3f}")
 
             # Save updated weights
             self.save_signal_weights()
@@ -704,18 +789,24 @@ class AdaptiveLearningManager:
             symbol = trade_data['symbol']
             profit_pct = trade_data['profit_pct']
 
-            logger.info(f"Significant trade event for {symbol}: {profit_pct:.2f}% - triggering immediate learning")
+            logger.info(
+                f"Significant trade event for {symbol}: {
+                    profit_pct:.2f}% - triggering immediate learning")
 
             # Adjust risk parameters if large loss
             if profit_pct < -3:
                 self.adaptive_params['risk_multiplier'] *= 0.95
-                logger.info(f"Reduced risk multiplier to {self.adaptive_params['risk_multiplier']:.2f}")
+                logger.info(
+                    f"Reduced risk multiplier to {
+                        self.adaptive_params['risk_multiplier']:.2f}")
 
             # Increase confidence if large win
             elif profit_pct > 5:
                 if self.adaptive_params['risk_multiplier'] < 1.0:
                     self.adaptive_params['risk_multiplier'] *= 1.02
-                    logger.info(f"Increased risk multiplier to {self.adaptive_params['risk_multiplier']:.2f}")
+                    logger.info(
+                        f"Increased risk multiplier to {
+                            self.adaptive_params['risk_multiplier']:.2f}")
 
             # Update model if pattern detected
             self.check_for_new_patterns(trade_data)
@@ -738,28 +829,47 @@ class AdaptiveLearningManager:
             if len(winning_trades) > 10 and len(losing_trades) > 10:
                 # Find common characteristics of winners
                 winning_patterns = {
-                    'avg_signal_strength': winning_trades['signal_strength'].mean(),
-                    'avg_ml_score': winning_trades.get('ml_score', pd.Series()).mean(),
-                    'common_hour': winning_trades['timestamp'].dt.hour.mode().values[0] if 'timestamp' in winning_trades else None
-                }
+                    'avg_signal_strength': (
+                        winning_trades['signal_strength'].mean()
+                    ),
+                    'avg_ml_score': winning_trades.get(
+                        'ml_score',
+                        pd.Series()).mean(),
+                    'common_hour': (
+                        winning_trades['timestamp'].dt.hour.mode().values[0]
+                        if 'timestamp' in winning_trades else None
+                    )}
 
                 # Find common characteristics of losers
                 losing_patterns = {
-                    'avg_signal_strength': losing_trades['signal_strength'].mean(),
-                    'avg_ml_score': losing_trades.get('ml_score', pd.Series()).mean(),
+                    'avg_signal_strength': (
+                        losing_trades['signal_strength'].mean()
+                    ),
+                    'avg_ml_score': losing_trades.get(
+                        'ml_score',
+                        pd.Series()).mean(),
                 }
 
                 # Adjust minimum signal strength based on patterns
-                if winning_patterns['avg_signal_strength'] > losing_patterns['avg_signal_strength']:
-                    new_threshold = (winning_patterns['avg_signal_strength'] + self.adaptive_params['min_signal_strength']) / 2
+                if (winning_patterns['avg_signal_strength'] >
+                        losing_patterns['avg_signal_strength']):
+                    new_threshold = (
+                        (winning_patterns['avg_signal_strength'] +
+                         self.adaptive_params['min_signal_strength']) / 2
+                    )
                     self.adaptive_params['min_signal_strength'] = new_threshold
-                    logger.info(f"Adjusted min_signal_strength to {new_threshold:.3f}")
+                    logger.info(
+                        f"Adjusted min_signal_strength to {
+                            new_threshold:.3f}")
 
         except Exception as e:
             logger.error(f"Error identifying patterns: {e}")
 
-    def calculate_optimization_score(self, params: dict, test_data: pd.DataFrame) -> float:
-        """Calculate optimization score for given parameters using backtest simulation"""
+    def calculate_optimization_score(
+            self,
+            params: dict,
+            test_data: pd.DataFrame) -> float:
+        """Calculate optimization score for parameters using backtest"""
         try:
             # Create a strategy function that uses the test parameters
             def test_strategy(data_dict, symbol):
@@ -771,20 +881,24 @@ class AdaptiveLearningManager:
 
                     # Simple RSI-based signal generation using test parameters
                     rsi = row.get('rsi', 50)
-                    if rsi < params.get('rsi_oversold', 30) and row['close'] > row['open']:
+                    if rsi < params.get(
+                        'rsi_oversold',
+                            30) and row['close'] > row['open']:
                         # Buy signal
                         entry_price = row['close']
-                        atr = row.get('atr', entry_price * 0.01)  # Fallback ATR
+                        atr = row.get(
+                            'atr', entry_price * 0.01)  # Fallback ATR
 
                         # Use adaptive ATR multipliers for SL/TP
-                        sl_multiplier = params.get('stop_loss_atr_multiplier', 2.0)
-                        tp_multiplier = params.get('take_profit_atr_multiplier', 4.0)
+                        sl_multiplier = params.get(
+                            'stop_loss_atr_multiplier', 2.0)
+                        tp_multiplier = params.get(
+                            'take_profit_atr_multiplier', 4.0)
 
                         stop_loss = entry_price - (atr * sl_multiplier)
                         take_profit = entry_price + (atr * tp_multiplier)
 
                         # Track holding time
-                        holding_minutes = 0
                         max_holding = params.get('max_holding_minutes', 480)
                         min_holding = params.get('min_holding_minutes', 15)
 
@@ -793,19 +907,25 @@ class AdaptiveLearningManager:
                             'entry_price': entry_price,
                             'stop_loss': stop_loss,
                             'take_profit': take_profit,
-                            'strength': abs(row['close'] - row['open']) / row['open'],
+                            'strength': (
+                                abs(row['close'] - row['open']) / row['open']
+                            ),
                             'max_holding_minutes': max_holding,
                             'min_holding_minutes': min_holding
                         })
 
-                    elif rsi > params.get('rsi_overbought', 70) and row['close'] < row['open']:
+                    elif (rsi > params.get('rsi_overbought', 70) and
+                            row['close'] < row['open']):
                         # Sell signal
                         entry_price = row['close']
-                        atr = row.get('atr', entry_price * 0.01)  # Fallback ATR
+                        atr = row.get(
+                            'atr', entry_price * 0.01)  # Fallback ATR
 
                         # Use adaptive ATR multipliers for SL/TP
-                        sl_multiplier = params.get('stop_loss_atr_multiplier', 2.0)
-                        tp_multiplier = params.get('take_profit_atr_multiplier', 4.0)
+                        sl_multiplier = params.get(
+                            'stop_loss_atr_multiplier', 2.0)
+                        tp_multiplier = params.get(
+                            'take_profit_atr_multiplier', 4.0)
 
                         stop_loss = entry_price + (atr * sl_multiplier)
                         take_profit = entry_price - (atr * tp_multiplier)
@@ -819,7 +939,9 @@ class AdaptiveLearningManager:
                             'entry_price': entry_price,
                             'stop_loss': stop_loss,
                             'take_profit': take_profit,
-                            'strength': abs(row['close'] - row['open']) / row['open'],
+                            'strength': (
+                                abs(row['close'] - row['open']) / row['open']
+                            ),
                             'max_holding_minutes': max_holding,
                             'min_holding_minutes': min_holding
                         })
@@ -833,7 +955,8 @@ class AdaptiveLearningManager:
                 end_date = test_data.index.max()
 
                 # Prepare data in the format expected by backtest engine
-                data_dict = {symbol: test_data for symbol in ['EURUSD']}  # Simplified for single symbol
+                # data_dict = {symbol: test_data for symbol in [
+                #     'EURUSD']}  # Simplified for single symbol
 
                 results = self.backtest_engine.run_backtest(
                     start_date, end_date, ['EURUSD'], test_strategy
@@ -847,10 +970,12 @@ class AdaptiveLearningManager:
                     profit_factor = metrics.get('profit_factor', 1)
 
                     # Weighted score combining multiple metrics
-                    score = (sharpe * 0.4 + win_rate * 0.3 + min(profit_factor, 3) * 0.3)
+                    score = (sharpe * 0.4 + win_rate * 0.3 +
+                             min(profit_factor, 3) * 0.3)
                     return max(score, 0)
             else:
-                # Fallback to simple simulation if backtest engine not available
+                # Fallback to simple simulation if backtest engine not
+                # available
                 simulated_returns = []
 
                 for i in range(len(test_data) - 1):
@@ -858,17 +983,23 @@ class AdaptiveLearningManager:
                     next_row = test_data.iloc[i + 1]
 
                     # Generate signal based on parameters
-                    rsi_signal = 1 if row['close'] > row['open'] and row.get('rsi', 50) < params.get('rsi_oversold', 30) else -1
-                    signal_strength = abs(row['close'] - row['open']) / row['open']
+                    rsi_signal = 1 if row['close'] > row['open'] and row.get(
+                        'rsi', 50) < params.get('rsi_oversold', 30) else -1
+                    signal_strength = abs(
+                        row['close'] - row['open']) / row['open']
 
-                    if signal_strength > params.get('min_signal_strength', 0.001):
+                    if signal_strength > params.get(
+                            'min_signal_strength', 0.001):
                         # Calculate return with ATR-based SL/TP simulation
                         atr = row.get('atr', row['close'] * 0.01)
-                        sl_multiplier = params.get('stop_loss_atr_multiplier', 2.0)
-                        tp_multiplier = params.get('take_profit_atr_multiplier', 4.0)
+                        sl_multiplier = params.get(
+                            'stop_loss_atr_multiplier', 2.0)
+                        tp_multiplier = params.get(
+                            'take_profit_atr_multiplier', 4.0)
 
                         # Simulate price movement
-                        price_change = (next_row['close'] - row['close']) / row['close']
+                        price_change = (
+                            next_row['close'] - row['close']) / row['close']
 
                         # Check if hit SL or TP
                         if rsi_signal > 0:  # Long position
@@ -879,12 +1010,15 @@ class AdaptiveLearningManager:
                             tp_level = -atr * tp_multiplier / row['close']
 
                         # Time-based exit logic
-                        max_holding_minutes = params.get('max_holding_minutes', 480)
-                        optimal_holding_hours = params.get('optimal_holding_hours', 4.0)
+                        max_holding_minutes = params.get(
+                            'max_holding_minutes', 480)
+                        optimal_holding_hours = params.get(
+                            'optimal_holding_hours', 4.0)
                         optimal_holding_minutes = optimal_holding_hours * 60
 
-                        # Simulate holding time (assume 5-minute bars, so each iteration = 5 minutes)
-                        holding_minutes = 0  # Placeholder - will be fixed with proper position tracking
+                        # Simulate holding time (assume 5-minute bars, so each
+                        # iteration = 5 minutes)
+                        holding_minutes = 0  # Placeholder
 
                         # Exit conditions: SL, TP, or max holding time
                         if price_change <= sl_level:
@@ -899,9 +1033,12 @@ class AdaptiveLearningManager:
                             # Max holding time reached - exit at current price
                             realized_return = price_change * rsi_signal
                             exit_reason = 'max_time'
-                        elif holding_minutes >= optimal_holding_minutes and price_change > 0:
-                            # Optimal holding time reached with profit - take profit
-                            realized_return = price_change * rsi_signal * 0.8  # Slightly reduce profit for optimal exit
+                        elif (holding_minutes >= optimal_holding_minutes and
+                                price_change > 0):
+                            # Optimal holding time reached with profit - take
+                            # profit
+                            realized_return = price_change * rsi_signal * \
+                                0.8  # Slightly reduce profit for optimal exit
                             exit_reason = 'optimal_time'
                         else:
                             # Position still open, use actual price change
@@ -910,14 +1047,19 @@ class AdaptiveLearningManager:
 
                         # Only count completed trades (not open positions)
                         if exit_reason != 'open':
-                            simulated_returns.append(realized_return * params.get('risk_multiplier', 1.0))
+                            simulated_returns.append(
+                                realized_return *
+                                params.get(
+                                    'risk_multiplier',
+                                    1.0))
                     else:
                         simulated_returns.append(0)  # No trade
 
                 if simulated_returns:
                     avg_return = np.mean(simulated_returns)
                     volatility = np.std(simulated_returns)
-                    sharpe = avg_return / (volatility + 1e-6) if volatility > 0 else 0
+                    sharpe = avg_return / \
+                        (volatility + 1e-6) if volatility > 0 else 0
                     score = sharpe * params.get('risk_multiplier', 1.0)
                     return max(score, 0)
 
@@ -930,10 +1072,13 @@ class AdaptiveLearningManager:
     def apply_optimized_parameters(self, new_params: dict):
         """Gradually apply optimized parameters"""
         for param_name, new_value in new_params.items():
-            if param_name in self.adaptive_params and param_name != 'risk_multiplier':
+            if (param_name in self.adaptive_params and
+                    param_name != 'risk_multiplier'):
                 old_value = self.adaptive_params[param_name]
                 # Gradual transition
-                adjusted_value = old_value * (1 - self.adaptation_rate) + new_value * self.adaptation_rate
+                adjusted_value = old_value * \
+                    (1 - self.adaptation_rate) + \
+                    new_value * self.adaptation_rate
                 self.adaptive_params[param_name] = adjusted_value
 
     def get_current_weights(self) -> dict:
@@ -950,7 +1095,8 @@ class AdaptiveLearningManager:
         """Prepare data for backtesting"""
         try:
             # Get recent data for backtesting (last 5 years)
-            symbols = self.config.get('trading', {}).get('pairs', [])[:3]  # Test with first 3 symbols
+            symbols = self.config.get('trading', {}).get('pairs', [])[
+                :3]  # Test with first 3 symbols
 
             if not symbols:
                 return None
@@ -973,7 +1119,8 @@ class AdaptiveLearningManager:
             logger.error(f"Error preparing backtest data: {e}")
             return None
 
-    def fetch_recent_market_data(self, symbol: str, days: int = 30) -> Optional[pd.DataFrame]:
+    def fetch_recent_market_data(
+            self, symbol: str, days: int = 30) -> Optional[pd.DataFrame]:
         """Fetch recent market data for retraining"""
         try:
             # Calculate date range
@@ -1013,7 +1160,10 @@ class AdaptiveLearningManager:
         conn.close()
         return df
 
-    def prepare_training_data(self, market_data: pd.DataFrame, trades: pd.DataFrame) -> pd.DataFrame:
+    def prepare_training_data(
+            self,
+            market_data: pd.DataFrame,
+            trades: pd.DataFrame) -> pd.DataFrame:
         """Prepare training data with trade outcomes"""
         # Merge market data with trade outcomes
         # Add labels based on successful trades
@@ -1021,7 +1171,9 @@ class AdaptiveLearningManager:
 
     def validate_new_model(self, symbol: str, metrics: dict) -> bool:
         """Validate new model meets minimum performance criteria"""
-        min_accuracy = self.config.get('adaptive_learning', {}).get('min_accuracy', 0.6)
+        min_accuracy = self.config.get(
+            'adaptive_learning', {}).get(
+            'min_accuracy', 0.6)
         return metrics.get('accuracy', 0) >= min_accuracy
 
     def backup_model(self, symbol: str, version: str):
@@ -1042,7 +1194,8 @@ class AdaptiveLearningManager:
         cursor.execute('''
             INSERT INTO model_performance (
                 timestamp, symbol, model_type, accuracy, precision,
-                recall, sharpe_ratio, max_drawdown, win_rate, avg_profit, total_trades
+                recall, sharpe_ratio, max_drawdown, win_rate, \
+                avg_profit, total_trades
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             datetime.now(),
@@ -1061,12 +1214,18 @@ class AdaptiveLearningManager:
         conn.commit()
         conn.close()
 
-    def record_parameter_change(self, param_name: str, old_value: float, new_value: float, score: float):
+    def record_parameter_change(
+            self,
+            param_name: str,
+            old_value: float,
+            new_value: float,
+            score: float):
         """Record parameter optimization"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        improvement = ((new_value - old_value) / old_value * 100) if old_value != 0 else 0
+        improvement = ((new_value - old_value) / old_value *
+                       100) if old_value != 0 else 0
 
         cursor.execute('''
             INSERT INTO parameter_optimization (
@@ -1152,22 +1311,24 @@ class AdaptiveLearningManager:
         try:
             if len(df) < 2:
                 return 0.0
-            
+
             # Calculate weighted returns
             weighted_returns = df['profit_pct'] * df['weight']
             total_weight = df['weight'].sum()
             avg_return = weighted_returns.sum() / total_weight
-            
+
             # Calculate weighted volatility
-            variance = ((df['profit_pct'] - avg_return) ** 2 * df['weight']).sum() / total_weight
+            variance = ((df['profit_pct'] - avg_return) **
+                        2 * df['weight']).sum() / total_weight
             volatility = np.sqrt(variance) + 1e-6
-            
+
             return avg_return / volatility
         except Exception:
             return 0.0
 
-    def analyze_symbol_holding_performance(self, symbol: str, min_trades: int = 20) -> Optional[dict]:
-        """Analyze trade performance by holding duration for a specific symbol"""
+    def analyze_symbol_holding_performance(
+            self, symbol: str, min_trades: int = 20) -> Optional[dict]:
+        """Analyze trade performance by holding duration"""
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
@@ -1215,21 +1376,26 @@ class AdaptiveLearningManager:
                 else:
                     duration_buckets['24h+'].append(profit_pct)
 
-            # Calculate average profit for each bucket (only if bucket has enough trades)
+            # Calculate average profit for each bucket (only if bucket has
+            # enough trades)
             avg_profit_by_duration = {}
             for bucket, profits in duration_buckets.items():
                 if len(profits) >= 5:  # Minimum 5 trades per bucket
-                    avg_profit_by_duration[bucket] = sum(profits) / len(profits)
+                    avg_profit_by_duration[bucket] = sum(
+                        profits) / len(profits)
 
             return {
                 'symbol': symbol,
                 'total_trades': len(trades),
                 'avg_profit_by_duration': avg_profit_by_duration,
-                'best_bucket': max(avg_profit_by_duration.items(), key=lambda x: x[1]) if avg_profit_by_duration else None
-            }
+                'best_bucket': max(
+                    avg_profit_by_duration.items(),
+                    key=lambda x: x[1]) if avg_profit_by_duration else None}
 
         except Exception as e:
-            logger.error(f"Error analyzing symbol holding performance for {symbol}: {e}")
+            logger.error(
+                f"Error analyzing symbol holding performance "
+                f"for {symbol}: {e}")
             return None
 
     def calculate_optimal_holding_times(self, symbol: str) -> Optional[dict]:
@@ -1250,19 +1416,22 @@ class AdaptiveLearningManager:
                 '3-4h': (3.5, 240, 90),   # optimal: 3.5h, max: 4h, min: 1.5h
                 '4-6h': (5.0, 360, 120),  # optimal: 5h, max: 6h, min: 2h
                 '6-8h': (7.0, 480, 180),  # optimal: 7h, max: 8h, min: 3h
-                '8-12h': (10.0, 720, 240), # optimal: 10h, max: 12h, min: 4h
-                '12-24h': (18.0, 1440, 360), # optimal: 18h, max: 24h, min: 6h
+                '8-12h': (10.0, 720, 240),  # optimal: 10h, max: 12h, min: 4h
+                '12-24h': (18.0, 1440, 360),  # optimal: 18h, max: 24h, min: 6h
                 '24h+': (36.0, 2880, 720)  # optimal: 36h, max: 48h, min: 12h
             }
 
             if best_bucket in bucket_ranges:
-                optimal_hours, max_minutes, min_minutes = bucket_ranges[best_bucket]
+                optimal_hours, max_minutes, min_minutes = \
+                    bucket_ranges[best_bucket]
 
-                # Calculate confidence score based on profit difference and sample size
+                # Calculate confidence score based on profit difference and
+                # sample size
                 all_profits = list(analysis['avg_profit_by_duration'].values())
                 if len(all_profits) > 1:
                     profit_std = np.std(all_profits)
-                    confidence = min(1.0, best_avg_profit / (profit_std + 0.01))
+                    confidence = min(1.0,
+                                     best_avg_profit / (profit_std + 0.01))
                 else:
                     confidence = 0.5
 
@@ -1275,13 +1444,14 @@ class AdaptiveLearningManager:
                     'best_avg_profit': best_avg_profit,
                     'total_trades': analysis['total_trades'],
                     'confidence_score': confidence,
-                    'avg_profit_by_duration': json.dumps(analysis['avg_profit_by_duration'])
-                }
+                    'avg_profit_by_duration': json.dumps(
+                        analysis['avg_profit_by_duration'])}
 
             return None
 
         except Exception as e:
-            logger.error(f"Error calculating optimal holding times for {symbol}: {e}")
+            logger.error(
+                f"Error calculating optimal holding times for {symbol}: {e}")
             return None
 
     def update_symbol_holding_times(self, symbol: str):
@@ -1297,8 +1467,10 @@ class AdaptiveLearningManager:
             # Insert or replace symbol holding times
             cursor.execute('''
                 INSERT OR REPLACE INTO symbol_holding_times
-                (symbol, optimal_holding_hours, max_holding_minutes, min_holding_minutes,
-                 avg_profit_by_duration, total_trades, last_updated, confidence_score)
+                (symbol, optimal_holding_hours, max_holding_minutes,
+                 min_holding_minutes,
+                 avg_profit_by_duration, total_trades, last_updated,
+                 confidence_score)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 optimal_times['symbol'],
@@ -1314,11 +1486,14 @@ class AdaptiveLearningManager:
             conn.commit()
             conn.close()
 
-            logger.info(f"Updated optimal holding times for {symbol}: {optimal_times['optimal_holding_hours']}h "
-                       f"(confidence: {optimal_times['confidence_score']:.2f})")
+            logger.info(
+                f"Updated optimal holding times for {symbol}: {
+                    optimal_times['optimal_holding_hours']}h " f"(confidence: {
+                    optimal_times['confidence_score']:.2f})")
 
         except Exception as e:
-            logger.error(f"Error updating symbol holding times for {symbol}: {e}")
+            logger.error(
+                f"Error updating symbol holding times for {symbol}: {e}")
 
     def get_symbol_optimal_holding_time(self, symbol: str) -> dict:
         """Get optimal holding times for a specific symbol"""
@@ -1327,7 +1502,8 @@ class AdaptiveLearningManager:
             cursor = conn.cursor()
 
             cursor.execute('''
-                SELECT optimal_holding_hours, max_holding_minutes, min_holding_minutes,
+                SELECT optimal_holding_hours, max_holding_minutes,
+                       min_holding_minutes,
                        confidence_score, total_trades
                 FROM symbol_holding_times
                 WHERE symbol = ?
@@ -1337,7 +1513,8 @@ class AdaptiveLearningManager:
             conn.close()
 
             if result:
-                optimal_hours, max_minutes, min_minutes, confidence, total_trades = result
+                optimal_hours, max_minutes, min_minutes, confidence, \
+                    total_trades = result
                 return {
                     'optimal_holding_hours': optimal_hours,
                     'max_holding_minutes': max_minutes,
@@ -1349,27 +1526,38 @@ class AdaptiveLearningManager:
             else:
                 # Return default global parameters if no symbol-specific data
                 return {
-                    'optimal_holding_hours': self.adaptive_params.get('optimal_holding_hours', 4.0),
-                    'max_holding_minutes': self.adaptive_params.get('max_holding_minutes', 480),
-                    'min_holding_minutes': self.adaptive_params.get('min_holding_minutes', 15),
+                    'optimal_holding_hours': self.adaptive_params.get(
+                        'optimal_holding_hours',
+                        4.0),
+                    'max_holding_minutes': self.adaptive_params.get(
+                        'max_holding_minutes',
+                        480),
+                    'min_holding_minutes': self.adaptive_params.get(
+                        'min_holding_minutes',
+                        15),
                     'confidence_score': 0.0,
                     'total_trades': 0,
-                    'found': False
-                }
+                    'found': False}
 
         except Exception as e:
-            logger.error(f"Error getting symbol optimal holding time for {symbol}: {e}")
+            logger.error(
+                f"Error getting symbol optimal holding time for {symbol}: {e}")
             return {
-                'optimal_holding_hours': self.adaptive_params.get('optimal_holding_hours', 4.0),
-                'max_holding_minutes': self.adaptive_params.get('max_holding_minutes', 480),
-                'min_holding_minutes': self.adaptive_params.get('min_holding_minutes', 15),
+                'optimal_holding_hours': self.adaptive_params.get(
+                    'optimal_holding_hours',
+                    4.0),
+                'max_holding_minutes': self.adaptive_params.get(
+                    'max_holding_minutes',
+                    480),
+                'min_holding_minutes': self.adaptive_params.get(
+                    'min_holding_minutes',
+                    15),
                 'confidence_score': 0.0,
                 'total_trades': 0,
-                'found': False
-            }
+                'found': False}
 
     def update_all_symbol_holding_times(self):
-        """Update optimal holding times for all symbols with sufficient trade history"""
+        """Update optimal holding times for all symbols"""
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
@@ -1386,7 +1574,9 @@ class AdaptiveLearningManager:
             conn.close()
 
             for symbol, trade_count in symbols:
-                logger.info(f"Updating holding times for {symbol} ({trade_count} trades)")
+                logger.info(
+                    f"Updating holding times for {symbol} "
+                    f"({trade_count} trades)")
                 self.update_symbol_holding_times(symbol)
 
         except Exception as e:
@@ -1399,7 +1589,8 @@ class AdaptiveLearningManager:
             cursor = conn.cursor()
 
             cursor.execute('''
-                SELECT symbol, optimal_holding_hours, max_holding_minutes, min_holding_minutes,
+                SELECT symbol, optimal_holding_hours, max_holding_minutes,
+                       min_holding_minutes,
                        confidence_score, total_trades, last_updated
                 FROM symbol_holding_times
                 ORDER BY confidence_score DESC, total_trades DESC
@@ -1410,7 +1601,8 @@ class AdaptiveLearningManager:
 
             symbol_times = {}
             for row in results:
-                symbol, opt_hours, max_min, min_min, confidence, trades, last_updated = row
+                symbol, opt_hours, max_min, min_min, confidence, \
+                    trades, last_updated = row
                 symbol_times[symbol] = {
                     'optimal_holding_hours': opt_hours,
                     'max_holding_minutes': max_min,
@@ -1436,7 +1628,7 @@ class AdaptiveLearningManager:
     # ===== NEW LEARNING METHODS =====
 
     def analyze_entry_timing(self):
-        """Analyze profitable entry timing patterns by time of day, volatility, etc."""
+        """Analyze profitable entry timing patterns"""
         logger.info("Analyzing entry timing patterns...")
 
         try:
@@ -1450,8 +1642,10 @@ class AdaptiveLearningManager:
                     continue
 
                 # Analyze by hour of day
-                trades_df['hour'] = pd.to_datetime(trades_df['timestamp']).dt.hour
-                trades_df['day_of_week'] = pd.to_datetime(trades_df['timestamp']).dt.dayofweek
+                trades_df['hour'] = pd.to_datetime(
+                    trades_df['timestamp']).dt.hour
+                trades_df['day_of_week'] = pd.to_datetime(
+                    trades_df['timestamp']).dt.dayofweek
 
                 # Group by hour and calculate performance
                 hourly_performance = trades_df.groupby('hour').agg({
@@ -1459,7 +1653,8 @@ class AdaptiveLearningManager:
                     'profit': 'mean'
                 }).round(4)
 
-                hourly_performance.columns = ['total_trades', 'avg_profit_pct', 'win_rate', 'avg_profit']
+                hourly_performance.columns = [
+                    'total_trades', 'avg_profit_pct', 'win_rate', 'avg_profit']
                 hourly_performance = hourly_performance.reset_index()
 
                 # Store results in database
@@ -1469,14 +1664,17 @@ class AdaptiveLearningManager:
                 for _, row in hourly_performance.iterrows():
                     cursor.execute('''
                         INSERT OR REPLACE INTO entry_timing_analysis
-                        (symbol, hour_of_day, day_of_week, market_volatility, spread_pips,
-                         total_trades, profitable_trades, avg_profit, win_rate, last_updated)
+                        (symbol, hour_of_day, day_of_week, market_volatility,
+                         spread_pips,
+                         total_trades, profitable_trades, avg_profit, win_rate,
+                         last_updated)
                         VALUES (?, ?, -1, 0, 0, ?, ?, ?, ?, ?)
                     ''', (
                         symbol,
                         int(row['hour']),
                         int(row['total_trades']),
-                        int(row['total_trades'] * row['win_rate']),  # profitable_trades
+                        # profitable_trades
+                        int(row['total_trades'] * row['win_rate']),
                         row['avg_profit'],
                         row['win_rate'],
                         datetime.now()
@@ -1491,7 +1689,8 @@ class AdaptiveLearningManager:
             logger.error(f"Error analyzing entry timing: {e}")
 
     def optimize_symbol_sl_tp(self):
-        """Optimize SL/TP parameters per symbol based on historical performance"""
+        """Optimize SL/TP parameters per symbol based on historical
+        performance"""
         logger.info("Optimizing per-symbol SL/TP parameters...")
 
         try:
@@ -1505,7 +1704,8 @@ class AdaptiveLearningManager:
                     continue
 
                 # Test different SL/TP combinations
-                best_params = self.find_optimal_sl_tp_for_symbol(symbol, trades_df)
+                best_params = self.find_optimal_sl_tp_for_symbol(
+                    symbol, trades_df)
 
                 if best_params:
                     # Store optimal parameters
@@ -1514,8 +1714,10 @@ class AdaptiveLearningManager:
 
                     cursor.execute('''
                         INSERT OR REPLACE INTO symbol_sl_tp_optimization
-                        (symbol, optimal_sl_atr_multiplier, optimal_tp_atr_multiplier,
-                         optimal_rr_ratio, avg_win_rate, avg_profit_factor, total_trades,
+                        (symbol, optimal_sl_atr_multiplier,
+                         optimal_tp_atr_multiplier,
+                         optimal_rr_ratio, avg_win_rate, avg_profit_factor,
+                         total_trades,
                          last_updated, confidence_score)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ''', (
@@ -1533,13 +1735,19 @@ class AdaptiveLearningManager:
                     conn.commit()
                     conn.close()
 
-                    logger.info(f"Optimized SL/TP for {symbol}: SL={best_params['sl_multiplier']:.2f}, "
-                              f"TP={best_params['tp_multiplier']:.2f}, RR={best_params['rr_ratio']:.1f}")
+                    logger.info(
+                        f"Optimized SL/TP for {symbol}: SL={
+                            best_params['sl_multiplier']:.2f}, " f"TP={
+                            best_params['tp_multiplier']:.2f}, RR={
+                            best_params['rr_ratio']:.1f}")
 
         except Exception as e:
             logger.error(f"Error optimizing symbol SL/TP: {e}")
 
-    def find_optimal_sl_tp_for_symbol(self, symbol: str, trades_df: pd.DataFrame) -> Optional[dict]:
+    def find_optimal_sl_tp_for_symbol(
+            self,
+            symbol: str,
+            trades_df: pd.DataFrame) -> Optional[dict]:
         """Find optimal SL/TP multipliers for a specific symbol"""
         try:
             # Test different combinations of SL/TP multipliers
@@ -1552,7 +1760,8 @@ class AdaptiveLearningManager:
             for sl_mult in sl_multipliers:
                 for tp_mult in tp_multipliers:
                     # Simulate trades with these parameters
-                    score = self.simulate_sl_tp_performance(trades_df, sl_mult, tp_mult)
+                    score = self.simulate_sl_tp_performance(
+                        trades_df, sl_mult, tp_mult)
 
                     if score > best_score:
                         best_score = score
@@ -1564,7 +1773,8 @@ class AdaptiveLearningManager:
                             'win_rate': score['win_rate'],
                             'profit_factor': score['profit_factor'],
                             'total_trades': score['total_trades'],
-                            'confidence': min(1.0, score['total_trades'] / 100)  # Confidence based on sample size
+                            # Confidence based on sample size
+                            'confidence': min(1.0, score['total_trades'] / 100)
                         }
 
             return best_params
@@ -1573,7 +1783,11 @@ class AdaptiveLearningManager:
             logger.error(f"Error finding optimal SL/TP for {symbol}: {e}")
             return None
 
-    def simulate_sl_tp_performance(self, trades_df: pd.DataFrame, sl_mult: float, tp_mult: float) -> dict:
+    def simulate_sl_tp_performance(
+            self,
+            trades_df: pd.DataFrame,
+            sl_mult: float,
+            tp_mult: float) -> dict:
         """Simulate performance with given SL/TP multipliers"""
         try:
             total_trades = len(trades_df)
@@ -1584,12 +1798,17 @@ class AdaptiveLearningManager:
 
             for _, trade in trades_df.iterrows():
                 # Simulate SL/TP based on ATR multipliers
-                # This is a simplified simulation - in reality would need ATR data
+                # This is a simplified simulation - in reality would need ATR
+                # data
                 entry_price = trade['entry_price']
                 direction = 1 if trade['direction'] == 'BUY' else -1
 
-                # Simplified SL/TP calculation (would use actual ATR in real implementation)
-                atr_estimate = abs(trade.get('exit_price', entry_price) - entry_price) * 0.1  # Rough ATR estimate
+                # Simplified SL/TP calculation (would use actual ATR in real
+                # implementation)
+                atr_estimate = abs(
+                    trade.get(
+                        'exit_price',
+                        entry_price) - entry_price) * 0.1  # Rough ATR estimate
 
                 sl_distance = atr_estimate * sl_mult
                 tp_distance = atr_estimate * tp_mult
@@ -1617,7 +1836,8 @@ class AdaptiveLearningManager:
                 total_profit += profit
 
             win_rate = winning_trades / total_trades if total_trades > 0 else 0
-            profit_factor = gross_profit / gross_loss if gross_loss > 0 else float('inf')
+            profit_factor = gross_profit / \
+                gross_loss if gross_loss > 0 else float('inf')
 
             return {
                 'win_rate': win_rate,
@@ -1628,7 +1848,11 @@ class AdaptiveLearningManager:
 
         except Exception as e:
             logger.error(f"Error simulating SL/TP performance: {e}")
-            return {'win_rate': 0, 'profit_factor': 0, 'total_trades': 0, 'score': 0}
+            return {
+                'win_rate': 0,
+                'profit_factor': 0,
+                'total_trades': 0,
+                'score': 0}
 
     def update_entry_filters(self):
         """Learn when NOT to enter trades based on historical outcomes"""
@@ -1655,7 +1879,8 @@ class AdaptiveLearningManager:
                     cursor.execute('''
                         INSERT OR REPLACE INTO entry_filters
                         (symbol, filter_type, condition_value, should_enter,
-                         total_trades, profitable_trades, win_rate, last_updated)
+                         total_trades, profitable_trades, win_rate,
+                         last_updated)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     ''', (
                         symbol,
@@ -1677,14 +1902,19 @@ class AdaptiveLearningManager:
             logger.error(f"Error updating entry filters: {e}")
 
     def analyze_filter_conditions(self, trades_df: pd.DataFrame) -> list:
-        """Analyze different conditions to determine when not to enter trades"""
+        """Analyze different conditions to determine when not to enter
+        trades"""
         filters = []
 
         try:
             # High volatility filter - don't enter when ATR is too high
             trades_df['volatility'] = trades_df['profit_pct'].rolling(10).std()
-            high_vol_trades = trades_df[trades_df['volatility'] > trades_df['volatility'].quantile(0.8)]
-            low_vol_trades = trades_df[trades_df['volatility'] <= trades_df['volatility'].quantile(0.8)]
+            high_vol_trades = trades_df[
+                trades_df['volatility'] > trades_df['volatility'].quantile(
+                    0.8)]
+            low_vol_trades = trades_df[
+                trades_df['volatility'] <= trades_df['volatility'].quantile(
+                    0.8)]
 
             if len(high_vol_trades) > 10:
                 high_vol_win_rate = (high_vol_trades['profit_pct'] > 0).mean()
@@ -1694,16 +1924,19 @@ class AdaptiveLearningManager:
                 if high_vol_win_rate < low_vol_win_rate * 0.8:
                     filters.append({
                         'type': 'high_volatility_filter',
-                        'condition_value': trades_df['volatility'].quantile(0.8),
+                        'condition_value': trades_df['volatility'].quantile(
+                            0.8),
                         'should_enter': False,
                         'total_trades': len(high_vol_trades),
-                        'profitable_trades': int(len(high_vol_trades) * high_vol_win_rate),
+                        'profitable_trades': int(len(high_vol_trades) *
+                                                 high_vol_win_rate),
                         'win_rate': high_vol_win_rate
                     })
 
             # Time of day filter - avoid certain hours
             trades_df['hour'] = pd.to_datetime(trades_df['timestamp']).dt.hour
-            hourly_win_rates = trades_df.groupby('hour')['profit_pct'].apply(lambda x: (x > 0).mean())
+            hourly_win_rates = trades_df.groupby(
+                'hour')['profit_pct'].apply(lambda x: (x > 0).mean())
 
             bad_hours = hourly_win_rates[hourly_win_rates < 0.3].index.tolist()
 
@@ -1725,7 +1958,10 @@ class AdaptiveLearningManager:
 
         return filters
 
-    def get_recent_trades_df(self, symbol: str, days: int = 30) -> pd.DataFrame:
+    def get_recent_trades_df(
+            self,
+            symbol: str,
+            days: int = 30) -> pd.DataFrame:
         """Get recent trades as DataFrame for analysis"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -1747,7 +1983,8 @@ class AdaptiveLearningManager:
 
     # ===== GETTER METHODS FOR NEW FEATURES =====
 
-    def get_entry_timing_recommendation(self, symbol: str, current_hour: int) -> dict:
+    def get_entry_timing_recommendation(
+            self, symbol: str, current_hour: int) -> dict:
         """Get entry timing recommendation for current conditions"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -1770,11 +2007,19 @@ class AdaptiveLearningManager:
                     'total_trades': row[5]
                 }
 
-            return {'recommended': True, 'win_rate': 0.5, 'avg_profit': 0, 'total_trades': 0}
+            return {
+                'recommended': True,
+                'win_rate': 0.5,
+                'avg_profit': 0,
+                'total_trades': 0}
 
         except Exception as e:
             logger.error(f"Error getting entry timing for {symbol}: {e}")
-            return {'recommended': True, 'win_rate': 0.5, 'avg_profit': 0, 'total_trades': 0}
+            return {
+                'recommended': True,
+                'win_rate': 0.5,
+                'avg_profit': 0,
+                'total_trades': 0}
 
     def get_symbol_sl_tp_params(self, symbol: str) -> dict:
         """Get optimized SL/TP parameters for a symbol"""
@@ -1803,13 +2048,16 @@ class AdaptiveLearningManager:
 
             # Return global defaults if no symbol-specific data
             return {
-                'sl_atr_multiplier': self.adaptive_params.get('stop_loss_atr_multiplier', 2.0),
-                'tp_atr_multiplier': self.adaptive_params.get('take_profit_atr_multiplier', 6.0),
+                'sl_atr_multiplier': self.adaptive_params.get(
+                    'stop_loss_atr_multiplier',
+                    2.0),
+                'tp_atr_multiplier': self.adaptive_params.get(
+                    'take_profit_atr_multiplier',
+                    6.0),
                 'rr_ratio': 3.0,
                 'win_rate': 0.5,
                 'profit_factor': 1.0,
-                'confidence': 0.0
-            }
+                'confidence': 0.0}
 
         except Exception as e:
             logger.error(f"Error getting SL/TP params for {symbol}: {e}")
@@ -1822,7 +2070,10 @@ class AdaptiveLearningManager:
                 'confidence': 0.0
             }
 
-    def should_enter_based_on_filters(self, symbol: str, current_conditions: dict) -> bool:
+    def should_enter_based_on_filters(
+            self,
+            symbol: str,
+            current_conditions: dict) -> bool:
         """Check if entry filters allow trading"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -1860,7 +2111,8 @@ class AdaptiveLearningManager:
     # ===== NEW ADVANCED LEARNING METHODS =====
 
     def optimize_technical_indicators(self):
-        """Optimize technical indicator parameters based on historical performance"""
+        """Optimize technical indicator parameters based on historical
+        performance"""
         logger.info("Optimizing technical indicator parameters...")
 
         try:
@@ -1868,17 +2120,28 @@ class AdaptiveLearningManager:
 
             for symbol in symbols:
                 # Test different parameter combinations for each indicator
-                self.optimize_indicator_for_symbol(symbol, 'vwap', 'period', [10, 20, 30, 40, 50])
-                self.optimize_indicator_for_symbol(symbol, 'ema_fast', 'period', [5, 9, 12, 15, 20])
-                self.optimize_indicator_for_symbol(symbol, 'ema_slow', 'period', [15, 21, 25, 30, 50])
-                self.optimize_indicator_for_symbol(symbol, 'rsi', 'period', [7, 14, 21])
-                self.optimize_indicator_for_symbol(symbol, 'atr', 'period', [7, 14, 21])
+                self.optimize_indicator_for_symbol(
+                    symbol, 'vwap', 'period', [10, 20, 30, 40, 50])
+                self.optimize_indicator_for_symbol(
+                    symbol, 'ema_fast', 'period', [5, 9, 12, 15, 20])
+                self.optimize_indicator_for_symbol(
+                    symbol, 'ema_slow', 'period', [15, 21, 25, 30, 50])
+                self.optimize_indicator_for_symbol(
+                    symbol, 'rsi', 'period', [7, 14, 21])
+                self.optimize_indicator_for_symbol(
+                    symbol, 'atr', 'period', [7, 14, 21])
 
         except Exception as e:
             logger.error(f"Error optimizing technical indicators: {e}")
 
-    def optimize_indicator_for_symbol(self, symbol: str, indicator_name: str, param_name: str, test_values: list):
-        """Test different parameter values for a specific indicator and symbol"""
+    def optimize_indicator_for_symbol(
+            self,
+            symbol: str,
+            indicator_name: str,
+            param_name: str,
+            test_values: list):
+        """Test different parameter values for a specific indicator and
+        symbol"""
         try:
             # Get recent trades for this symbol
             trades_df = self.get_recent_trades_df(symbol, days=365)
@@ -1891,7 +2154,8 @@ class AdaptiveLearningManager:
 
             for test_value in test_values:
                 # Simulate performance with this parameter value
-                score = self.simulate_indicator_performance(trades_df, indicator_name, param_name, test_value)
+                score = self.simulate_indicator_performance(
+                    trades_df, indicator_name, param_name, test_value)
 
                 if score > best_score:
                     best_score = score
@@ -1903,8 +2167,9 @@ class AdaptiveLearningManager:
 
             cursor.execute('''
                 INSERT OR REPLACE INTO technical_indicator_optimization
-                (symbol, indicator_name, parameter_name, optimal_value, performance_score,
-                 total_trades, last_updated, confidence_score)
+                (symbol, indicator_name, parameter_name, optimal_value,
+                 performance_score, total_trades, last_updated,
+                 confidence_score)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 symbol,
@@ -1914,24 +2179,32 @@ class AdaptiveLearningManager:
                 best_score,
                 len(trades_df),
                 datetime.now(),
-                min(1.0, len(trades_df) / 200)  # Confidence based on sample size
+                # Confidence based on sample size
+                min(1.0, len(trades_df) / 200)
             ))
 
             conn.commit()
             conn.close()
 
         except Exception as e:
-            logger.error(f"Error optimizing {indicator_name} for {symbol}: {e}")
+            logger.error(
+                f"Error optimizing {indicator_name} for {symbol}: {e}")
 
-    def simulate_indicator_performance(self, trades_df: pd.DataFrame, indicator_name: str,
-                                     param_name: str, param_value: float) -> float:
+    def simulate_indicator_performance(
+            self,
+            trades_df: pd.DataFrame,
+            indicator_name: str,
+            param_name: str,
+            param_value: float) -> float:
         """Simulate trading performance with specific indicator parameter"""
         try:
-            # This is a simplified simulation - in practice would recalculate indicators
+            # This is a simplified simulation - in practice would
+            # recalculate indicators
             # For now, use a proxy based on existing trade data
             win_rate = (trades_df['profit_pct'] > 0).mean()
 
-            # Add some variation based on parameter value (simulating optimization)
+            # Add some variation based on parameter value
+            # (simulating optimization)
             # Better parameters should perform better
             optimal_ranges = {
                 'vwap_period': (15, 25),
@@ -1962,8 +2235,12 @@ class AdaptiveLearningManager:
 
         try:
             # Test different weight combinations for fundamental sources
-            sources = ['myfxbook', 'fxstreet', 'fxblue', 'investing', 'forexclientsentiment']
-            weight_ranges = [(0.1, 0.4), (0.1, 0.4), (0.1, 0.3), (0.1, 0.3), (0.05, 0.2)]
+            sources = [
+                'myfxbook',
+                'fxstreet',
+                'fxblue',
+                'investing',
+                'forexclientsentiment']
 
             # Simple optimization: test a few combinations
             test_combinations = [
@@ -1975,7 +2252,8 @@ class AdaptiveLearningManager:
             ]
 
             best_weights = test_combinations[0]
-            best_score = self.evaluate_fundamental_weights(test_combinations[0])
+            best_score = self.evaluate_fundamental_weights(
+                test_combinations[0])
 
             for weights in test_combinations[1:]:
                 score = self.evaluate_fundamental_weights(weights)
@@ -1987,12 +2265,17 @@ class AdaptiveLearningManager:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            sources = ['myfxbook', 'fxstreet', 'fxblue', 'investing', 'forexclientsentiment']
+            sources = [
+                'myfxbook',
+                'fxstreet',
+                'fxblue',
+                'investing',
+                'forexclientsentiment']
             for i, source in enumerate(sources):
                 cursor.execute('''
                     INSERT OR REPLACE INTO fundamental_weight_optimization
-                    (source_name, optimal_weight, prediction_accuracy, total_predictions,
-                     last_updated, market_condition)
+                    (source_name, optimal_weight, prediction_accuracy,
+                     total_predictions, last_updated, market_condition)
                     VALUES (?, ?, ?, ?, ?, ?)
                 ''', (
                     source,
@@ -2000,13 +2283,16 @@ class AdaptiveLearningManager:
                     best_score,
                     100,  # Placeholder
                     datetime.now(),
-                    'general'  # Could be extended for different market conditions
+                    'general'  # Could be extended for different
+                    # market conditions
                 ))
 
             conn.commit()
             conn.close()
 
-            logger.info(f"Optimized fundamental weights: {dict(zip(sources, best_weights))}")
+            logger.info(
+                f"Optimized fundamental weights: "
+                f"{dict(zip(sources, best_weights))}")
 
         except Exception as e:
             logger.error(f"Error optimizing fundamental weights: {e}")
@@ -2014,14 +2300,16 @@ class AdaptiveLearningManager:
     def evaluate_fundamental_weights(self, weights: list) -> float:
         """Evaluate performance of fundamental weight combination"""
         try:
-            # Simplified evaluation - in practice would test against historical data
+            # Simplified evaluation - in practice would test against
+            # historical data
             # For now, prefer balanced weights
             total_weight = sum(weights)
             if abs(total_weight - 1.0) > 0.01:  # Must sum to 1.0
                 return 0.0
 
             # Score based on balance and reasonable ranges
-            balance_score = 1.0 - abs(0.25 - sum(weights[:4])/4)  # First 4 sources should be balanced
+            # First 4 sources should be balanced
+            balance_score = 1.0 - abs(0.25 - sum(weights[:4]) / 4)
             return balance_score * 0.8  # Scale to reasonable score
 
         except Exception as e:
@@ -2053,12 +2341,14 @@ class AdaptiveLearningManager:
             for event_name, impact, hours_before, hours_after in sample_events:
                 # Simulate analysis - in practice would analyze real trade data
                 should_avoid = impact == 'high'
-                avg_performance = 0.45 if should_avoid else 0.55  # Lower performance during high impact
+                # Lower performance during high impact
+                avg_performance = 0.45 if should_avoid else 0.55
 
                 cursor.execute('''
                     INSERT OR REPLACE INTO economic_calendar_impact
-                    (event_name, event_impact, hours_before_event, hours_after_event,
-                     avg_trade_performance, total_trades, should_avoid_trading, last_updated, currency_pair)
+                    (event_name, event_impact, hours_before_event,
+                     hours_after_event, avg_trade_performance, total_trades,
+                     should_avoid_trading, last_updated, currency_pair)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     event_name,
@@ -2089,7 +2379,8 @@ class AdaptiveLearningManager:
             # In a real implementation, you would:
             # 1. Track central bank rate decisions
             # 2. Monitor currency reactions to rate changes
-            # 3. Learn correlations between rate differentials and currency movements
+            # 3. Learn correlations between rate differentials and currency
+            # movements
 
             currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD']
             time_horizons = ['1h', '4h', '1d', '1w']
@@ -2101,14 +2392,18 @@ class AdaptiveLearningManager:
                 for horizon in time_horizons:
                     # Simulate interest rate impact analysis
                     # In practice, this would analyze real rate change data
-                    rate_change = np.random.normal(0, 0.25)  # Sample rate change
-                    price_movement = rate_change * np.random.uniform(0.5, 2.0)  # Correlated movement
-                    correlation = np.random.uniform(0.3, 0.8)  # Correlation strength
+                    rate_change = np.random.normal(
+                        0, 0.25)  # Sample rate change
+                    price_movement = rate_change * \
+                        np.random.uniform(0.5, 2.0)  # Correlated movement
+                    correlation = np.random.uniform(
+                        0.3, 0.8)  # Correlation strength
 
                     cursor.execute('''
                         INSERT OR REPLACE INTO interest_rate_impact
-                        (currency, rate_change, time_horizon, avg_price_movement,
-                         total_observations, correlation_strength, last_updated)
+                        (currency, rate_change, time_horizon,
+                         avg_price_movement, total_observations,
+                         correlation_strength, last_updated)
                         VALUES (?, ?, ?, ?, ?, ?, ?)
                     ''', (
                         currency,
@@ -2146,8 +2441,10 @@ class AdaptiveLearningManager:
 
             for threshold in param_ranges['sentiment_threshold']:
                 for decay in param_ranges['sentiment_time_decay']:
-                    for multiplier in param_ranges['keyword_weight_multiplier']:
-                        score = self.evaluate_sentiment_params(threshold, decay, multiplier)
+                    for multiplier in param_ranges[
+                            'keyword_weight_multiplier']:
+                        score = self.evaluate_sentiment_params(
+                            threshold, decay, multiplier)
 
                         if score > best_score:
                             best_score = score
@@ -2164,8 +2461,8 @@ class AdaptiveLearningManager:
             for param_name, value in best_params.items():
                 cursor.execute('''
                     INSERT OR REPLACE INTO sentiment_parameter_optimization
-                    (parameter_name, optimal_value, performance_impact, total_trades,
-                     last_updated, market_condition)
+                    (parameter_name, optimal_value, performance_impact,
+                     total_trades, last_updated, market_condition)
                     VALUES (?, ?, ?, ?, ?, ?)
                 ''', (
                     param_name,
@@ -2184,14 +2481,23 @@ class AdaptiveLearningManager:
         except Exception as e:
             logger.error(f"Error optimizing sentiment parameters: {e}")
 
-    def evaluate_sentiment_params(self, threshold: float, decay: float, multiplier: float) -> float:
+    def evaluate_sentiment_params(
+            self,
+            threshold: float,
+            decay: float,
+            multiplier: float) -> float:
         """Evaluate sentiment parameter combination"""
         try:
-            # Simplified evaluation - in practice would test against historical sentiment data
-            # Prefer moderate threshold, moderate decay, and balanced multiplier
-            threshold_score = 1.0 - abs(threshold - 0.3) / 0.3  # Optimal around 0.3
-            decay_score = 1.0 - abs(decay - 1.0) / 1.0          # Optimal around 1.0
-            multiplier_score = 1.0 - abs(multiplier - 1.0) / 0.5 # Optimal around 1.0
+            # Simplified evaluation - in practice would test against
+            # historical sentiment data
+            # Prefer moderate threshold, moderate decay, and balanced
+            # multiplier
+            threshold_score = 1.0 - \
+                abs(threshold - 0.3) / 0.3  # Optimal around 0.3
+            decay_score = 1.0 - abs(decay - 1.0) / \
+                1.0          # Optimal around 1.0
+            multiplier_score = 1.0 - \
+                abs(multiplier - 1.0) / 0.5  # Optimal around 1.0
 
             return (threshold_score + decay_score + multiplier_score) / 3.0
 
@@ -2247,7 +2553,8 @@ class AdaptiveLearningManager:
             return {}
 
     def should_avoid_economic_events(self, hours_ahead: int = 24) -> list:
-        """Check if trading should be avoided due to upcoming economic events"""
+        """Check if trading should be avoided due to upcoming economic
+        events"""
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
@@ -2291,13 +2598,20 @@ class AdaptiveLearningManager:
             return expectations
 
         except Exception as e:
-            logger.error(f"Error getting interest rate expectations for {currency}: {e}")
+            logger.error(
+                f"Error getting interest rate expectations for "
+                f"{currency}: {e}")
             return {}
 
-    def get_updated_sl_tp_params(self, symbol: str, trade_timestamp: datetime) -> dict:
-        """Get updated SL/TP parameters if they've changed since trade was opened"""
+    def get_updated_sl_tp_params(
+            self,
+            symbol: str,
+            trade_timestamp: datetime) -> dict:
+        """Get updated SL/TP parameters if they've changed since trade
+        was opened"""
         try:
-            # Check if SL/TP parameters have been updated since the trade was opened
+            # Check if SL/TP parameters have been updated since the trade was
+            # opened
             symbol_params = self.get_symbol_sl_tp_params(symbol)
 
             if symbol_params['confidence'] < 0.5:
@@ -2324,20 +2638,29 @@ class AdaptiveLearningManager:
             return None  # No updates since trade was opened
 
         except Exception as e:
-            logger.error(f"Error checking for updated SL/TP params for {symbol}: {e}")
+            logger.error(
+                f"Error checking for updated SL/TP params for {symbol}: {e}")
             return None
 
-    def should_adjust_existing_trade(self, symbol: str, current_sl: float, current_tp: float,
-                                    trade_timestamp: datetime) -> dict:
-        """Determine if an existing trade should have its SL/TP adjusted based on new learning"""
+    def should_adjust_existing_trade(
+            self,
+            symbol: str,
+            current_sl: float,
+            current_tp: float,
+            trade_timestamp: datetime) -> dict:
+        """Determine if an existing trade should have its SL/TP adjusted
+        based on new learning"""
         try:
-            updated_params = self.get_updated_sl_tp_params(symbol, trade_timestamp)
+            updated_params = self.get_updated_sl_tp_params(
+                symbol, trade_timestamp)
 
             if not updated_params:
                 return {'should_adjust': False}
 
-            # Calculate what the new SL/TP should be based on current market conditions
-            # This would need current price data - for now, return the updated parameters
+            # Calculate what the new SL/TP should be based on current
+            # market conditions
+            # This would need current price data - for now, return the updated
+            # parameters
             return {
                 'should_adjust': True,
                 'new_sl_atr_multiplier': updated_params['sl_atr_multiplier'],
@@ -2347,11 +2670,19 @@ class AdaptiveLearningManager:
             }
 
         except Exception as e:
-            logger.error(f"Error determining trade adjustment for {symbol}: {e}")
+            logger.error(
+                f"Error determining trade adjustment for {symbol}: {e}")
             return {'should_adjust': False}
 
-    def record_position_adjustment(self, ticket: int, symbol: str, old_sl: float, old_tp: float,
-                                 new_sl: float, new_tp: float, adjustment_reason: str):
+    def record_position_adjustment(
+            self,
+            ticket: int,
+            symbol: str,
+            old_sl: float,
+            old_tp: float,
+            new_sl: float,
+            new_tp: float,
+            adjustment_reason: str):
         """Record when a position's SL/TP was adjusted for learning purposes"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -2359,7 +2690,8 @@ class AdaptiveLearningManager:
 
             cursor.execute('''
                 INSERT INTO position_adjustments
-                (ticket, symbol, old_sl, old_tp, new_sl, new_tp, adjustment_reason, adjustment_timestamp)
+                (ticket, symbol, old_sl, old_tp, new_sl, new_tp,
+                 adjustment_reason, adjustment_timestamp)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 ticket,
@@ -2375,25 +2707,30 @@ class AdaptiveLearningManager:
             conn.commit()
             conn.close()
 
-            logger.info(f"Recorded position adjustment for {symbol} ticket {ticket}: {adjustment_reason}")
+            logger.info(
+                f"Recorded position adjustment for {symbol} ticket {ticket}: "
+                f"{adjustment_reason}")
 
         except Exception as e:
             logger.error(f"Error recording position adjustment: {e}")
 
     def analyze_adjustment_performance(self):
-        """Analyze how position adjustments performed to improve future adjustments"""
+        """Analyze how position adjustments performed to improve future
+        adjustments"""
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
             # Get adjustment history with outcomes
             cursor.execute('''
-                SELECT pa.ticket, pa.symbol, pa.adjustment_reason, pa.adjustment_timestamp,
-                       t.profit_pct, t.exit_price, t.duration_minutes
+                SELECT pa.ticket, pa.symbol, pa.adjustment_reason,
+                       pa.adjustment_timestamp, t.profit_pct, t.exit_price,
+                       t.duration_minutes
                 FROM position_adjustments pa
                 LEFT JOIN trades t ON pa.ticket = t.ticket
                 WHERE t.timestamp > pa.adjustment_timestamp
-                AND t.timestamp <= datetime(pa.adjustment_timestamp, '+24 hours')
+                AND t.timestamp <= datetime(pa.adjustment_timestamp,
+                                             '+24 hours')
             ''')
 
             adjustments = cursor.fetchall()
@@ -2407,20 +2744,25 @@ class AdaptiveLearningManager:
             total_adjustments = len(adjustments)
 
             for adj in adjustments:
-                ticket, symbol, reason, adj_time, profit_pct, exit_price, duration = adj
+                ticket, symbol, reason, adj_time, profit_pct, exit_price, \
+                    duration = adj
 
                 if profit_pct and profit_pct > 0:
                     successful_adjustments += 1
 
                 # Log adjustment outcome
-                outcome = "SUCCESS" if (profit_pct and profit_pct > 0) else "FAILURE"
-                logger.info(f"Adjustment analysis - {symbol} ticket {ticket}: {outcome} "
-                          f"(reason: {reason}, profit: {profit_pct:.2f}%)")
+                outcome = "SUCCESS" if (
+                    profit_pct and profit_pct > 0) else "FAILURE"
+                logger.info(f"Adjustment analysis - {symbol} ticket "
+                            f"{ticket}: {outcome} "
+                            f"(reason: {reason}, profit: {profit_pct:.2f}%)")
 
-            success_rate = successful_adjustments / total_adjustments if total_adjustments > 0 else 0
+            success_rate = successful_adjustments / \
+                total_adjustments if total_adjustments > 0 else 0
 
-            logger.info(f"Position adjustment analysis: {successful_adjustments}/{total_adjustments} "
-                      f"successful ({success_rate:.1%})")
+            logger.info(f"Position adjustment analysis: "
+                        f"{successful_adjustments}/{total_adjustments} "
+                        f"successful ({success_rate:.1%})")
 
             # Store analysis results for future learning
             self.store_adjustment_learning(success_rate, adjustments)
@@ -2428,7 +2770,10 @@ class AdaptiveLearningManager:
         except Exception as e:
             logger.error(f"Error analyzing adjustment performance: {e}")
 
-    def store_adjustment_learning(self, success_rate: float, adjustments: list):
+    def store_adjustment_learning(
+            self,
+            success_rate: float,
+            adjustments: list):
         """Store learning from adjustment performance"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -2436,7 +2781,8 @@ class AdaptiveLearningManager:
 
             cursor.execute('''
                 INSERT INTO adjustment_performance_analysis
-                (analysis_date, success_rate, total_adjustments, successful_adjustments, avg_profit_impact)
+                (analysis_date, success_rate, total_adjustments,
+                 successful_adjustments, avg_profit_impact)
                 VALUES (?, ?, ?, ?, ?)
             ''', (
                 datetime.now(),
