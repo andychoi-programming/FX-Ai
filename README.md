@@ -11,8 +11,12 @@ I've created the complete FX-Ai trading system with the following components:
 3. **FX-Ai_Start.bat** - Windows startup script
 4. **install_ea.bat** - Automated MT5 EA installation script
 5. **fix_ea_files.bat** - EA file organization utility
-6. **requirements.txt** - Python dependencies
-7. **Complete Python codebase** - Analysis, trading, and communication modules
+6. **risk_display.py** - Risk management parameters display script
+7. **risk_config.py** - Interactive risk management configuration script
+8. **Risk_Display.bat** - Windows batch file for risk display
+9. **Risk_Config.bat** - Windows batch file for risk configuration
+10. **requirements.txt** - Python dependencies
+11. **Complete Python codebase** - Analysis, trading, and communication modules
 
 ## 📋 Table of Contents
 
@@ -910,6 +914,37 @@ python main.py
 - **Max Positions**: 5 concurrent trades
 - **Breakeven**: Move SL at 20 pips profit
 - **Trailing Stop**: Trail by 30 pips after 40 pips
+
+### Risk Management Tools
+
+#### View Current Risk Settings
+
+```bash
+# Display current risk parameters
+python risk_display.py
+
+# Or use the batch file
+Risk_Display.bat
+```
+
+#### Configure Risk Parameters Interactively
+
+```bash
+# Interactive risk configuration
+python risk_config.py
+
+# Or use the batch file
+Risk_Config.bat
+```
+
+The interactive configuration allows you to:
+- View current risk settings
+- Modify risk dollar amount per trade
+- Adjust maximum daily loss limit
+- Change maximum concurrent positions
+- Save changes to configuration file
+
+**⚠️ Important**: Always test risk changes on a demo account first!
 
 ## Trading Pairs
 
