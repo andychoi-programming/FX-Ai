@@ -107,10 +107,71 @@ class FXAiApplication:
         signal.signal(signal.SIGINT, self.shutdown_handler)
         signal.signal(signal.SIGTERM, self.shutdown_handler)
 
+    async def validate_configuration(self):
+        """Validate critical configuration before trading starts"""
+        from utils.exceptions import ConfigurationError, MissingParametersError
+        import os
+        import json
+        
+        self.logger.info("Validating system configuration...")
+        
+        # 1. Check optimal_parameters.json exists
+        params_path = "models/parameter_optimization/optimal_parameters.json"
+        if not os.path.exists(params_path):
+            raise MissingParametersError(
+                f"Optimized parameters file not found: {params_path}\n"
+                "Please run optimization first: python backtest/optimize_fast_3year.py"
+            )
+        
+        # 2. Verify all trading symbols have optimized parameters
+        with open(params_path, 'r') as f:
+            optimized_params = json.load(f)
+        
+        trading_symbols = self.config.get('trading', {}).get('symbols', [])
+        missing_symbols = [s for s in trading_symbols if s not in optimized_params]
+        
+        if missing_symbols:
+            self.logger.warning(
+                f"No optimized parameters for: {', '.join(missing_symbols)}\n"
+                f"These symbols will use fallback parameters from config"
+            )
+        else:
+            self.logger.info(f"✓ All {len(trading_symbols)} symbols have optimized parameters")
+        
+        # 3. Validate MT5 connection settings
+        mt5_config = self.config.get('mt5', {})
+        if not mt5_config.get('login') or not mt5_config.get('password'):
+            raise ConfigurationError(
+                "MT5 credentials missing. Please check:\n"
+                "1. .env file exists with MT5_LOGIN and MT5_PASSWORD\n"
+                "2. config/config.json has MT5 settings"
+            )
+        
+        # 4. Validate risk settings
+        risk_per_trade = self.config.get('trading', {}).get('risk_per_trade', 0)
+        if risk_per_trade <= 0:
+            raise ConfigurationError(f"Invalid risk_per_trade: {risk_per_trade}. Must be > 0")
+        
+        max_positions = self.config.get('trading', {}).get('max_positions', 0)
+        if max_positions <= 0 or max_positions > 100:
+            raise ConfigurationError(f"Invalid max_positions: {max_positions}. Must be 1-100")
+        
+        # 5. Validate model directory exists
+        model_dir = "models"
+        if not os.path.exists(model_dir):
+            self.logger.warning(f"Model directory not found: {model_dir}")
+            os.makedirs(model_dir, exist_ok=True)
+            self.logger.info(f"Created model directory: {model_dir}")
+        
+        self.logger.info("✓ Configuration validation passed")
+
     async def initialize_components(self):
         """Initialize all trading components"""
         try:
             self.logger.info("Initializing components...")
+            
+            # Validate configuration first
+            await self.validate_configuration()
 
             # 1. MT5 Connection
             self.logger.info("Initializing MT5 connection...")
@@ -411,11 +472,29 @@ class FXAiApplication:
                                     'ml_predictor.predict', response_time, True)
                         except Exception as e:
                             response_time = time_module.time() - start_time
-                            ml_prediction = {'direction': 0, 'probability': 0.5, 'confidence': 0.5}
                             if self.system_health_monitor:
                                 self.system_health_monitor.record_api_call(
                                     'ml_predictor.predict', response_time, False, str(e))
-                            self.logger.warning(f"ML prediction failed for {symbol}: {e}")
+                            
+                            # GRACEFUL DEGRADATION: Fall back to technical analysis only
+                            self.logger.warning(
+                                f"{symbol}: ML prediction failed, falling back to technical analysis only: {e}")
+                            
+                            # Use signal_strength as fallback confidence
+                            # Strong buy (>0.7) or strong sell (<-0.7) = higher confidence
+                            fallback_confidence = min(abs(signal_strength), 0.75)  # Cap at 0.75 to indicate fallback
+                            
+                            ml_prediction = {
+                                'direction': 'BUY' if signal_strength > 0 else 'SELL',
+                                'probability': (signal_strength + 1.0) / 2.0,  # Normalize -1..1 to 0..1
+                                'confidence': fallback_confidence,
+                                'source': 'technical_fallback',  # Mark as fallback
+                                'signal_strength': signal_strength
+                            }
+                            
+                            self.logger.info(
+                                f"{symbol}: Fallback prediction - {ml_prediction['direction']} "
+                                f"(confidence: {fallback_confidence:.2f}, signal: {signal_strength:.2f})")
 
                     # Sentiment analysis
                     start_time = time_module.time()

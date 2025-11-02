@@ -421,8 +421,7 @@ class TradingEngine:
                 # This ensures SL/TP are set correctly even if initial order
                 # had issues
                 if stop_loss is not None or take_profit is not None:
-                    import time
-                    time.sleep(0.2)  # Brief pause before modifying
+                    await asyncio.sleep(0.2)  # Brief pause before modifying
 
                     # CRITICAL FIX: Get the actual position ticket, not order
                     # ticket
@@ -461,8 +460,7 @@ class TradingEngine:
                             "âš ï¸  WARNING: No position found to modify SL/TP")
 
                 # CRITICAL FIX: Enhanced verification with detailed diagnostics
-                import time
-                time.sleep(0.5)  # Wait for position to register
+                await asyncio.sleep(0.5)  # Wait for position to register
 
                 positions = mt5.positions_get(symbol=symbol)
                 if positions:

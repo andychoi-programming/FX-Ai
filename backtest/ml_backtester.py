@@ -193,9 +193,6 @@ class MLBacktester:
         entry_start, entry_end = self.param_manager.get_entry_time_windows(symbol, timeframe)
         exit_hour = self.param_manager.get_exit_time(symbol, timeframe)
 
-        print(f"Parameters for {symbol}: {params}")
-        print(f"Entry window: {entry_start}-{entry_end}, Exit hour: {exit_hour}")
-
         # Trading state
         position = None
         entry_price = 0
@@ -281,10 +278,6 @@ class MLBacktester:
                         breakeven_activated = False
                         trailing_activated = False
                         highest_price = entry_price if direction == 1 else entry_price  # Initialize for trailing
-
-                        print(f"Opened {symbol} position: {'BUY' if direction == 1 else 'SELL'} at {entry_price}, size: {position_size} lots, confidence: {confidence}")
-                    else:
-                        print(f"Low confidence for {symbol}: {confidence} < 0.6") if trade_count < 5 else None  # Only print first few
 
             # Check exit conditions
             elif position is not None:

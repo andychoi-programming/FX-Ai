@@ -1,10 +1,11 @@
 {
   "mt5": {
-    "login": 53605,
-    "password": "AshtonAmy369!",
-    "server": "TIOMarkets-Demo1",
+    "login": 0,
+    "password": "",
+    "server": "",
     "timeout": 60000,
-    "path": ""
+    "path": "",
+    "_comment": "MT5 credentials loaded from .env file for security"
   },
   "trading": {
     "symbols": [
@@ -506,7 +507,8 @@
     "notify_on_error": true
   },
   "logging": {
-    "level": "DEBUG",
+    "level": "INFO",
+    "console_level": "WARNING",
     "file": "logs/FX-Ai",
     "rotation_type": "time",
     "file_rotation": true,
@@ -515,6 +517,7 @@
     "log_trades": true,
     "log_learning": true,
     "log_performance": true,
-    "log_calculations": true
+    "log_calculations": false,
+    "_comment": "level: DEBUG/INFO/WARNING/ERROR, console_level for terminal output"
   }
 }

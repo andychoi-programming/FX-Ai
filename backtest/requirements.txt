@@ -1,7 +1,0 @@
-# Backtest Module Requirements
-# These are in addition to the main FX-Ai program requirements
-
-pandas>=1.5.0
-numpy>=1.21.0
-matplotlib>=3.5.0  # Optional, for additional charting capabilities
-seaborn>=0.11.0    # Optional, for enhanced visualizations

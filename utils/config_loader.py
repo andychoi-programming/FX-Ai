@@ -8,6 +8,7 @@ import os
 import logging
 from typing import Dict, Any, Optional
 from pathlib import Path
+from dotenv import load_dotenv
 
 class ConfigLoader:
     """Configuration loader with validation and defaults"""
@@ -22,6 +23,9 @@ class ConfigLoader:
         self.config_path = config_path
         self.config = {}
         self.logger = logging.getLogger(__name__)
+        
+        # Load environment variables from .env file
+        load_dotenv()
 
         # Default configuration
         self.defaults = {
@@ -85,6 +89,9 @@ class ConfigLoader:
                 self.config = self.defaults.copy()
                 self.save_config()
                 self.logger.info(f"Default configuration created at {self.config_path}")
+            
+            # Override with environment variables if present
+            self._load_env_overrides()
 
         except Exception as e:
             self.logger.error(f"Error loading configuration: {e}")
@@ -235,6 +242,34 @@ class ConfigLoader:
 
         update_nested_dict(self.config, updates)
         self.save_config()
+
+    def _load_env_overrides(self):
+        """Override configuration with environment variables (for security)"""
+        # MT5 credentials from environment
+        if os.getenv('MT5_LOGIN'):
+            self.config['mt5']['login'] = int(os.getenv('MT5_LOGIN'))
+            self.logger.info("MT5 login loaded from environment variable")
+        
+        if os.getenv('MT5_PASSWORD'):
+            self.config['mt5']['password'] = os.getenv('MT5_PASSWORD')
+            self.logger.info("MT5 password loaded from environment variable")
+        
+        if os.getenv('MT5_SERVER'):
+            self.config['mt5']['server'] = os.getenv('MT5_SERVER')
+            self.logger.info(f"MT5 server loaded from environment: {os.getenv('MT5_SERVER')}")
+        
+        if os.getenv('MT5_PATH'):
+            self.config['mt5']['path'] = os.getenv('MT5_PATH')
+        
+        # Optional: Other environment overrides
+        if os.getenv('RISK_PER_TRADE'):
+            self.config['trading']['risk_per_trade'] = float(os.getenv('RISK_PER_TRADE'))
+        
+        if os.getenv('MAX_POSITIONS'):
+            self.config['trading']['max_positions'] = int(os.getenv('MAX_POSITIONS'))
+        
+        if os.getenv('LOG_LEVEL'):
+            self.config['logging']['level'] = os.getenv('LOG_LEVEL')
 
     def __str__(self) -> str:
         """String representation of config"""
