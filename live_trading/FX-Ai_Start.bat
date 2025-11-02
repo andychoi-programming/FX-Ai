@@ -1,6 +1,9 @@
-@echo off
+2@echo off
 REM FX-Ai Trading System Startup Script
-REM Version 1.1.0 - October 29, 2025
+REM Version 1.5.0 - November 2, 2025
+
+REM Change to parent directory (FX-Ai root)
+cd /d "%~dp0.."
 
 echo ========================================
 echo   FX-Ai Trading System Startup
@@ -17,14 +20,15 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [✓] Python found
+echo [OK] Python found
 python --version
 echo.
 
 REM Check if we're in the right directory
 if not exist "main.py" (
     echo [ERROR] main.py not found in current directory
-    echo Please run this script from the FX-Ai root directory
+    echo Current directory: %CD%
+    echo Expected to find main.py in FX-Ai root directory
     echo.
     pause
     exit /b 1
@@ -39,9 +43,9 @@ if not exist "venv" (
         pause
         exit /b 1
     )
-    echo [✓] Virtual environment created
+    echo [OK] Virtual environment created
 ) else (
-    echo [✓] Virtual environment exists
+    echo [OK] Virtual environment exists
 )
 
 REM Activate virtual environment
@@ -58,7 +62,7 @@ if errorlevel 1 (
         exit /b 1
     )
 )
-echo [✓] Virtual environment activated
+echo [OK] Virtual environment activated
 echo.
 
 REM Upgrade pip (silently)
@@ -81,7 +85,7 @@ if exist "requirements.txt" (
         pause
         exit /b 1
     )
-    echo [✓] Dependencies installed
+    echo [OK] Dependencies installed
 ) else (
     echo [WARNING] requirements.txt not found
     echo Please ensure all dependencies are installed manually
@@ -104,24 +108,25 @@ if not exist "models" (
     mkdir models 2>nul
 )
 
-REM Check for config file
+REM Check for config file and .env (v1.5.0+)
+if not exist ".env" (
+    echo [WARNING] .env file not found
+    echo Please copy .env.example to .env and add your MT5 credentials
+    echo.
+    echo Run: copy .env.example .env
+    echo Then edit .env with your credentials
+    echo.
+)
+
 if not exist "config\config.json" (
     echo [WARNING] config\config.json not found
-    echo Please create it with your MT5 credentials
-    echo Example:
-    echo {
-    echo   "mt5": {
-    echo     "login": "YOUR_ACCOUNT_NUMBER",
-    echo     "password": "YOUR_PASSWORD",
-    echo     "server": "YOUR_BROKER_SERVER"
-    echo   }
-    echo }
+    echo Please ensure config.json exists in the config directory
     echo.
 )
 
 REM Check for MT5 installation
 echo [INFO] Checking MT5 installation...
-python -c "import MetaTrader5 as mt5; print('✓ MT5 module available')" 2>nul
+python -c "import MetaTrader5 as mt5; print('[OK] MT5 module available')" 2>nul
 if errorlevel 1 (
     echo [WARNING] MT5 module not properly installed
     echo Please ensure MetaTrader5 is correctly installed

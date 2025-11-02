@@ -67,8 +67,8 @@ class MT5ConfigManager:
             with open(self.config_path, 'w') as f:
                 json.dump(config_copy, f, indent=2)
             
-            print(f"{Fore.GREEN}✓ Credentials saved to .env file (secure){Style.RESET_ALL}")
-            print(f"{Fore.GREEN}✓ Other settings saved to config.json{Style.RESET_ALL}")
+            print(f"{Fore.GREEN}[OK] Credentials saved to .env file (secure){Style.RESET_ALL}")
+            print(f"{Fore.GREEN}[OK] Other settings saved to config.json{Style.RESET_ALL}")
             return True
         except Exception as e:
             print(f"{Fore.RED}❌ Error saving config: {e}{Style.RESET_ALL}")

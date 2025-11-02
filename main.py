@@ -136,7 +136,7 @@ class FXAiApplication:
                 f"These symbols will use fallback parameters from config"
             )
         else:
-            self.logger.info(f"✓ All {len(trading_symbols)} symbols have optimized parameters")
+            self.logger.info(f"[OK] All {len(trading_symbols)} symbols have optimized parameters")
         
         # 3. Validate MT5 connection settings
         mt5_config = self.config.get('mt5', {})
@@ -163,7 +163,7 @@ class FXAiApplication:
             os.makedirs(model_dir, exist_ok=True)
             self.logger.info(f"Created model directory: {model_dir}")
         
-        self.logger.info("✓ Configuration validation passed")
+        self.logger.info("[OK] Configuration validation passed")
 
     async def initialize_components(self):
         """Initialize all trading components"""
