@@ -11,7 +11,7 @@ from datetime import datetime
 
 def load_config():
     """Load configuration from config.json"""
-    config_path = Path(__file__).parent / "config" / "config.json"
+    config_path = Path(__file__).parent.parent / "config" / "config.json"
     try:
         with open(config_path, 'r') as f:
             return json.load(f)
