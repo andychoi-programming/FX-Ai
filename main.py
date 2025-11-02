@@ -15,6 +15,7 @@ from ai.advanced_risk_metrics import AdvancedRiskMetrics
 from ai.anomaly_detector import AnomalyDetector
 from ai.system_health_monitor import SystemHealthMonitor
 from ai.ml_predictor import MLPredictor
+from live_trading.dynamic_parameter_manager import DynamicParameterManager
 from analysis.sentiment_analyzer import SentimentAnalyzer
 from analysis.technical_analyzer import TechnicalAnalyzer
 from analysis.fundamental_analyzer import (
@@ -84,6 +85,7 @@ class FXAiApplication:
         self.advanced_risk_metrics = None
         self.anomaly_detector = None
         self.system_health_monitor = None
+        self.param_manager = None
 
         # Control flags
         self.running = False
@@ -164,6 +166,10 @@ class FXAiApplication:
             # 8. ML Predictor
             self.logger.info("Initializing ML predictor...")
             self.ml_predictor = MLPredictor(self.config)
+
+            # 8.3. Parameter Manager
+            self.logger.info("Initializing Parameter Manager...")
+            self.param_manager = DynamicParameterManager(self.config)
 
             # 8.5. Ensemble Predictor
             self.logger.info("Initializing Ensemble Predictor...")
@@ -690,75 +696,32 @@ class FXAiApplication:
                                 f"{symbol} fallback stop loss: 2% of entry = "
                                 f"{stop_loss_distance:.5f}")
 
-                        # Ensure minimum stop distance matches position sizing
-                        # requirements
-                        min_sl_pips = self.config.get(
-                            'risk_management', {}).get('minimum_sl_pips', 25)
-                        # Use higher minimum SL for metals due to higher
-                        # volatility
-                        if 'XAU' in symbol or 'GOLD' in symbol:
-                            # Minimum 200 pips for gold
-                            min_sl_pips = max(min_sl_pips, 200)
-                        elif 'XAG' in symbol:
-                            # Minimum 100 pips for silver (reduced for
-                            # tradability)
-                            min_sl_pips = max(min_sl_pips, 100)
-
-                        # Convert minimum pips to distance
-                        if 'JPY' in symbol:
-                            min_stop_distance = min_sl_pips * 0.01   # JPY pairs: 1 pip = 0.01
-                        elif 'XAG' in symbol or 'XAU' in symbol:
-                            # Metals: 1 pip = 0.01 (same as JPY)
-                            min_stop_distance = min_sl_pips * 0.01
-                        else:
-                            min_stop_distance = min_sl_pips * 0.0001  # Forex: 1 pip = 0.0001
-
-                        original_distance = stop_loss_distance
-                        stop_loss_distance = max(
-                            stop_loss_distance, min_stop_distance)
-                        if original_distance != stop_loss_distance:
-                            self.logger.info(
-                                f"{symbol} stop loss adjusted from "
-                                f"{original_distance:.5f} to "
-                                f"{stop_loss_distance:.5f} "
-                                f"(min {min_sl_pips} pips = "
-                                f"{min_stop_distance:.5f})")
+                        # No minimum SL restriction - use optimized parameters directly
+                        # The stop_loss_distance is already calculated using optimized values from
+                        # DynamicParameterManager or adaptive learning
 
                         if ml_prediction.get('direction') == 1:  # BUY
                             stop_loss = entry_price - stop_loss_distance
                         else:  # SELL
                             stop_loss = entry_price + stop_loss_distance
 
-                        # Calculate take profit using adaptive ATR multiplier
+                        # Calculate take profit using adaptive ATR multiplier or optimized parameters
                         take_profit = None
                         if atr_value > 0:
-                            # Use appropriate TP multiplier for precious metals
-                            # to ensure proper risk-reward
-                            base_tp_multiplier = adaptive_params.get(
-                                'take_profit_atr_multiplier', 6.0)
+                            # Use optimized TP for metals, ATR-based for forex
                             if 'XAU' in symbol or 'XAG' in symbol or 'GOLD' in symbol:
-                                # Minimum 4.0x ATR for metals to ensure proper
-                                # RR
-                                tp_atr_multiplier = max(
-                                    base_tp_multiplier, 4.0)
+                                # Get optimized take profit for metals from parameter manager
+                                optimal_params = self.param_manager.get_optimal_parameters(symbol, 'H1')
+                                tp_pips = optimal_params.get('tp_pips', 600)  # Default 600 pips for metals
+                                # Convert TP pips to distance
+                                take_profit_distance = tp_pips * 0.01  # Metals: 1 pip = 0.01
+                                self.logger.info(f"{symbol} using optimized metal take profit: {tp_pips} pips = {take_profit_distance:.5f}")
                             else:
+                                # Use ATR-based TP for forex
+                                base_tp_multiplier = adaptive_params.get(
+                                    'take_profit_atr_multiplier', 6.0)
                                 tp_atr_multiplier = base_tp_multiplier
-
-                            take_profit_distance = atr_value * tp_atr_multiplier
-
-                            # Ensure minimum take profit distance for 1:3
-                            # reward ratio
-                            min_tp_distance = min_stop_distance * 3  # 3x the minimum stop loss distance
-                            original_tp_distance = take_profit_distance
-                            take_profit_distance = max(
-                                take_profit_distance, min_tp_distance)
-
-                            if original_tp_distance != take_profit_distance:
-                                self.logger.info(
-                                    f"{symbol} take profit adjusted from " f"{
-                                        original_tp_distance:.5f} to " f"{
-                                        take_profit_distance:.5f} " f"(min {
-                                        min_tp_distance:.5f} for 1:3 ratio)")
+                                take_profit_distance = atr_value * tp_atr_multiplier
 
                             if ml_prediction.get('direction') == 1:  # BUY
                                 take_profit = entry_price + take_profit_distance
@@ -774,10 +737,6 @@ class FXAiApplication:
                             # Fallback take profit: 6% of entry price (3x the
                             # 2% stop loss fallback)
                             take_profit_distance = entry_price * 0.06
-                            # Ensure minimum take profit distance
-                            min_tp_distance = min_stop_distance * 3
-                            take_profit_distance = max(
-                                take_profit_distance, min_tp_distance)
 
                             if ml_prediction.get('direction') == 1:  # BUY
                                 take_profit = entry_price + take_profit_distance
@@ -1011,22 +970,8 @@ class FXAiApplication:
                             else:
                                 stop_loss_pips = stop_loss_distance / 0.0001
 
-                        # Enforce minimum stop loss distance for consistent
-                        # risk calculation
-                        min_sl_pips = self.config.get(
-                            'risk_management', {}).get('minimum_sl_pips', 25)
-
-                        # Use appropriate minimum SL for metals with $50 risk
-                        metal_symbols = ['XAU', 'XAG', 'GOLD']
-                        if any(metal in signal['symbol'] for metal in metal_symbols):
-                            # With $50 risk and 0.01 min lot, we can use reasonable SL
-                            # 0.01 lots * pip_value * pips = $50
-                            # For XAUUSD: pip_value ≈ $10, so pips = 50/10 = 5, but we need
-                            # minimum for stability
-                            # At least 50 pips for metals with $50 risk
-                            min_sl_pips = max(min_sl_pips, 50)
-
-                        stop_loss_pips = max(stop_loss_pips, min_sl_pips)
+                        # Use optimized stop loss directly without minimum enforcement
+                        # stop_loss_pips already calculated from optimized parameters
 
                         # Check if minimum lot size would exceed risk limit for
                         # volatile symbols

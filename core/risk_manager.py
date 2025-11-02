@@ -522,3 +522,49 @@ class RiskManager:
             'risk_per_trade': self.risk_per_trade,
             'can_trade': self.can_trade("")
         }
+    
+    def check_trade_risk(self, symbol: str, ml_signal: Dict, current_capital: float) -> Dict:
+        """
+        Check if a trade meets risk management criteria for backtesting
+        
+        Args:
+            symbol: Trading symbol
+            ml_signal: ML prediction signal dict with 'direction' and 'confidence'
+            current_capital: Current account capital
+            
+        Returns:
+            Dict with 'approved' (bool) and 'max_volume' (float)
+        """
+        try:
+            # Check if we can trade this symbol
+            if not self.can_trade(symbol):
+                return {'approved': False, 'max_volume': 0.0}
+            
+            # Check daily loss limit
+            if self.daily_loss >= self.max_daily_loss:
+                return {'approved': False, 'max_volume': 0.0}
+            
+            # Check max positions
+            positions = mt5.positions_get()
+            if positions and len(positions) >= self.max_positions:
+                return {'approved': False, 'max_volume': 0.0}
+            
+            # Calculate maximum position size based on risk per trade
+            stop_loss_pips = 20  # Conservative 20 pip stop loss
+            max_volume = self.calculate_position_size(symbol, stop_loss_pips, self.risk_per_trade)
+            
+            # Limit volume based on current capital (max 2% of capital per trade)
+            capital_limit = current_capital * 0.02
+            max_volume = min(max_volume, capital_limit / (stop_loss_pips * 10.0))  # Simplified pip value
+            
+            # Ensure minimum volume
+            max_volume = max(max_volume, 0.01)
+            
+            return {
+                'approved': True,
+                'max_volume': round(max_volume, 2)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in check_trade_risk: {e}")
+            return {'approved': False, 'max_volume': 0.0}

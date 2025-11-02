@@ -8,15 +8,42 @@
   },
   "trading": {
     "symbols": [
-      "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD",
-      "USDCHF", "NZDUSD", "EURJPY", "GBPJPY", "EURGBP",
-      "XAUUSD", "XAGUSD"
+      "AUDCAD",
+      "AUDCHF",
+      "AUDJPY",
+      "AUDNZD",
+      "AUDUSD",
+      "CADCHF",
+      "CADJPY",
+      "CHFJPY",
+      "EURAUD",
+      "EURCAD",
+      "EURCHF",
+      "EURGBP",
+      "EURJPY",
+      "EURNZD",
+      "EURUSD",
+      "GBPAUD",
+      "GBPCAD",
+      "GBPCHF",
+      "GBPJPY",
+      "GBPNZD",
+      "GBPUSD",
+      "NZDCAD",
+      "NZDCHF",
+      "NZDJPY",
+      "NZDUSD",
+      "USDCAD",
+      "USDCHF",
+      "USDJPY",
+      "XAGUSD",
+      "XAUUSD"
     ],
     "risk_per_trade": 50.0,
     "risk_type": "fixed_dollar",
     "default_sl_pips": 20,
     "default_tp_pips": 40,
-    "max_positions": 20,
+    "max_positions": 30,
     "max_spread": 3.0,
     "min_lot_size": 0.01,
     "max_lot_size": 1.0,
@@ -36,7 +63,6 @@
     "risk_calculation_method": "pip_based",
     "stop_loss_method": "atr_based",
     "atr_multiplier": 1.5,
-    "minimum_sl_pips": 25,
     "maximum_sl_pips": 50,
     "risk_reward_ratio": 3.0,
     "trailing_stop": {
@@ -63,16 +89,29 @@
     },
     "advanced_risk": {
       "enabled": true,
-      "var_confidence_levels": [0.95, 0.99, 0.999],
+      "var_confidence_levels": [
+        0.95,
+        0.99,
+        0.999
+      ],
       "max_portfolio_var": 0.05,
       "max_correlation": 0.7,
       "risk_free_rate": 0.02,
       "min_sharpe_ratio": 0.5,
       "max_drawdown_limit": 0.2,
       "stress_test_scenarios": {
-        "mild_stress": {"volatility_multiplier": 1.5, "correlation_shift": 0.2},
-        "severe_stress": {"volatility_multiplier": 2.0, "correlation_shift": 0.4},
-        "extreme_stress": {"volatility_multiplier": 3.0, "correlation_shift": 0.6}
+        "mild_stress": {
+          "volatility_multiplier": 1.5,
+          "correlation_shift": 0.2
+        },
+        "severe_stress": {
+          "volatility_multiplier": 2.0,
+          "correlation_shift": 0.4
+        },
+        "extreme_stress": {
+          "volatility_multiplier": 3.0,
+          "correlation_shift": 0.6
+        }
       },
       "risk_parity": {
         "enabled": true,
@@ -317,25 +356,99 @@
       "interactions"
     ],
     "technical_params": {
-      "rsi_periods": [7, 14, 21],
-      "macd_params": [[12, 26, 9], [8, 21, 5]],
-      "bb_periods": [20, 30],
-      "bb_std": [2.0, 2.5],
-      "stoch_params": [[14, 3, 3], [21, 5, 5]],
-      "williams_r_periods": [14, 21],
-      "cci_periods": [14, 20],
-      "mfi_periods": [14, 21],
-      "adx_periods": [14, 21],
-      "atr_periods": [14, 21],
-      "ema_periods": [9, 21, 50, 200],
-      "sma_periods": [10, 20, 50, 100]
+      "rsi_periods": [
+        7,
+        14,
+        21
+      ],
+      "macd_params": [
+        [
+          12,
+          26,
+          9
+        ],
+        [
+          8,
+          21,
+          5
+        ]
+      ],
+      "bb_periods": [
+        20,
+        30
+      ],
+      "bb_std": [
+        2.0,
+        2.5
+      ],
+      "stoch_params": [
+        [
+          14,
+          3,
+          3
+        ],
+        [
+          21,
+          5,
+          5
+        ]
+      ],
+      "williams_r_periods": [
+        14,
+        21
+      ],
+      "cci_periods": [
+        14,
+        20
+      ],
+      "mfi_periods": [
+        14,
+        21
+      ],
+      "adx_periods": [
+        14,
+        21
+      ],
+      "atr_periods": [
+        14,
+        21
+      ],
+      "ema_periods": [
+        9,
+        21,
+        50,
+        200
+      ],
+      "sma_periods": [
+        10,
+        20,
+        50,
+        100
+      ]
     },
     "statistical_params": {
-      "rolling_windows": [5, 10, 20, 50],
-      "percentile_periods": [10, 20],
-      "zscore_windows": [20, 50],
-      "skewness_windows": [20, 50],
-      "kurtosis_windows": [20, 50]
+      "rolling_windows": [
+        5,
+        10,
+        20,
+        50
+      ],
+      "percentile_periods": [
+        10,
+        20
+      ],
+      "zscore_windows": [
+        20,
+        50
+      ],
+      "skewness_windows": [
+        20,
+        50
+      ],
+      "kurtosis_windows": [
+        20,
+        50
+      ]
     },
     "domain_params": {
       "session_weights": {
@@ -344,8 +457,19 @@
         "tokyo": 1.0,
         "sydney": 0.9
       },
-      "currency_pairs": ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD"],
-      "volatility_thresholds": [0.5, 1.0, 1.5, 2.0]
+      "currency_pairs": [
+        "EURUSD",
+        "GBPUSD",
+        "USDJPY",
+        "AUDUSD",
+        "USDCAD"
+      ],
+      "volatility_thresholds": [
+        0.5,
+        1.0,
+        1.5,
+        2.0
+      ]
     },
     "selection_params": {
       "method": "mutual_info",

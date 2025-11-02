@@ -1,0 +1,71 @@
+2025-11-01 00:48:49,108 - INFO - ============================================================
+2025-11-01 00:48:49,108 - INFO - Starting Metal Model Training Process
+2025-11-01 00:48:49,108 - INFO - ============================================================
+2025-11-01 00:48:49,118 - INFO - MT5 connection established successfully
+2025-11-01 00:48:49,118 - INFO - Advanced Feature Engineer initialized
+2025-11-01 00:48:49,119 - INFO - 
+============================================================
+2025-11-01 00:48:49,119 - INFO - Training models for XAGUSD
+2025-11-01 00:48:49,119 - INFO - ============================================================
+2025-11-01 00:48:49,119 - INFO - 
+Processing XAGUSD M1...
+2025-11-01 00:48:49,119 - INFO - Fetching M1 data for XAGUSD from 2025-08-02 00:00:00 to 2025-10-31 00:00:00
+2025-11-01 00:48:49,119 - ERROR - Failed to get data for XAGUSD: (-2, 'Terminal: Invalid params')
+2025-11-01 00:48:49,119 - WARNING - Insufficient data for XAGUSD M1, skipping...
+2025-11-01 00:48:49,120 - INFO - 
+Processing XAGUSD M5...
+2025-11-01 00:48:49,120 - INFO - Fetching M5 data for XAGUSD from 2025-08-02 00:00:00 to 2025-10-31 00:00:00
+2025-11-01 00:48:49,204 - INFO - Retrieved 17590 bars for XAGUSD M5
+2025-11-01 00:48:49,214 - INFO - Prepared 17541 samples with 12 features
+2025-11-01 00:48:49,215 - INFO - Training model for XAGUSD M5...
+2025-11-01 00:48:49,215 - ERROR - Error training XAGUSD M5: 'MLPredictor' object has no attribute 'train_symbol_model'
+2025-11-01 00:48:49,215 - INFO - 
+Processing XAGUSD M15...
+2025-11-01 00:48:49,215 - INFO - Fetching M15 data for XAGUSD from 2025-08-02 00:00:00 to 2025-10-31 00:00:00
+2025-11-01 00:48:49,231 - INFO - Retrieved 5866 bars for XAGUSD M15
+2025-11-01 00:48:49,238 - INFO - Prepared 5817 samples with 12 features
+2025-11-01 00:48:49,238 - INFO - Training model for XAGUSD M15...
+2025-11-01 00:48:49,238 - ERROR - Error training XAGUSD M15: 'MLPredictor' object has no attribute 'train_symbol_model'
+2025-11-01 00:48:49,238 - INFO - 
+Processing XAGUSD H1...
+2025-11-01 00:48:49,238 - INFO - Fetching H1 data for XAGUSD from 2025-08-02 00:00:00 to 2025-10-31 00:00:00
+2025-11-01 00:48:49,239 - INFO - Retrieved 1474 bars for XAGUSD H1
+2025-11-01 00:48:49,243 - INFO - Prepared 1425 samples with 12 features
+2025-11-01 00:48:49,244 - INFO - Training model for XAGUSD H1...
+2025-11-01 00:48:49,244 - ERROR - Error training XAGUSD H1: 'MLPredictor' object has no attribute 'train_symbol_model'
+2025-11-01 00:48:49,247 - INFO - 
+============================================================
+2025-11-01 00:48:49,247 - INFO - Training models for XAUUSD
+2025-11-01 00:48:49,247 - INFO - ============================================================
+2025-11-01 00:48:49,247 - INFO - 
+Processing XAUUSD M1...
+2025-11-01 00:48:49,247 - INFO - Fetching M1 data for XAUUSD from 2025-08-02 00:00:00 to 2025-10-31 00:00:00
+2025-11-01 00:48:49,247 - ERROR - Failed to get data for XAUUSD: (-2, 'Terminal: Invalid params')
+2025-11-01 00:48:49,247 - WARNING - Insufficient data for XAUUSD M1, skipping...
+2025-11-01 00:48:49,247 - INFO - 
+Processing XAUUSD M5...
+2025-11-01 00:48:49,247 - INFO - Fetching M5 data for XAUUSD from 2025-08-02 00:00:00 to 2025-10-31 00:00:00
+2025-11-01 00:48:49,342 - INFO - Retrieved 17600 bars for XAUUSD M5
+2025-11-01 00:48:49,353 - INFO - Prepared 17551 samples with 12 features
+2025-11-01 00:48:49,354 - INFO - Training model for XAUUSD M5...
+2025-11-01 00:48:49,354 - ERROR - Error training XAUUSD M5: 'MLPredictor' object has no attribute 'train_symbol_model'
+2025-11-01 00:48:49,354 - INFO - 
+Processing XAUUSD M15...
+2025-11-01 00:48:49,354 - INFO - Fetching M15 data for XAUUSD from 2025-08-02 00:00:00 to 2025-10-31 00:00:00
+2025-11-01 00:48:49,371 - INFO - Retrieved 5868 bars for XAUUSD M15
+2025-11-01 00:48:49,377 - INFO - Prepared 5819 samples with 12 features
+2025-11-01 00:48:49,378 - INFO - Training model for XAUUSD M15...
+2025-11-01 00:48:49,378 - ERROR - Error training XAUUSD M15: 'MLPredictor' object has no attribute 'train_symbol_model'
+2025-11-01 00:48:49,378 - INFO - 
+Processing XAUUSD H1...
+2025-11-01 00:48:49,378 - INFO - Fetching H1 data for XAUUSD from 2025-08-02 00:00:00 to 2025-10-31 00:00:00
+2025-11-01 00:48:49,379 - INFO - Retrieved 1474 bars for XAUUSD H1
+2025-11-01 00:48:49,383 - INFO - Prepared 1425 samples with 12 features
+2025-11-01 00:48:49,383 - INFO - Training model for XAUUSD H1...
+2025-11-01 00:48:49,383 - ERROR - Error training XAUUSD H1: 'MLPredictor' object has no attribute 'train_symbol_model'
+2025-11-01 00:48:49,385 - INFO - 
+============================================================
+2025-11-01 00:48:49,385 - INFO - Metal Model Training Complete!
+2025-11-01 00:48:49,385 - INFO - ============================================================
+2025-11-01 00:48:49,385 - INFO - 
+Trained models:

@@ -36,6 +36,10 @@ class MLPredictor:
         self.model_type = config.get('model_type', 'random_forest')
         self.confidence_threshold = config.get('confidence_threshold', 0.6)
 
+        # Support multiple timeframes for training
+        self.supported_timeframes = ['M1', 'M5', 'M15', 'H1', 'D1']
+        self.primary_timeframe = config.get('primary_timeframe', 'H1')
+
         # Feature engineering
         self.lookback_periods = config.get('lookback_periods', [5, 10, 20, 50])
         self.technical_indicators = [
@@ -50,7 +54,7 @@ class MLPredictor:
         os.makedirs(self.model_dir, exist_ok=True)
 
     def predict_signal(self, symbol: str, data: pd.DataFrame,
-                      technical_signals: Dict) -> Dict:
+                      technical_signals: Dict, timeframe: str = 'H1') -> Dict:
         """
         Generate ML-based trading signal
 
@@ -58,16 +62,18 @@ class MLPredictor:
             symbol: Trading symbol
             data: Historical price data
             technical_signals: Technical analysis signals
+            timeframe: Timeframe for prediction (M1, M5, M15, H1, D1)
 
         Returns:
             dict: ML prediction results
         """
         try:
-            # Check if model exists
-            if symbol not in self.models:
-                self._load_or_train_model(symbol, data)
+            # Check if model exists for this timeframe
+            model_key = f"{symbol}_{timeframe}"
+            if model_key not in self.models:
+                self._load_or_train_model(symbol, data, timeframe)
 
-            if symbol not in self.models:
+            if model_key not in self.models:
                 return {'direction': 'neutral', 'confidence': 0, 'signal_strength': 0}
 
             # Prepare features
@@ -77,8 +83,8 @@ class MLPredictor:
                 return {'direction': 'neutral', 'confidence': 0, 'signal_strength': 0}
 
             # Make prediction
-            model = self.models[symbol]
-            scaler = self.scalers.get(symbol)
+            model = self.models[model_key]
+            scaler = self.scalers.get(model_key)
 
             if scaler:
                 features_scaled = scaler.transform(features.reshape(1, -1))
@@ -104,7 +110,8 @@ class MLPredictor:
 
             return {
                 'direction': direction_numeric,  # 1 for bullish, 0 for bearish
-                'probability': confidence,       # Use confidence as probability
+                'confidence': confidence,        # Use confidence as the main confidence score
+                'probability': confidence,       # Keep probability for backward compatibility
                 'signal_strength': signal_strength,
                 'probabilities': {
                     'bearish': probabilities[0],
@@ -116,7 +123,7 @@ class MLPredictor:
             self.logger.error(f"Error generating ML prediction for {symbol}: {e}")
             return {'direction': 'neutral', 'confidence': 0, 'signal_strength': 0}
 
-    async def predict(self, symbol: str, data: Union[pd.DataFrame, Dict], technical_signals: Dict) -> Dict:
+    async def predict(self, symbol: str, data: Union[pd.DataFrame, Dict], technical_signals: Dict, timeframe: str = 'H1') -> Dict:
         """
         Async wrapper for predict_signal method
 
@@ -124,18 +131,19 @@ class MLPredictor:
             symbol: Trading symbol
             data: Historical price data (DataFrame or dict of DataFrames by timeframe)
             technical_signals: Technical analysis signals
+            timeframe: Timeframe for prediction
 
         Returns:
             dict: ML prediction results
         """
         # Handle both DataFrame and dict formats
         if isinstance(data, dict):
-            # Extract H1 data from timeframe dictionary
-            data = data.get('H1')
+            # Extract data for the specified timeframe
+            data = data.get(timeframe)
             if data is None:
                 return {'direction': 'neutral', 'confidence': 0, 'signal_strength': 0, 'probability': 0}
         
-        return self.predict_signal(symbol, data, technical_signals)
+        return self.predict_signal(symbol, data, technical_signals, timeframe)
 
     def prepare_features(self, symbol: str, data: Union[pd.DataFrame, Dict], technical_signals: Dict) -> Optional[pd.DataFrame]:
         """
@@ -266,17 +274,39 @@ class MLPredictor:
 
             # Technical indicators from signals
             if technical_signals:
-                # RSI
-                rsi = float(technical_signals.get('rsi', {}).get('value', 50))
+                # Handle both nested dict format (from feature engineer) and flat format (from backtester)
+                if isinstance(technical_signals.get('rsi'), dict):
+                    # Nested format: {'rsi': {'value': 50}}
+                    rsi = float(technical_signals.get('rsi', {}).get('value', 50))
+                else:
+                    # Flat format: {'rsi': 50}
+                    rsi = float(technical_signals.get('rsi', 50))
                 features.append(rsi / 100.0)  # Normalize
 
                 # VWAP position
-                vwap_pos = 1.0 if technical_signals.get('vwap', {}).get('position') == 'above' else 0.0
+                if isinstance(technical_signals.get('vwap'), dict):
+                    vwap_pos = 1.0 if technical_signals.get('vwap', {}).get('position') == 'above' else 0.0
+                else:
+                    # For flat format, assume price > vwap means above
+                    current_price = close_prices[-1] if len(close_prices) > 0 else 0
+                    vwap_value = technical_signals.get('vwap', current_price)
+                    vwap_pos = 1.0 if current_price > vwap_value else 0.0
                 features.append(vwap_pos)
 
                 # EMA trend
-                ema_trend = technical_signals.get('ema', {}).get('trend', 'neutral')
-                ema_score = float({'bullish': 1, 'bearish': -1, 'bullish_crossover': 1.5, 'bearish_crossover': -1.5}.get(ema_trend, 0))
+                if isinstance(technical_signals.get('ema'), dict):
+                    ema_trend = technical_signals.get('ema', {}).get('trend', 'neutral')
+                    ema_score = float({'bullish': 1, 'bearish': -1, 'bullish_crossover': 1.5, 'bearish_crossover': -1.5}.get(ema_trend, 0))
+                else:
+                    # For flat format, compare EMA values
+                    ema9 = technical_signals.get('ema_9', current_price)
+                    ema21 = technical_signals.get('ema_21', current_price)
+                    if ema9 > ema21:
+                        ema_score = 1.0  # Bullish
+                    elif ema9 < ema21:
+                        ema_score = -1.0  # Bearish
+                    else:
+                        ema_score = 0.0  # Neutral
                 features.append(ema_score)
 
             # Fill missing features with zeros
@@ -348,40 +378,43 @@ class MLPredictor:
             self.logger.error(f"Error preparing features DataFrame: {e}")
             return None
 
-    def _load_or_train_model(self, symbol: str, data: pd.DataFrame):
+    def _load_or_train_model(self, symbol: str, data: pd.DataFrame, timeframe: str = 'H1'):
         """
         Load existing model or train new one
 
         Args:
             symbol: Trading symbol
             data: Historical data for training
+            timeframe: Timeframe for the model
         """
         try:
-            model_path = os.path.join(self.model_dir, f'{symbol}_model.pkl')
-            scaler_path = os.path.join(self.model_dir, f'{symbol}_scaler.pkl')
+            model_key = f"{symbol}_{timeframe}"
+            model_path = os.path.join(self.model_dir, f'{symbol}_{timeframe}_model.pkl')
+            scaler_path = os.path.join(self.model_dir, f'{symbol}_{timeframe}_scaler.pkl')
 
             # Try to load existing model
             if os.path.exists(model_path):
-                self.models[symbol] = joblib.load(model_path)
+                self.models[model_key] = joblib.load(model_path)
                 if os.path.exists(scaler_path):
-                    self.scalers[symbol] = joblib.load(scaler_path)
-                self.logger.info(f"Loaded existing model for {symbol}")
+                    self.scalers[model_key] = joblib.load(scaler_path)
+                self.logger.info(f"Loaded existing model for {symbol} {timeframe}")
                 return
 
             # Train new model
-            self.logger.info(f"Training new model for {symbol}")
-            self._train_model(symbol, data)
+            self.logger.info(f"Training new model for {symbol} {timeframe}")
+            self._train_model(symbol, data, timeframe)
 
         except Exception as e:
             self.logger.error(f"Error loading/training model for {symbol}: {e}")
 
-    def _train_model(self, symbol: str, data: pd.DataFrame):
+    def _train_model(self, symbol: str, data: pd.DataFrame, timeframe: str = 'H1'):
         """
-        Train ML model for symbol
+        Train ML model for symbol and timeframe
 
         Args:
             symbol: Trading symbol
             data: Historical data
+            timeframe: Timeframe for the model (M1, M5, M15, H1, D1)
         """
         try:
             if len(data) < 80:  # Reduced from 100 for demo purposes
@@ -458,13 +491,14 @@ class MLPredictor:
 
             self.logger.info(f"Model for {symbol} - Train accuracy: {train_score:.3f}, Test accuracy: {test_score:.3f}")
 
-            # Store model and scaler
-            self.models[symbol] = model
-            self.scalers[symbol] = scaler
+            # Store model and scaler with timeframe key
+            model_key = f"{symbol}_{timeframe}"
+            self.models[model_key] = model
+            self.scalers[model_key] = scaler
 
-            # Save model
-            model_path = os.path.join(self.model_dir, f'{symbol}_model.pkl')
-            scaler_path = os.path.join(self.model_dir, f'{symbol}_scaler.pkl')
+            # Save model with timeframe
+            model_path = os.path.join(self.model_dir, f'{symbol}_{timeframe}_model.pkl')
+            scaler_path = os.path.join(self.model_dir, f'{symbol}_{timeframe}_scaler.pkl')
 
             joblib.dump(model, model_path)
             joblib.dump(scaler, scaler_path)
@@ -492,19 +526,19 @@ class MLPredictor:
             'total_predictions': 0
         }
 
-    def get_model_version(self, symbol: str) -> Optional[str]:
+    def get_model_version(self, symbol: str, timeframe: str = 'H1') -> Optional[str]:
         """
-        Return a lightweight model version identifier for a given symbol.
+        Return a lightweight model version identifier for a given symbol and timeframe.
 
         Currently implemented as the model file modification timestamp (ISO string)
         when a saved model exists, otherwise returns None.
         """
         try:
-            model_path = os.path.join(self.model_dir, f'{symbol}_model.pkl')
+            model_path = os.path.join(self.model_dir, f'{symbol}_{timeframe}_model.pkl')
             if os.path.exists(model_path):
                 mtime = os.path.getmtime(model_path)
                 return datetime.fromtimestamp(mtime).isoformat()
             return None
         except Exception as e:
-            self.logger.debug(f"Error getting model version for {symbol}: {e}")
+            self.logger.debug(f"Error getting model version for {symbol} {timeframe}: {e}")
             return None

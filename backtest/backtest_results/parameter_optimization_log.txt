@@ -1,0 +1,171 @@
+2025-10-31 20:19:24,971 - INFO - Starting comprehensive parameter optimization for all symbols
+2025-10-31 20:19:24,981 - INFO - Starting comprehensive parameter optimization...
+2025-10-31 20:19:24,981 - INFO - Optimizing parameters for AUDCAD
+2025-10-31 20:19:24,982 - INFO - Optimizing AUDCAD for H1 timeframe
+2025-10-31 20:19:34,986 - INFO - Optimizing AUDCAD for D1 timeframe
+2025-10-31 20:20:07,712 - INFO - Optimizing AUDCAD for W1 timeframe
+2025-10-31 20:20:14,155 - INFO - Optimizing AUDCAD for MN1 timeframe
+2025-10-31 20:20:14,669 - INFO - Optimizing parameters for AUDCHF
+2025-10-31 20:20:14,670 - INFO - Optimizing AUDCHF for H1 timeframe
+2025-10-31 20:20:26,439 - INFO - Optimizing AUDCHF for D1 timeframe
+2025-10-31 20:21:00,155 - INFO - Optimizing AUDCHF for W1 timeframe
+2025-10-31 20:21:06,130 - INFO - Optimizing AUDCHF for MN1 timeframe
+2025-10-31 20:21:06,627 - INFO - Optimizing parameters for AUDJPY
+2025-10-31 20:21:06,627 - INFO - Optimizing AUDJPY for H1 timeframe
+2025-10-31 20:21:16,761 - INFO - Optimizing AUDJPY for D1 timeframe
+2025-10-31 20:21:49,568 - INFO - Optimizing AUDJPY for W1 timeframe
+2025-10-31 20:22:13,316 - INFO - Optimizing AUDJPY for MN1 timeframe
+2025-10-31 20:22:13,835 - INFO - Optimizing parameters for AUDNZD
+2025-10-31 20:22:13,835 - INFO - Optimizing AUDNZD for H1 timeframe
+2025-10-31 20:22:22,609 - INFO - Optimizing AUDNZD for D1 timeframe
+2025-10-31 20:22:54,446 - INFO - Optimizing AUDNZD for W1 timeframe
+2025-10-31 20:23:00,812 - INFO - Optimizing AUDNZD for MN1 timeframe
+2025-10-31 20:23:01,317 - INFO - Optimizing parameters for AUDUSD
+2025-10-31 20:23:01,317 - INFO - Optimizing AUDUSD for H1 timeframe
+2025-10-31 20:23:12,915 - INFO - Optimizing AUDUSD for D1 timeframe
+2025-10-31 20:23:54,050 - INFO - Optimizing AUDUSD for W1 timeframe
+2025-10-31 20:24:28,948 - INFO - Optimizing AUDUSD for MN1 timeframe
+2025-10-31 20:24:29,484 - INFO - Optimizing parameters for CADCHF
+2025-10-31 20:24:29,485 - INFO - Optimizing CADCHF for H1 timeframe
+2025-10-31 20:24:40,981 - INFO - Optimizing CADCHF for D1 timeframe
+2025-10-31 20:25:26,346 - INFO - Optimizing CADCHF for W1 timeframe
+2025-10-31 20:25:32,368 - INFO - Optimizing CADCHF for MN1 timeframe
+2025-10-31 20:25:32,872 - INFO - Optimizing parameters for CADJPY
+2025-10-31 20:25:32,872 - INFO - Optimizing CADJPY for H1 timeframe
+2025-10-31 20:25:42,818 - INFO - Optimizing CADJPY for D1 timeframe
+2025-10-31 20:26:34,576 - INFO - Optimizing CADJPY for W1 timeframe
+2025-10-31 20:26:35,601 - INFO - Optimizing CADJPY for MN1 timeframe
+2025-10-31 20:26:35,879 - INFO - Optimizing parameters for CHFJPY
+2025-10-31 20:26:35,879 - INFO - Optimizing CHFJPY for H1 timeframe
+2025-10-31 20:26:45,549 - INFO - Optimizing CHFJPY for D1 timeframe
+2025-10-31 20:27:26,925 - INFO - Optimizing CHFJPY for W1 timeframe
+2025-10-31 20:27:59,935 - INFO - Optimizing CHFJPY for MN1 timeframe
+2025-10-31 20:28:00,467 - INFO - Optimizing parameters for EURAUD
+2025-10-31 20:28:00,467 - INFO - Optimizing EURAUD for H1 timeframe
+2025-10-31 20:28:10,170 - INFO - Optimizing EURAUD for D1 timeframe
+2025-10-31 20:28:59,783 - INFO - Optimizing EURAUD for W1 timeframe
+2025-10-31 20:29:11,109 - INFO - Optimizing EURAUD for MN1 timeframe
+2025-10-31 20:29:11,436 - INFO - Optimizing parameters for EURCAD
+2025-10-31 20:29:11,436 - INFO - Optimizing EURCAD for H1 timeframe
+2025-10-31 20:29:21,000 - INFO - Optimizing EURCAD for D1 timeframe
+2025-10-31 20:29:57,263 - INFO - Optimizing EURCAD for W1 timeframe
+2025-10-31 20:30:02,119 - INFO - Optimizing EURCAD for MN1 timeframe
+2025-10-31 20:30:02,524 - INFO - Optimizing parameters for EURCHF
+2025-10-31 20:30:02,524 - INFO - Optimizing EURCHF for H1 timeframe
+2025-10-31 20:30:12,583 - INFO - Optimizing EURCHF for D1 timeframe
+2025-10-31 20:30:46,658 - INFO - Optimizing EURCHF for W1 timeframe
+2025-10-31 20:31:13,936 - INFO - Optimizing EURCHF for MN1 timeframe
+2025-10-31 20:31:14,463 - INFO - Optimizing parameters for EURJPY
+2025-10-31 20:31:14,463 - INFO - Optimizing EURJPY for H1 timeframe
+2025-10-31 20:31:24,352 - INFO - Optimizing EURJPY for D1 timeframe
+2025-10-31 20:32:03,045 - INFO - Optimizing EURJPY for W1 timeframe
+2025-10-31 20:32:39,723 - INFO - Optimizing EURJPY for MN1 timeframe
+2025-10-31 20:32:40,243 - INFO - Optimizing parameters for EURGBP
+2025-10-31 20:32:40,243 - INFO - Optimizing EURGBP for H1 timeframe
+2025-10-31 20:32:50,342 - INFO - Optimizing EURGBP for D1 timeframe
+2025-10-31 20:33:37,574 - INFO - Optimizing EURGBP for W1 timeframe
+2025-10-31 20:34:08,977 - INFO - Optimizing EURGBP for MN1 timeframe
+2025-10-31 20:34:09,488 - INFO - Optimizing parameters for EURNZD
+2025-10-31 20:34:09,488 - INFO - Optimizing EURNZD for H1 timeframe
+2025-10-31 20:34:19,222 - INFO - Optimizing EURNZD for D1 timeframe
+2025-10-31 20:35:02,916 - INFO - Optimizing EURNZD for W1 timeframe
+2025-10-31 20:35:07,549 - INFO - Optimizing EURNZD for MN1 timeframe
+2025-10-31 20:35:07,956 - INFO - Optimizing parameters for EURUSD
+2025-10-31 20:35:07,956 - INFO - Optimizing EURUSD for H1 timeframe
+2025-10-31 20:35:18,090 - INFO - Optimizing EURUSD for D1 timeframe
+2025-10-31 20:36:03,865 - INFO - Optimizing EURUSD for W1 timeframe
+2025-10-31 20:36:50,569 - INFO - Optimizing EURUSD for MN1 timeframe
+2025-10-31 20:36:51,447 - INFO - Optimizing parameters for GBPAUD
+2025-10-31 20:36:51,448 - INFO - Optimizing GBPAUD for H1 timeframe
+2025-10-31 20:37:01,055 - INFO - Optimizing GBPAUD for D1 timeframe
+2025-10-31 20:37:50,150 - INFO - Optimizing GBPAUD for W1 timeframe
+2025-10-31 20:37:51,140 - INFO - Optimizing GBPAUD for MN1 timeframe
+2025-10-31 20:37:51,431 - INFO - Optimizing parameters for GBPCAD
+2025-10-31 20:37:51,431 - INFO - Optimizing GBPCAD for H1 timeframe
+2025-10-31 20:38:00,775 - INFO - Optimizing GBPCAD for D1 timeframe
+2025-10-31 20:38:47,836 - INFO - Optimizing GBPCAD for W1 timeframe
+2025-10-31 20:38:48,842 - INFO - Optimizing GBPCAD for MN1 timeframe
+2025-10-31 20:38:49,109 - INFO - Optimizing parameters for GBPCHF
+2025-10-31 20:38:49,109 - INFO - Optimizing GBPCHF for H1 timeframe
+2025-10-31 20:38:59,397 - INFO - Optimizing GBPCHF for D1 timeframe
+2025-10-31 20:39:38,718 - INFO - Optimizing GBPCHF for W1 timeframe
+2025-10-31 20:40:12,852 - INFO - Optimizing GBPCHF for MN1 timeframe
+2025-10-31 20:40:13,404 - INFO - Optimizing parameters for GBPJPY
+2025-10-31 20:40:13,404 - INFO - Optimizing GBPJPY for H1 timeframe
+2025-10-31 20:40:23,323 - INFO - Optimizing GBPJPY for D1 timeframe
+2025-10-31 20:41:06,284 - INFO - Optimizing GBPJPY for W1 timeframe
+2025-10-31 20:41:40,073 - INFO - Optimizing GBPJPY for MN1 timeframe
+2025-10-31 20:41:40,615 - INFO - Optimizing parameters for GBPNZD
+2025-10-31 20:41:40,615 - INFO - Optimizing GBPNZD for H1 timeframe
+2025-10-31 20:41:50,214 - INFO - Optimizing GBPNZD for D1 timeframe
+2025-10-31 20:42:23,511 - INFO - Optimizing GBPNZD for W1 timeframe
+2025-10-31 20:42:24,338 - INFO - Optimizing GBPNZD for MN1 timeframe
+2025-10-31 20:42:24,411 - WARNING - Insufficient data for GBPNZD MN1
+2025-10-31 20:42:24,412 - INFO - Optimizing parameters for GBPUSD
+2025-10-31 20:42:24,412 - INFO - Optimizing GBPUSD for H1 timeframe
+2025-10-31 20:42:34,272 - INFO - Optimizing GBPUSD for D1 timeframe
+2025-10-31 20:43:20,242 - INFO - Optimizing GBPUSD for W1 timeframe
+2025-10-31 20:43:52,234 - INFO - Optimizing GBPUSD for MN1 timeframe
+2025-10-31 20:43:52,748 - INFO - Optimizing parameters for NZDCAD
+2025-10-31 20:43:52,749 - INFO - Optimizing NZDCAD for H1 timeframe
+2025-10-31 20:44:03,361 - INFO - Optimizing NZDCAD for D1 timeframe
+2025-10-31 20:44:44,131 - INFO - Optimizing NZDCAD for W1 timeframe
+2025-10-31 20:44:45,132 - INFO - Optimizing NZDCAD for MN1 timeframe
+2025-10-31 20:44:45,414 - INFO - Optimizing parameters for NZDCHF
+2025-10-31 20:44:45,414 - INFO - Optimizing NZDCHF for H1 timeframe
+2025-10-31 20:44:57,430 - INFO - Optimizing NZDCHF for D1 timeframe
+2025-10-31 20:45:38,767 - INFO - Optimizing NZDCHF for W1 timeframe
+2025-10-31 20:45:39,753 - INFO - Optimizing NZDCHF for MN1 timeframe
+2025-10-31 20:45:40,030 - INFO - Optimizing parameters for NZDJPY
+2025-10-31 20:45:40,032 - INFO - Optimizing NZDJPY for H1 timeframe
+2025-10-31 20:45:50,060 - INFO - Optimizing NZDJPY for D1 timeframe
+2025-10-31 20:46:46,739 - INFO - Optimizing NZDJPY for W1 timeframe
+2025-10-31 20:46:47,797 - INFO - Optimizing NZDJPY for MN1 timeframe
+2025-10-31 20:46:48,083 - INFO - Optimizing parameters for NZDUSD
+2025-10-31 20:46:48,083 - INFO - Optimizing NZDUSD for H1 timeframe
+2025-10-31 20:47:00,242 - INFO - Optimizing NZDUSD for D1 timeframe
+2025-10-31 20:47:45,629 - INFO - Optimizing NZDUSD for W1 timeframe
+2025-10-31 20:48:04,020 - INFO - Optimizing NZDUSD for MN1 timeframe
+2025-10-31 20:48:04,519 - INFO - Optimizing parameters for USDCAD
+2025-10-31 20:48:04,519 - INFO - Optimizing USDCAD for H1 timeframe
+2025-10-31 20:48:13,747 - INFO - Optimizing USDCAD for D1 timeframe
+2025-10-31 20:49:13,001 - INFO - Optimizing USDCAD for W1 timeframe
+2025-10-31 20:49:37,758 - INFO - Optimizing USDCAD for MN1 timeframe
+2025-10-31 20:49:38,282 - INFO - Optimizing parameters for USDCHF
+2025-10-31 20:49:38,282 - INFO - Optimizing USDCHF for H1 timeframe
+2025-10-31 20:49:49,180 - INFO - Optimizing USDCHF for D1 timeframe
+2025-10-31 20:50:49,115 - INFO - Optimizing USDCHF for W1 timeframe
+2025-10-31 20:51:26,358 - INFO - Optimizing USDCHF for MN1 timeframe
+2025-10-31 20:51:27,213 - INFO - Optimizing parameters for USDJPY
+2025-10-31 20:51:27,213 - INFO - Optimizing USDJPY for H1 timeframe
+2025-10-31 20:51:37,172 - INFO - Optimizing USDJPY for D1 timeframe
+2025-10-31 20:52:31,935 - INFO - Optimizing USDJPY for W1 timeframe
+2025-10-31 20:53:04,307 - INFO - Optimizing USDJPY for MN1 timeframe
+2025-10-31 20:53:05,195 - INFO - Optimizing parameters for XAGUSD
+2025-10-31 20:53:05,195 - INFO - Optimizing XAGUSD for H1 timeframe
+2025-10-31 20:53:17,163 - INFO - Optimizing XAGUSD for D1 timeframe
+2025-10-31 20:53:35,934 - INFO - Optimizing XAGUSD for W1 timeframe
+2025-10-31 20:53:36,303 - INFO - Optimizing XAGUSD for MN1 timeframe
+2025-10-31 20:53:36,337 - WARNING - Insufficient data for XAGUSD MN1
+2025-10-31 20:53:36,337 - INFO - Optimizing parameters for XAUUSD
+2025-10-31 20:53:36,337 - INFO - Optimizing XAUUSD for H1 timeframe
+2025-10-31 20:53:47,707 - INFO - Optimizing XAUUSD for D1 timeframe
+2025-10-31 20:54:00,726 - INFO - Optimizing XAUUSD for W1 timeframe
+2025-10-31 20:54:01,089 - INFO - Optimizing XAUUSD for MN1 timeframe
+2025-10-31 20:54:01,125 - WARNING - Insufficient data for XAUUSD MN1
+2025-10-31 20:54:01,131 - INFO - Parameter optimization completed!
+2025-10-31 20:54:01,131 - INFO - Training parameter prediction models...
+2025-10-31 20:54:01,131 - INFO - Parameter prediction models training completed
+2025-10-31 20:54:01,131 - INFO - Parameter optimization completed successfully!
+2025-10-31 22:31:16,490 - INFO - Starting comprehensive parameter optimization for all symbols
+2025-10-31 22:31:16,501 - INFO - Starting comprehensive parameter optimization...
+2025-10-31 22:31:16,501 - INFO - Optimizing parameters for AUDCAD
+2025-10-31 22:31:16,501 - INFO - Optimizing AUDCAD for H1 timeframe
+2025-10-31 22:37:18,592 - INFO - Starting comprehensive parameter optimization for all symbols
+2025-10-31 22:37:18,604 - INFO - Starting comprehensive parameter optimization...
+2025-10-31 22:37:18,604 - INFO - Optimizing parameters for AUDCAD
+2025-10-31 22:37:18,604 - INFO - Optimizing AUDCAD for H1 timeframe
+2025-10-31 22:39:11,870 - INFO - Starting comprehensive parameter optimization for all symbols
+2025-10-31 22:39:11,882 - INFO - Starting comprehensive parameter optimization...
+2025-10-31 22:39:11,882 - INFO - Optimizing parameters for AUDCAD
+2025-10-31 22:39:11,882 - INFO - Optimizing AUDCAD for H1 timeframe

@@ -72,7 +72,7 @@ class MT5Connector:
                 return False
 
             self.connected = True
-            self.logger.info(f"✅ Connected to MT5: {account_info.server}")
+            self.logger.info(f"Connected to MT5: {account_info.server}")
             self.logger.info(f"Account: {account_info.login}, Balance: ${account_info.balance:.2f}")
 
             # Cache symbol information

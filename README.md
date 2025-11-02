@@ -1,6 +1,203 @@
 # FX-Ai Trading System - Complete Overview
 
-## 🎉 System Successfully Created
+## 🎯 System Architecture
+
+FX-Ai is organized into **two main sections** with clearly separated responsibilities:
+
+### 1. **Live Trading System** (`live_trading/`)
+
+Production trading system with real-time execution and ML-based continuous learning.
+
+### 2. **Backtesting System** (`backtest/`)
+
+Historical testing, parameter optimization, and model training.
+
+Both systems share core modules (`ai/`, `core/`, `data/`, `analysis/`) and use the same ML models (`models/`) to ensure consistency.
+
+---
+
+## 🤖 ML-Powered Trading System
+
+### Overview
+
+A comprehensive machine learning-based forex trading system that combines trained ML models with optimized trading parameters for automated trading across multiple currency pairs and timeframes.
+
+### Key Features
+
+- **ML Model Integration**: Uses trained RandomForest/GradientBoosting models for each currency pair
+- **Dynamic Parameter Optimization**: Automatically applies optimized SL/TP levels, entry/exit times, and risk management parameters
+- **Multi-Timeframe Support**: Optimized parameters for H1, D1, W1, and MN1 timeframes
+- **Real-time Trading**: Automated position management with breakeven and trailing stops
+- **Risk Management**: Dynamic position sizing, daily loss limits, and trade frequency controls
+- **Backtesting**: Comprehensive backtesting with ML predictions and optimized parameters
+- **Monitoring Dashboard**: Real-time system status and performance monitoring
+
+### Quick Start - ML System
+
+1. **Launch Dashboard**:
+
+   ```bash
+   python live_trading/trading_dashboard.py
+   ```
+
+2. **Run Backtest** (from dashboard press 'B' or run directly):
+
+   ```bash
+   python backtest/ml_backtester.py
+   ```
+
+3. **Start Trading** (from dashboard press 'T' or run directly):
+
+   ```bash
+   python live_trading/trading_orchestrator.py
+   ```
+
+### ML System Architecture
+
+```text
+├── dynamic_parameter_manager.py    # Parameter optimization manager
+├── ml_trading_system.py           # Core trading system with ML integration
+├── trading_orchestrator.py        # Main orchestrator for automated trading
+├── ml_backtester.py              # Backtesting system
+├── trading_dashboard.py          # Monitoring dashboard
+├── config/
+│   └── trading_config.json       # System configuration
+├── models/                       # Trained ML models and scalers
+├── models/parameter_optimization/ # Optimized parameters
+├── logs/                         # System logs and performance data
+└── backtest/                     # Backtest results and analysis
+```
+
+### ML System Configuration
+
+Edit `config/trading_config.json`:
+
+```json
+{
+  "trading": {
+    "symbols": ["EURUSD", "GBPUSD", "AUDUSD", "USDJPY", "EURJPY", ...],
+    "timeframes": ["H1", "D1"],
+    "risk_per_trade": 50,
+    "max_positions": 3,
+    "trading_hours": {"start": "08:00", "end": "20:00"}
+  },
+  "system": {
+    "cycle_interval_minutes": 15,
+    "max_daily_trades": 10,
+    "daily_loss_limit": 200
+  }
+}
+```
+
+### ML Performance Summary
+
+- **Models Trained**: 30/30 currency pairs
+- **Parameter Optimization**: Complete across H1/D1/W1/MN1 timeframes
+- **Backtesting**: Realistic spread/commission modeling
+- **Risk Management**: $50 risk per trade, daily loss limits
+
+---
+
+## 📁 Detailed Folder Structure
+
+### **1. LIVE TRADING SYSTEM** (`live_trading/`)
+
+**Purpose**: Production trading with real-time execution and ML-based learning
+
+**Files**:
+
+- `ml_trading_system.py` - Main trading engine with MT5 integration
+- `trading_orchestrator.py` - System lifecycle orchestration
+- `trading_dashboard.py` - Real-time monitoring dashboard
+- `dynamic_parameter_manager.py` - Optimized parameter management
+- `risk_config.py` / `risk_display.py` - Risk management tools
+- `FX-Ai_Start.bat` - Start trading system
+- `EMERGENCY_STOP.bat` - Emergency shutdown
+- `Risk_Config.bat` / `Risk_Display.bat` - Risk utilities
+
+### **2. BACKTESTING SYSTEM** (`backtest/`)
+
+**Purpose**: Historical testing, parameter optimization, model training
+
+**Core Scripts**:
+
+- `optimize_fast_3year.py` - Three-stage parameter optimization (current)
+- `ml_backtester.py` - ML-based backtest engine
+- `backtest_engine.py` - Core simulation engine
+- `run_backtest.py` - Backtest runner
+- `train_all_models.py` - Train all ML models
+- `retrain_metal_models.py` - Metal model retraining
+
+**Utility Scripts**:
+
+- `check_status.py` - Monitor optimization progress
+- `check_symbol_params.py` - Analyze parameter variations
+- `verify_metal_params.py` - Verify metal parameters
+- `show_optimization_progress.py` - Real-time progress
+- `estimate_time.py` - Time estimation
+- `update_parameters.py` - Update parameters
+
+**Subdirectories**:
+
+- `backtest_results/` - All logs and result files
+- `documentation/` - Strategy documentation
+
+### **Shared Components** (Root `/`)
+
+**Entry Point**:
+
+- `main.py` - Main application controller
+
+**Directories**:
+
+- `ai/` - Machine learning & prediction modules
+- `core/` - MT5 connector, risk manager, trading engine
+- `data/` - Market data management
+- `analysis/` - Technical, fundamental, sentiment analysis
+- `utils/` - Utility functions
+- `config/` - Configuration files
+- `models/` - ML models and optimized parameters (shared by both systems)
+- `logs/` - Live trading system logs
+
+### **System Workflow**
+
+```text
+1. BACKTEST → Find optimal parameters
+   Command: python backtest/optimize_fast_3year.py
+   Output: models/parameter_optimization/optimal_parameters.json
+
+2. TRAIN MODELS → Build ML prediction models
+   Command: python backtest/train_all_models.py
+   Output: models/*_model.pkl, *_scaler.pkl
+
+3. LIVE TRADE → Execute with optimized params + ML predictions
+   Command: python live_trading/trading_orchestrator.py
+   Reads: optimal_parameters.json + ML models
+
+4. RETRAIN → Update models with new data
+   Command: python backtest/retrain_metal_models.py
+   Updates: models/*_model.pkl
+
+5. RE-OPTIMIZE → Adjust parameters as markets change
+   Command: python backtest/optimize_fast_3year.py
+   Updates: optimal_parameters.json
+```
+
+### **Key Principles**
+
+✅ **Separation**: Backtesting does NOT affect live trading until you explicitly apply results
+
+✅ **Independence**: Live trading does NOT trigger backtests automatically
+
+✅ **Learning vs Risk**: Model retraining (learning) is separate from parameter optimization (risk management)
+
+✅ **Shared Resources**: Both systems use the same ML models and core modules for consistency
+
+✅ **Safety**: Run backtests anytime without affecting live trades - results await your approval
+
+---
+
+## 🎉 Original System Successfully Created
 
 ### 📁 Files Created
 
@@ -150,7 +347,7 @@ I've created the complete FX-Ai trading system with the following components:
 
 ## Adaptive Learning System - Complete Implementation Guide
 
-### Overview
+### System Overview
 
 The FX-Ai system now features a **comprehensive adaptive learning ecosystem** that continuously optimizes every aspect of trading performance:
 

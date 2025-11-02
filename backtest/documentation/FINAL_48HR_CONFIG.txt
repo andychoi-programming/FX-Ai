@@ -1,0 +1,109 @@
+✓ 48-HOUR OPTIMIZATION CONFIGURED
+=================================
+Updated: 2025-11-01
+Configuration: 21,888 combinations per symbol
+Total Execution Time: ~45.6 hours (~2 days)
+
+FINAL PARAMETER CONFIGURATION
+------------------------------
+Stop Loss:           [15, 20, 25, 30, 35] pips (5 options)
+Take Profit:         [60, 75, 90, 105, 120] pips (5 options)
+Breakeven Trigger:   [15, 20, 25] pips (3 options)
+Trailing Activation: [20, 25] pips (2 options)
+Trailing Distance:   [10, 15] pips (2 options)
+Entry Start:         [6, 8] AM MT5 (2 options)
+Entry End:           [16, 18] PM MT5 (2 options)
+Max Holding:         [6, 12] hours (2 options)
+
+MONDAY ENTRY DELAY (NEW - 2 options):
+  [10] = Start trading 10:00 AM Monday (skip morning volatility)
+  [12] = Start trading 12:00 PM Monday (more conservative)
+
+FRIDAY EXIT STRATEGY (NEW - 3 options):
+Tests impact of US economic news (8:30 AM EST = 15:30 MT5 time)
+  [10] = Exit 10:00 AM MT5 (before US session/news)
+  [13] = Exit 1:00 PM MT5 (2.5 hours before 15:30 news)
+  [16] = Exit 4:00 PM MT5 (30 mins after 15:30 news settles)
+
+WEEKLY PATTERNS (2 options):
+  Option 1: Trade Tuesday-Friday (skip Monday volatility)
+  Option 2: Trade Monday-Thursday (test Monday trading)
+
+HARD CLOSE:
+  22:30 MT5 time (all positions closed, no overnight risk)
+
+EXECUTION STATS
+---------------
+Total Combinations:   21,888 per symbol (vs 10,944 in 24hr version)
+Total Symbols:        30 (28 Forex + 2 Metals)
+Execution Time:       ~45.6 hours (~1.9 days)
+Improvement:          2x more comprehensive than 24hr version
+
+Time Breakdown:
+  Per symbol: ~1.52 hours (91 minutes)
+  Total: 45.6 hours (1 day 21 hours 36 minutes)
+
+WHAT THIS TESTS
+----------------
+✓ Monday Volatility: Tests 10 AM vs 12 PM Monday entry delay
+✓ US News Impact: Tests exiting before/during/after 15:30 news
+✓ Risk/Reward: 25 SL/TP profiles (5×5 combinations)
+✓ Breakeven: 3 trigger levels
+✓ Trailing: 4 combinations
+✓ Time Windows: 4 entry/exit combinations
+✓ Holding Duration: 2 options
+✓ Weekly Patterns: 2 options
+
+WHY 48 HOURS?
+-------------
+Monday [10, 12] × Friday [10, 13, 16] = 2 × 3 = 6 combinations
+This multiplies all other parameters: 10,944 × 2 = 21,888 combos
+
+WHAT YOU'RE TESTING
+-------------------
+1. MONDAY IMPACT:
+   - Does waiting until 12 PM improve results?
+   - Quantify Monday morning volatility cost/benefit
+
+2. FRIDAY US NEWS (15:30 MT5 = 8:30 AM EST):
+   - Exit at 10:00: Avoid all US session volatility
+   - Exit at 13:00: Capture morning, avoid news spike
+   - Exit at 16:00: Capture news moves, exit after settle
+
+3. RISK/REWARD OPTIMIZATION:
+   - 25 SL/TP combinations (vs 16 in 24hr version)
+   - Tests 15-35 pip stops with 60-120 pip targets
+
+METALS SPECIFIC
+---------------
+SL: [300, 500, 700, 1000, 1200] pips
+TP: [1200, 1500, 2100, 3000, 3600] pips
+Same Monday/Friday logic applies
+
+EXECUTION PLAN
+--------------
+Start: Today ~1 PM
+Finish: Day after tomorrow ~11 AM (45.6 hours later)
+
+Command: python optimize_fast_3year.py
+Monitor: python show_optimization_progress.py
+
+OUTPUT FILES
+------------
+1. optimal_parameters.json (best params for each symbol)
+2. optimization_log_TIMESTAMP.txt (detailed results)
+
+Each symbol will show:
+  - Best Monday delay (10 or 12)
+  - Best Friday exit (10, 13, or 16)
+  - Optimal SL/TP for that symbol
+  - Breakeven/trailing strategy
+  - Best entry windows
+  - Validation metrics
+
+✓ READY FOR 48-HOUR COMPREHENSIVE OPTIMIZATION
+✓ US NEWS TIMING INCORPORATED (15:30 MT5)
+✓ MONDAY VOLATILITY TESTING ENABLED
+
+Press Enter to Start:
+python optimize_fast_3year.py

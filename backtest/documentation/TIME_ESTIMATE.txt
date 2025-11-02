@@ -1,0 +1,9 @@
+================================================================================
+TIME ESTIMATE: 3-YEAR OPTIMIZATION & MODEL RETRAINING
+================================================================================
+
+Parameter Optimization: ~32.8 hours
+Model Retraining: ~1.0 hours
+Total: ~33.8 hours
+
+Recommendation: Run overnight for best results

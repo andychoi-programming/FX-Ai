@@ -1,0 +1,913 @@
+2025-10-31 20:15:57,229 - INFO - Starting training of all 30 ML models
+2025-10-31 20:15:57,229 - INFO - Found 30 symbols to train: ['AUDCAD', 'AUDCHF', 'AUDJPY', 'AUDNZD', 'AUDUSD', 'CADCHF', 'CADJPY', 'CHFJPY', 'EURAUD', 'EURCAD', 'EURCHF', 'EURJPY', 'EURGBP', 'EURNZD', 'EURUSD', 'GBPAUD', 'GBPCAD', 'GBPCHF', 'GBPJPY', 'GBPNZD', 'GBPUSD', 'NZDCAD', 'NZDCHF', 'NZDJPY', 'NZDUSD', 'USDCAD', 'USDCHF', 'USDJPY', 'XAGUSD', 'XAUUSD']
+2025-10-31 20:15:57,239 - INFO - MT5 connection established successfully
+2025-10-31 20:15:57,239 - INFO - Advanced Feature Engineer initialized
+2025-10-31 20:15:57,239 - INFO - Training model for AUDCAD
+2025-10-31 20:15:57,241 - INFO - Fetching 2000 bars of 16385 data for AUDCAD
+2025-10-31 20:15:57,242 - INFO - Retrieved 2000 bars for AUDCAD
+2025-10-31 20:15:57,605 - INFO - Model for AUDCAD - Train accuracy: 0.946, Test accuracy: 0.508
+2025-10-31 20:15:57,621 - INFO - Trained and saved model for AUDCAD
+2025-10-31 20:15:57,621 - INFO - Successfully trained model for AUDCAD
+2025-10-31 20:15:57,621 - INFO - Training model for AUDCHF
+2025-10-31 20:15:57,621 - INFO - Fetching 2000 bars of 16385 data for AUDCHF
+2025-10-31 20:15:57,622 - INFO - Retrieved 2000 bars for AUDCHF
+2025-10-31 20:15:57,977 - INFO - Model for AUDCHF - Train accuracy: 0.961, Test accuracy: 0.526
+2025-10-31 20:15:57,993 - INFO - Trained and saved model for AUDCHF
+2025-10-31 20:15:57,993 - INFO - Successfully trained model for AUDCHF
+2025-10-31 20:15:57,993 - INFO - Training model for AUDJPY
+2025-10-31 20:15:57,994 - INFO - Fetching 2000 bars of 16385 data for AUDJPY
+2025-10-31 20:15:57,994 - INFO - Retrieved 2000 bars for AUDJPY
+2025-10-31 20:15:58,374 - INFO - Model for AUDJPY - Train accuracy: 0.964, Test accuracy: 0.516
+2025-10-31 20:15:58,391 - INFO - Trained and saved model for AUDJPY
+2025-10-31 20:15:58,391 - INFO - Successfully trained model for AUDJPY
+2025-10-31 20:15:58,391 - INFO - Training model for AUDNZD
+2025-10-31 20:15:58,391 - INFO - Fetching 2000 bars of 16385 data for AUDNZD
+2025-10-31 20:15:58,393 - INFO - Retrieved 2000 bars for AUDNZD
+2025-10-31 20:15:58,747 - INFO - Model for AUDNZD - Train accuracy: 0.946, Test accuracy: 0.503
+2025-10-31 20:15:58,765 - INFO - Trained and saved model for AUDNZD
+2025-10-31 20:15:58,765 - INFO - Successfully trained model for AUDNZD
+2025-10-31 20:15:58,766 - INFO - Training model for AUDUSD
+2025-10-31 20:15:58,766 - INFO - Fetching 2000 bars of 16385 data for AUDUSD
+2025-10-31 20:15:58,766 - INFO - Retrieved 2000 bars for AUDUSD
+2025-10-31 20:15:59,127 - INFO - Model for AUDUSD - Train accuracy: 0.971, Test accuracy: 0.505
+2025-10-31 20:15:59,143 - INFO - Trained and saved model for AUDUSD
+2025-10-31 20:15:59,143 - INFO - Successfully trained model for AUDUSD
+2025-10-31 20:15:59,143 - INFO - Training model for CADCHF
+2025-10-31 20:15:59,143 - INFO - Fetching 2000 bars of 16385 data for CADCHF
+2025-10-31 20:15:59,144 - INFO - Retrieved 2000 bars for CADCHF
+2025-10-31 20:15:59,501 - INFO - Model for CADCHF - Train accuracy: 0.952, Test accuracy: 0.534
+2025-10-31 20:15:59,517 - INFO - Trained and saved model for CADCHF
+2025-10-31 20:15:59,517 - INFO - Successfully trained model for CADCHF
+2025-10-31 20:15:59,517 - INFO - Training model for CADJPY
+2025-10-31 20:15:59,517 - INFO - Fetching 2000 bars of 16385 data for CADJPY
+2025-10-31 20:15:59,518 - INFO - Retrieved 2000 bars for CADJPY
+2025-10-31 20:15:59,872 - INFO - Model for CADJPY - Train accuracy: 0.955, Test accuracy: 0.490
+2025-10-31 20:15:59,889 - INFO - Trained and saved model for CADJPY
+2025-10-31 20:15:59,889 - INFO - Successfully trained model for CADJPY
+2025-10-31 20:15:59,889 - INFO - Training model for CHFJPY
+2025-10-31 20:15:59,889 - INFO - Fetching 2000 bars of 16385 data for CHFJPY
+2025-10-31 20:15:59,890 - INFO - Retrieved 2000 bars for CHFJPY
+2025-10-31 20:16:00,246 - INFO - Model for CHFJPY - Train accuracy: 0.947, Test accuracy: 0.505
+2025-10-31 20:16:00,293 - INFO - Trained and saved model for CHFJPY
+2025-10-31 20:16:00,293 - INFO - Successfully trained model for CHFJPY
+2025-10-31 20:16:00,293 - INFO - Training model for EURAUD
+2025-10-31 20:16:00,294 - INFO - Fetching 2000 bars of 16385 data for EURAUD
+2025-10-31 20:16:00,295 - INFO - Retrieved 2000 bars for EURAUD
+2025-10-31 20:16:00,659 - INFO - Model for EURAUD - Train accuracy: 0.963, Test accuracy: 0.474
+2025-10-31 20:16:00,677 - INFO - Trained and saved model for EURAUD
+2025-10-31 20:16:00,677 - INFO - Successfully trained model for EURAUD
+2025-10-31 20:16:00,677 - INFO - Training model for EURCAD
+2025-10-31 20:16:00,677 - INFO - Fetching 2000 bars of 16385 data for EURCAD
+2025-10-31 20:16:00,678 - INFO - Retrieved 2000 bars for EURCAD
+2025-10-31 20:16:01,032 - INFO - Model for EURCAD - Train accuracy: 0.946, Test accuracy: 0.510
+2025-10-31 20:16:01,049 - INFO - Trained and saved model for EURCAD
+2025-10-31 20:16:01,049 - INFO - Successfully trained model for EURCAD
+2025-10-31 20:16:01,049 - INFO - Training model for EURCHF
+2025-10-31 20:16:01,049 - INFO - Fetching 2000 bars of 16385 data for EURCHF
+2025-10-31 20:16:01,050 - INFO - Retrieved 2000 bars for EURCHF
+2025-10-31 20:16:01,404 - INFO - Model for EURCHF - Train accuracy: 0.947, Test accuracy: 0.528
+2025-10-31 20:16:01,427 - INFO - Trained and saved model for EURCHF
+2025-10-31 20:16:01,427 - INFO - Successfully trained model for EURCHF
+2025-10-31 20:16:01,427 - INFO - Training model for EURJPY
+2025-10-31 20:16:01,427 - INFO - Fetching 2000 bars of 16385 data for EURJPY
+2025-10-31 20:16:01,428 - INFO - Retrieved 2000 bars for EURJPY
+2025-10-31 20:16:01,784 - INFO - Model for EURJPY - Train accuracy: 0.948, Test accuracy: 0.482
+2025-10-31 20:16:01,800 - INFO - Trained and saved model for EURJPY
+2025-10-31 20:16:01,800 - INFO - Successfully trained model for EURJPY
+2025-10-31 20:16:01,800 - INFO - Training model for EURGBP
+2025-10-31 20:16:01,800 - INFO - Fetching 2000 bars of 16385 data for EURGBP
+2025-10-31 20:16:01,801 - INFO - Retrieved 2000 bars for EURGBP
+2025-10-31 20:16:02,158 - INFO - Model for EURGBP - Train accuracy: 0.961, Test accuracy: 0.536
+2025-10-31 20:16:02,173 - INFO - Trained and saved model for EURGBP
+2025-10-31 20:16:02,173 - INFO - Successfully trained model for EURGBP
+2025-10-31 20:16:02,173 - INFO - Training model for EURNZD
+2025-10-31 20:16:02,173 - INFO - Fetching 2000 bars of 16385 data for EURNZD
+2025-10-31 20:16:02,174 - INFO - Retrieved 2000 bars for EURNZD
+2025-10-31 20:16:02,532 - INFO - Model for EURNZD - Train accuracy: 0.951, Test accuracy: 0.497
+2025-10-31 20:16:02,553 - INFO - Trained and saved model for EURNZD
+2025-10-31 20:16:02,553 - INFO - Successfully trained model for EURNZD
+2025-10-31 20:16:02,553 - INFO - Training model for EURUSD
+2025-10-31 20:16:02,553 - INFO - Fetching 2000 bars of 16385 data for EURUSD
+2025-10-31 20:16:02,554 - INFO - Retrieved 2000 bars for EURUSD
+2025-10-31 20:16:02,914 - INFO - Model for EURUSD - Train accuracy: 0.955, Test accuracy: 0.472
+2025-10-31 20:16:02,929 - INFO - Trained and saved model for EURUSD
+2025-10-31 20:16:02,930 - INFO - Successfully trained model for EURUSD
+2025-10-31 20:16:02,930 - INFO - Training model for GBPAUD
+2025-10-31 20:16:02,930 - INFO - Fetching 2000 bars of 16385 data for GBPAUD
+2025-10-31 20:16:02,931 - INFO - Retrieved 2000 bars for GBPAUD
+2025-10-31 20:16:03,291 - INFO - Model for GBPAUD - Train accuracy: 0.968, Test accuracy: 0.508
+2025-10-31 20:16:03,308 - INFO - Trained and saved model for GBPAUD
+2025-10-31 20:16:03,308 - INFO - Successfully trained model for GBPAUD
+2025-10-31 20:16:03,308 - INFO - Training model for GBPCAD
+2025-10-31 20:16:03,308 - INFO - Fetching 2000 bars of 16385 data for GBPCAD
+2025-10-31 20:16:03,309 - INFO - Retrieved 2000 bars for GBPCAD
+2025-10-31 20:16:03,697 - INFO - Model for GBPCAD - Train accuracy: 0.959, Test accuracy: 0.479
+2025-10-31 20:16:03,712 - INFO - Trained and saved model for GBPCAD
+2025-10-31 20:16:03,712 - INFO - Successfully trained model for GBPCAD
+2025-10-31 20:16:03,712 - INFO - Training model for GBPCHF
+2025-10-31 20:16:03,712 - INFO - Fetching 2000 bars of 16385 data for GBPCHF
+2025-10-31 20:16:03,714 - INFO - Retrieved 2000 bars for GBPCHF
+2025-10-31 20:16:04,076 - INFO - Model for GBPCHF - Train accuracy: 0.944, Test accuracy: 0.536
+2025-10-31 20:16:04,092 - INFO - Trained and saved model for GBPCHF
+2025-10-31 20:16:04,092 - INFO - Successfully trained model for GBPCHF
+2025-10-31 20:16:04,092 - INFO - Training model for GBPJPY
+2025-10-31 20:16:04,092 - INFO - Fetching 2000 bars of 16385 data for GBPJPY
+2025-10-31 20:16:04,093 - INFO - Retrieved 2000 bars for GBPJPY
+2025-10-31 20:16:04,477 - INFO - Model for GBPJPY - Train accuracy: 0.960, Test accuracy: 0.495
+2025-10-31 20:16:04,501 - INFO - Trained and saved model for GBPJPY
+2025-10-31 20:16:04,501 - INFO - Successfully trained model for GBPJPY
+2025-10-31 20:16:04,501 - INFO - Training model for GBPNZD
+2025-10-31 20:16:04,501 - INFO - Fetching 2000 bars of 16385 data for GBPNZD
+2025-10-31 20:16:04,502 - INFO - Retrieved 2000 bars for GBPNZD
+2025-10-31 20:16:04,857 - INFO - Model for GBPNZD - Train accuracy: 0.957, Test accuracy: 0.443
+2025-10-31 20:16:04,877 - INFO - Trained and saved model for GBPNZD
+2025-10-31 20:16:04,878 - INFO - Successfully trained model for GBPNZD
+2025-10-31 20:16:04,878 - INFO - Training model for GBPUSD
+2025-10-31 20:16:04,878 - INFO - Fetching 2000 bars of 16385 data for GBPUSD
+2025-10-31 20:16:04,879 - INFO - Retrieved 2000 bars for GBPUSD
+2025-10-31 20:16:05,231 - INFO - Model for GBPUSD - Train accuracy: 0.959, Test accuracy: 0.526
+2025-10-31 20:16:05,250 - INFO - Trained and saved model for GBPUSD
+2025-10-31 20:16:05,251 - INFO - Successfully trained model for GBPUSD
+2025-10-31 20:16:05,251 - INFO - Training model for NZDCAD
+2025-10-31 20:16:05,251 - INFO - Fetching 2000 bars of 16385 data for NZDCAD
+2025-10-31 20:16:05,252 - INFO - Retrieved 2000 bars for NZDCAD
+2025-10-31 20:16:05,603 - INFO - Model for NZDCAD - Train accuracy: 0.951, Test accuracy: 0.487
+2025-10-31 20:16:05,618 - INFO - Trained and saved model for NZDCAD
+2025-10-31 20:16:05,619 - INFO - Successfully trained model for NZDCAD
+2025-10-31 20:16:05,619 - INFO - Training model for NZDCHF
+2025-10-31 20:16:05,619 - INFO - Fetching 2000 bars of 16385 data for NZDCHF
+2025-10-31 20:16:05,620 - INFO - Retrieved 2000 bars for NZDCHF
+2025-10-31 20:16:05,971 - INFO - Model for NZDCHF - Train accuracy: 0.945, Test accuracy: 0.523
+2025-10-31 20:16:05,985 - INFO - Trained and saved model for NZDCHF
+2025-10-31 20:16:05,985 - INFO - Successfully trained model for NZDCHF
+2025-10-31 20:16:05,985 - INFO - Training model for NZDJPY
+2025-10-31 20:16:05,985 - INFO - Fetching 2000 bars of 16385 data for NZDJPY
+2025-10-31 20:16:05,986 - INFO - Retrieved 2000 bars for NZDJPY
+2025-10-31 20:16:06,338 - INFO - Model for NZDJPY - Train accuracy: 0.942, Test accuracy: 0.518
+2025-10-31 20:16:06,355 - INFO - Trained and saved model for NZDJPY
+2025-10-31 20:16:06,356 - INFO - Successfully trained model for NZDJPY
+2025-10-31 20:16:06,356 - INFO - Training model for NZDUSD
+2025-10-31 20:16:06,356 - INFO - Fetching 2000 bars of 16385 data for NZDUSD
+2025-10-31 20:16:06,357 - INFO - Retrieved 2000 bars for NZDUSD
+2025-10-31 20:16:06,711 - INFO - Model for NZDUSD - Train accuracy: 0.928, Test accuracy: 0.518
+2025-10-31 20:16:06,726 - INFO - Trained and saved model for NZDUSD
+2025-10-31 20:16:06,727 - INFO - Successfully trained model for NZDUSD
+2025-10-31 20:16:06,727 - INFO - Training model for USDCAD
+2025-10-31 20:16:06,727 - INFO - Fetching 2000 bars of 16385 data for USDCAD
+2025-10-31 20:16:06,728 - INFO - Retrieved 2000 bars for USDCAD
+2025-10-31 20:16:07,082 - INFO - Model for USDCAD - Train accuracy: 0.936, Test accuracy: 0.500
+2025-10-31 20:16:07,097 - INFO - Trained and saved model for USDCAD
+2025-10-31 20:16:07,097 - INFO - Successfully trained model for USDCAD
+2025-10-31 20:16:07,098 - INFO - Training model for USDCHF
+2025-10-31 20:16:07,098 - INFO - Fetching 2000 bars of 16385 data for USDCHF
+2025-10-31 20:16:07,098 - INFO - Retrieved 2000 bars for USDCHF
+2025-10-31 20:16:07,447 - INFO - Model for USDCHF - Train accuracy: 0.959, Test accuracy: 0.500
+2025-10-31 20:16:07,465 - INFO - Trained and saved model for USDCHF
+2025-10-31 20:16:07,465 - INFO - Successfully trained model for USDCHF
+2025-10-31 20:16:07,465 - INFO - Training model for USDJPY
+2025-10-31 20:16:07,465 - INFO - Fetching 2000 bars of 16385 data for USDJPY
+2025-10-31 20:16:07,466 - INFO - Retrieved 2000 bars for USDJPY
+2025-10-31 20:16:07,831 - INFO - Model for USDJPY - Train accuracy: 0.940, Test accuracy: 0.484
+2025-10-31 20:16:07,844 - INFO - Trained and saved model for USDJPY
+2025-10-31 20:16:07,844 - INFO - Successfully trained model for USDJPY
+2025-10-31 20:16:07,844 - INFO - Training model for XAGUSD
+2025-10-31 20:16:07,844 - INFO - Fetching 2000 bars of 16385 data for XAGUSD
+2025-10-31 20:16:07,845 - INFO - Retrieved 2000 bars for XAGUSD
+2025-10-31 20:16:08,201 - INFO - Model for XAGUSD - Train accuracy: 0.972, Test accuracy: 0.505
+2025-10-31 20:16:08,219 - INFO - Trained and saved model for XAGUSD
+2025-10-31 20:16:08,219 - INFO - Successfully trained model for XAGUSD
+2025-10-31 20:16:08,219 - INFO - Training model for XAUUSD
+2025-10-31 20:16:08,219 - INFO - Fetching 2000 bars of 16385 data for XAUUSD
+2025-10-31 20:16:08,220 - INFO - Retrieved 2000 bars for XAUUSD
+2025-10-31 20:16:08,576 - INFO - Model for XAUUSD - Train accuracy: 0.941, Test accuracy: 0.508
+2025-10-31 20:16:08,592 - INFO - Trained and saved model for XAUUSD
+2025-10-31 20:16:08,593 - INFO - Successfully trained model for XAUUSD
+2025-10-31 20:16:08,593 - INFO - Training completed: 30 successful, 0 failed
+2025-10-31 20:16:08,593 - INFO - All models trained successfully!
+2025-10-31 21:38:01,429 - INFO - Starting training of all 30 ML models on multiple timeframes
+2025-10-31 21:38:01,429 - INFO - Found 30 symbols to train: ['AUDCAD', 'AUDCHF', 'AUDJPY', 'AUDNZD', 'AUDUSD', 'CADCHF', 'CADJPY', 'CHFJPY', 'EURAUD', 'EURCAD', 'EURCHF', 'EURJPY', 'EURGBP', 'EURNZD', 'EURUSD', 'GBPAUD', 'GBPCAD', 'GBPCHF', 'GBPJPY', 'GBPNZD', 'GBPUSD', 'NZDCAD', 'NZDCHF', 'NZDJPY', 'NZDUSD', 'USDCAD', 'USDCHF', 'USDJPY', 'XAGUSD', 'XAUUSD']
+2025-10-31 21:38:01,440 - INFO - MT5 connection established successfully
+2025-10-31 21:38:01,440 - INFO - Training on timeframes: ['M1', 'M5', 'M15', 'H1']
+2025-10-31 21:38:01,440 - INFO - Advanced Feature Engineer initialized
+2025-10-31 21:38:01,441 - INFO - Training model for AUDCAD on M1 timeframe
+2025-10-31 21:38:01,441 - INFO - Fetching 5000 bars of M1 (1) data for AUDCAD
+2025-10-31 21:38:01,472 - INFO - Retrieved 5000 bars for AUDCAD
+2025-10-31 21:38:02,325 - INFO - Model for AUDCAD - Train accuracy: 0.914, Test accuracy: 0.505
+2025-10-31 21:38:02,341 - INFO - Trained and saved model for AUDCAD
+2025-10-31 21:38:02,341 - INFO - Successfully trained model for AUDCAD on M1
+2025-10-31 21:38:02,341 - INFO - Training model for AUDCAD on M5 timeframe
+2025-10-31 21:38:02,341 - INFO - Fetching 5000 bars of M5 (5) data for AUDCAD
+2025-10-31 21:38:02,384 - INFO - Retrieved 5000 bars for AUDCAD
+2025-10-31 21:38:03,264 - INFO - Model for AUDCAD - Train accuracy: 0.891, Test accuracy: 0.508
+2025-10-31 21:38:03,279 - INFO - Trained and saved model for AUDCAD
+2025-10-31 21:38:03,280 - INFO - Successfully trained model for AUDCAD on M5
+2025-10-31 21:38:03,280 - INFO - Training model for AUDCAD on M15 timeframe
+2025-10-31 21:38:03,280 - INFO - Fetching 5000 bars of M15 (15) data for AUDCAD
+2025-10-31 21:38:03,358 - INFO - Retrieved 5000 bars for AUDCAD
+2025-10-31 21:38:04,221 - INFO - Model for AUDCAD - Train accuracy: 0.897, Test accuracy: 0.468
+2025-10-31 21:38:04,236 - INFO - Trained and saved model for AUDCAD
+2025-10-31 21:38:04,237 - INFO - Successfully trained model for AUDCAD on M15
+2025-10-31 21:38:04,237 - INFO - Training model for AUDCAD on H1 timeframe
+2025-10-31 21:38:04,237 - INFO - Fetching 5000 bars of H1 (16385) data for AUDCAD
+2025-10-31 21:38:04,475 - INFO - Retrieved 5000 bars for AUDCAD
+2025-10-31 21:38:05,325 - INFO - Model for AUDCAD - Train accuracy: 0.857, Test accuracy: 0.475
+2025-10-31 21:38:05,342 - INFO - Trained and saved model for AUDCAD
+2025-10-31 21:38:05,343 - INFO - Successfully trained model for AUDCAD on H1
+2025-10-31 21:38:05,343 - INFO - Training model for AUDCHF on M1 timeframe
+2025-10-31 21:38:05,343 - INFO - Fetching 5000 bars of M1 (1) data for AUDCHF
+2025-10-31 21:38:05,379 - INFO - Retrieved 5000 bars for AUDCHF
+2025-10-31 21:38:06,236 - INFO - Model for AUDCHF - Train accuracy: 0.888, Test accuracy: 0.508
+2025-10-31 21:38:06,253 - INFO - Trained and saved model for AUDCHF
+2025-10-31 21:38:06,253 - INFO - Successfully trained model for AUDCHF on M1
+2025-10-31 21:38:06,253 - INFO - Training model for AUDCHF on M5 timeframe
+2025-10-31 21:38:06,253 - INFO - Fetching 5000 bars of M5 (5) data for AUDCHF
+2025-10-31 21:38:06,302 - INFO - Retrieved 5000 bars for AUDCHF
+2025-10-31 21:38:07,184 - INFO - Model for AUDCHF - Train accuracy: 0.873, Test accuracy: 0.493
+2025-10-31 21:38:07,200 - INFO - Trained and saved model for AUDCHF
+2025-10-31 21:38:07,201 - INFO - Successfully trained model for AUDCHF on M5
+2025-10-31 21:38:07,201 - INFO - Training model for AUDCHF on M15 timeframe
+2025-10-31 21:38:07,201 - INFO - Fetching 5000 bars of M15 (15) data for AUDCHF
+2025-10-31 21:38:07,285 - INFO - Retrieved 5000 bars for AUDCHF
+2025-10-31 21:38:08,131 - INFO - Model for AUDCHF - Train accuracy: 0.875, Test accuracy: 0.505
+2025-10-31 21:38:08,147 - INFO - Trained and saved model for AUDCHF
+2025-10-31 21:38:08,148 - INFO - Successfully trained model for AUDCHF on M15
+2025-10-31 21:38:08,148 - INFO - Training model for AUDCHF on H1 timeframe
+2025-10-31 21:38:08,148 - INFO - Fetching 5000 bars of H1 (16385) data for AUDCHF
+2025-10-31 21:38:08,370 - INFO - Retrieved 5000 bars for AUDCHF
+2025-10-31 21:38:09,218 - INFO - Model for AUDCHF - Train accuracy: 0.888, Test accuracy: 0.495
+2025-10-31 21:38:09,235 - INFO - Trained and saved model for AUDCHF
+2025-10-31 21:38:09,236 - INFO - Successfully trained model for AUDCHF on H1
+2025-10-31 21:38:09,236 - INFO - Training model for AUDJPY on M1 timeframe
+2025-10-31 21:38:09,236 - INFO - Fetching 5000 bars of M1 (1) data for AUDJPY
+2025-10-31 21:38:09,266 - INFO - Retrieved 5000 bars for AUDJPY
+2025-10-31 21:38:10,107 - INFO - Model for AUDJPY - Train accuracy: 0.883, Test accuracy: 0.524
+2025-10-31 21:38:10,124 - INFO - Trained and saved model for AUDJPY
+2025-10-31 21:38:10,124 - INFO - Successfully trained model for AUDJPY on M1
+2025-10-31 21:38:10,124 - INFO - Training model for AUDJPY on M5 timeframe
+2025-10-31 21:38:10,124 - INFO - Fetching 5000 bars of M5 (5) data for AUDJPY
+2025-10-31 21:38:10,166 - INFO - Retrieved 5000 bars for AUDJPY
+2025-10-31 21:38:11,008 - INFO - Model for AUDJPY - Train accuracy: 0.869, Test accuracy: 0.508
+2025-10-31 21:38:11,023 - INFO - Trained and saved model for AUDJPY
+2025-10-31 21:38:11,024 - INFO - Successfully trained model for AUDJPY on M5
+2025-10-31 21:38:11,024 - INFO - Training model for AUDJPY on M15 timeframe
+2025-10-31 21:38:11,024 - INFO - Fetching 5000 bars of M15 (15) data for AUDJPY
+2025-10-31 21:38:11,098 - INFO - Retrieved 5000 bars for AUDJPY
+2025-10-31 21:38:11,945 - INFO - Model for AUDJPY - Train accuracy: 0.869, Test accuracy: 0.506
+2025-10-31 21:38:11,961 - INFO - Trained and saved model for AUDJPY
+2025-10-31 21:38:11,962 - INFO - Successfully trained model for AUDJPY on M15
+2025-10-31 21:38:11,962 - INFO - Training model for AUDJPY on H1 timeframe
+2025-10-31 21:38:11,962 - INFO - Fetching 5000 bars of H1 (16385) data for AUDJPY
+2025-10-31 21:38:12,184 - INFO - Retrieved 5000 bars for AUDJPY
+2025-10-31 21:38:13,041 - INFO - Model for AUDJPY - Train accuracy: 0.865, Test accuracy: 0.514
+2025-10-31 21:38:13,056 - INFO - Trained and saved model for AUDJPY
+2025-10-31 21:38:13,057 - INFO - Successfully trained model for AUDJPY on H1
+2025-10-31 21:38:13,057 - INFO - Training model for AUDNZD on M1 timeframe
+2025-10-31 21:38:13,057 - INFO - Fetching 5000 bars of M1 (1) data for AUDNZD
+2025-10-31 21:38:13,089 - INFO - Retrieved 5000 bars for AUDNZD
+2025-10-31 21:38:13,921 - INFO - Model for AUDNZD - Train accuracy: 0.872, Test accuracy: 0.506
+2025-10-31 21:38:13,939 - INFO - Trained and saved model for AUDNZD
+2025-10-31 21:38:13,939 - INFO - Successfully trained model for AUDNZD on M1
+2025-10-31 21:38:13,939 - INFO - Training model for AUDNZD on M5 timeframe
+2025-10-31 21:38:13,940 - INFO - Fetching 5000 bars of M5 (5) data for AUDNZD
+2025-10-31 21:38:13,975 - INFO - Retrieved 5000 bars for AUDNZD
+2025-10-31 21:38:14,823 - INFO - Model for AUDNZD - Train accuracy: 0.878, Test accuracy: 0.483
+2025-10-31 21:38:14,841 - INFO - Trained and saved model for AUDNZD
+2025-10-31 21:38:14,841 - INFO - Successfully trained model for AUDNZD on M5
+2025-10-31 21:38:14,842 - INFO - Training model for AUDNZD on M15 timeframe
+2025-10-31 21:38:14,842 - INFO - Fetching 5000 bars of M15 (15) data for AUDNZD
+2025-10-31 21:38:14,941 - INFO - Retrieved 5000 bars for AUDNZD
+2025-10-31 21:38:15,811 - INFO - Model for AUDNZD - Train accuracy: 0.890, Test accuracy: 0.476
+2025-10-31 21:38:15,827 - INFO - Trained and saved model for AUDNZD
+2025-10-31 21:38:15,828 - INFO - Successfully trained model for AUDNZD on M15
+2025-10-31 21:38:15,828 - INFO - Training model for AUDNZD on H1 timeframe
+2025-10-31 21:38:15,828 - INFO - Fetching 5000 bars of H1 (16385) data for AUDNZD
+2025-10-31 21:38:16,045 - INFO - Retrieved 5000 bars for AUDNZD
+2025-10-31 21:38:16,905 - INFO - Model for AUDNZD - Train accuracy: 0.894, Test accuracy: 0.514
+2025-10-31 21:38:16,922 - INFO - Trained and saved model for AUDNZD
+2025-10-31 21:38:16,923 - INFO - Successfully trained model for AUDNZD on H1
+2025-10-31 21:38:16,923 - INFO - Training model for AUDUSD on M1 timeframe
+2025-10-31 21:38:16,923 - INFO - Fetching 5000 bars of M1 (1) data for AUDUSD
+2025-10-31 21:38:16,924 - INFO - Retrieved 5000 bars for AUDUSD
+2025-10-31 21:38:17,771 - INFO - Model for AUDUSD - Train accuracy: 0.891, Test accuracy: 0.534
+2025-10-31 21:38:17,788 - INFO - Trained and saved model for AUDUSD
+2025-10-31 21:38:17,788 - INFO - Successfully trained model for AUDUSD on M1
+2025-10-31 21:38:17,788 - INFO - Training model for AUDUSD on M5 timeframe
+2025-10-31 21:38:17,788 - INFO - Fetching 5000 bars of M5 (5) data for AUDUSD
+2025-10-31 21:38:17,834 - INFO - Retrieved 5000 bars for AUDUSD
+2025-10-31 21:38:18,694 - INFO - Model for AUDUSD - Train accuracy: 0.886, Test accuracy: 0.486
+2025-10-31 21:38:18,712 - INFO - Trained and saved model for AUDUSD
+2025-10-31 21:38:18,712 - INFO - Successfully trained model for AUDUSD on M5
+2025-10-31 21:38:18,712 - INFO - Training model for AUDUSD on M15 timeframe
+2025-10-31 21:38:18,712 - INFO - Fetching 5000 bars of M15 (15) data for AUDUSD
+2025-10-31 21:38:18,783 - INFO - Retrieved 5000 bars for AUDUSD
+2025-10-31 21:38:19,632 - INFO - Model for AUDUSD - Train accuracy: 0.895, Test accuracy: 0.506
+2025-10-31 21:38:19,648 - INFO - Trained and saved model for AUDUSD
+2025-10-31 21:38:19,648 - INFO - Successfully trained model for AUDUSD on M15
+2025-10-31 21:38:19,648 - INFO - Training model for AUDUSD on H1 timeframe
+2025-10-31 21:38:19,648 - INFO - Fetching 5000 bars of H1 (16385) data for AUDUSD
+2025-10-31 21:38:19,869 - INFO - Retrieved 5000 bars for AUDUSD
+2025-10-31 21:38:20,726 - INFO - Model for AUDUSD - Train accuracy: 0.861, Test accuracy: 0.511
+2025-10-31 21:38:20,745 - INFO - Trained and saved model for AUDUSD
+2025-10-31 21:38:20,745 - INFO - Successfully trained model for AUDUSD on H1
+2025-10-31 21:38:20,745 - INFO - Training model for CADCHF on M1 timeframe
+2025-10-31 21:38:20,745 - INFO - Fetching 5000 bars of M1 (1) data for CADCHF
+2025-10-31 21:38:20,772 - INFO - Retrieved 5000 bars for CADCHF
+2025-10-31 21:38:21,589 - INFO - Model for CADCHF - Train accuracy: 0.880, Test accuracy: 0.522
+2025-10-31 21:38:21,606 - INFO - Trained and saved model for CADCHF
+2025-10-31 21:38:21,606 - INFO - Successfully trained model for CADCHF on M1
+2025-10-31 21:38:21,606 - INFO - Training model for CADCHF on M5 timeframe
+2025-10-31 21:38:21,607 - INFO - Fetching 5000 bars of M5 (5) data for CADCHF
+2025-10-31 21:38:21,645 - INFO - Retrieved 5000 bars for CADCHF
+2025-10-31 21:38:22,489 - INFO - Model for CADCHF - Train accuracy: 0.876, Test accuracy: 0.513
+2025-10-31 21:38:22,504 - INFO - Trained and saved model for CADCHF
+2025-10-31 21:38:22,505 - INFO - Successfully trained model for CADCHF on M5
+2025-10-31 21:38:22,505 - INFO - Training model for CADCHF on M15 timeframe
+2025-10-31 21:38:22,505 - INFO - Fetching 5000 bars of M15 (15) data for CADCHF
+2025-10-31 21:38:22,582 - INFO - Retrieved 5000 bars for CADCHF
+2025-10-31 21:38:23,434 - INFO - Model for CADCHF - Train accuracy: 0.889, Test accuracy: 0.515
+2025-10-31 21:38:23,453 - INFO - Trained and saved model for CADCHF
+2025-10-31 21:38:23,454 - INFO - Successfully trained model for CADCHF on M15
+2025-10-31 21:38:23,454 - INFO - Training model for CADCHF on H1 timeframe
+2025-10-31 21:38:23,454 - INFO - Fetching 5000 bars of H1 (16385) data for CADCHF
+2025-10-31 21:38:23,682 - INFO - Retrieved 5000 bars for CADCHF
+2025-10-31 21:38:24,535 - INFO - Model for CADCHF - Train accuracy: 0.883, Test accuracy: 0.534
+2025-10-31 21:38:24,555 - INFO - Trained and saved model for CADCHF
+2025-10-31 21:38:24,556 - INFO - Successfully trained model for CADCHF on H1
+2025-10-31 21:38:24,556 - INFO - Training model for CADJPY on M1 timeframe
+2025-10-31 21:38:24,556 - INFO - Fetching 5000 bars of M1 (1) data for CADJPY
+2025-10-31 21:38:24,588 - INFO - Retrieved 5000 bars for CADJPY
+2025-10-31 21:38:25,433 - INFO - Model for CADJPY - Train accuracy: 0.876, Test accuracy: 0.511
+2025-10-31 21:38:25,448 - INFO - Trained and saved model for CADJPY
+2025-10-31 21:38:25,449 - INFO - Successfully trained model for CADJPY on M1
+2025-10-31 21:38:25,449 - INFO - Training model for CADJPY on M5 timeframe
+2025-10-31 21:38:25,449 - INFO - Fetching 5000 bars of M5 (5) data for CADJPY
+2025-10-31 21:38:25,498 - INFO - Retrieved 5000 bars for CADJPY
+2025-10-31 21:38:26,358 - INFO - Model for CADJPY - Train accuracy: 0.885, Test accuracy: 0.470
+2025-10-31 21:38:26,375 - INFO - Trained and saved model for CADJPY
+2025-10-31 21:38:26,375 - INFO - Successfully trained model for CADJPY on M5
+2025-10-31 21:38:26,375 - INFO - Training model for CADJPY on M15 timeframe
+2025-10-31 21:38:26,375 - INFO - Fetching 5000 bars of M15 (15) data for CADJPY
+2025-10-31 21:38:26,449 - INFO - Retrieved 5000 bars for CADJPY
+2025-10-31 21:38:27,307 - INFO - Model for CADJPY - Train accuracy: 0.893, Test accuracy: 0.489
+2025-10-31 21:38:27,325 - INFO - Trained and saved model for CADJPY
+2025-10-31 21:38:27,325 - INFO - Successfully trained model for CADJPY on M15
+2025-10-31 21:38:27,325 - INFO - Training model for CADJPY on H1 timeframe
+2025-10-31 21:38:27,325 - INFO - Fetching 5000 bars of H1 (16385) data for CADJPY
+2025-10-31 21:38:27,542 - INFO - Retrieved 5000 bars for CADJPY
+2025-10-31 21:38:28,395 - INFO - Model for CADJPY - Train accuracy: 0.862, Test accuracy: 0.512
+2025-10-31 21:38:28,412 - INFO - Trained and saved model for CADJPY
+2025-10-31 21:38:28,412 - INFO - Successfully trained model for CADJPY on H1
+2025-10-31 21:38:28,412 - INFO - Training model for CHFJPY on M1 timeframe
+2025-10-31 21:38:28,412 - INFO - Fetching 5000 bars of M1 (1) data for CHFJPY
+2025-10-31 21:38:28,444 - INFO - Retrieved 5000 bars for CHFJPY
+2025-10-31 21:38:29,299 - INFO - Model for CHFJPY - Train accuracy: 0.901, Test accuracy: 0.502
+2025-10-31 21:38:29,316 - INFO - Trained and saved model for CHFJPY
+2025-10-31 21:38:29,317 - INFO - Successfully trained model for CHFJPY on M1
+2025-10-31 21:38:29,317 - INFO - Training model for CHFJPY on M5 timeframe
+2025-10-31 21:38:29,317 - INFO - Fetching 5000 bars of M5 (5) data for CHFJPY
+2025-10-31 21:38:29,362 - INFO - Retrieved 5000 bars for CHFJPY
+2025-10-31 21:38:30,217 - INFO - Model for CHFJPY - Train accuracy: 0.888, Test accuracy: 0.499
+2025-10-31 21:38:30,233 - INFO - Trained and saved model for CHFJPY
+2025-10-31 21:38:30,233 - INFO - Successfully trained model for CHFJPY on M5
+2025-10-31 21:38:30,233 - INFO - Training model for CHFJPY on M15 timeframe
+2025-10-31 21:38:30,233 - INFO - Fetching 5000 bars of M15 (15) data for CHFJPY
+2025-10-31 21:38:30,306 - INFO - Retrieved 5000 bars for CHFJPY
+2025-10-31 21:38:31,162 - INFO - Model for CHFJPY - Train accuracy: 0.876, Test accuracy: 0.514
+2025-10-31 21:38:31,179 - INFO - Trained and saved model for CHFJPY
+2025-10-31 21:38:31,179 - INFO - Successfully trained model for CHFJPY on M15
+2025-10-31 21:38:31,179 - INFO - Training model for CHFJPY on H1 timeframe
+2025-10-31 21:38:31,179 - INFO - Fetching 5000 bars of H1 (16385) data for CHFJPY
+2025-10-31 21:38:31,406 - INFO - Retrieved 5000 bars for CHFJPY
+2025-10-31 21:38:32,270 - INFO - Model for CHFJPY - Train accuracy: 0.881, Test accuracy: 0.486
+2025-10-31 21:38:32,288 - INFO - Trained and saved model for CHFJPY
+2025-10-31 21:38:32,288 - INFO - Successfully trained model for CHFJPY on H1
+2025-10-31 21:38:32,288 - INFO - Training model for EURAUD on M1 timeframe
+2025-10-31 21:38:32,289 - INFO - Fetching 5000 bars of M1 (1) data for EURAUD
+2025-10-31 21:38:32,329 - INFO - Retrieved 5000 bars for EURAUD
+2025-10-31 21:38:33,188 - INFO - Model for EURAUD - Train accuracy: 0.899, Test accuracy: 0.483
+2025-10-31 21:38:33,203 - INFO - Trained and saved model for EURAUD
+2025-10-31 21:38:33,203 - INFO - Successfully trained model for EURAUD on M1
+2025-10-31 21:38:33,203 - INFO - Training model for EURAUD on M5 timeframe
+2025-10-31 21:38:33,204 - INFO - Fetching 5000 bars of M5 (5) data for EURAUD
+2025-10-31 21:38:33,249 - INFO - Retrieved 5000 bars for EURAUD
+2025-10-31 21:38:34,108 - INFO - Model for EURAUD - Train accuracy: 0.892, Test accuracy: 0.524
+2025-10-31 21:38:34,124 - INFO - Trained and saved model for EURAUD
+2025-10-31 21:38:34,125 - INFO - Successfully trained model for EURAUD on M5
+2025-10-31 21:38:34,125 - INFO - Training model for EURAUD on M15 timeframe
+2025-10-31 21:38:34,125 - INFO - Fetching 5000 bars of M15 (15) data for EURAUD
+2025-10-31 21:38:34,197 - INFO - Retrieved 5000 bars for EURAUD
+2025-10-31 21:38:35,081 - INFO - Model for EURAUD - Train accuracy: 0.881, Test accuracy: 0.509
+2025-10-31 21:38:35,097 - INFO - Trained and saved model for EURAUD
+2025-10-31 21:38:35,098 - INFO - Successfully trained model for EURAUD on M15
+2025-10-31 21:38:35,098 - INFO - Training model for EURAUD on H1 timeframe
+2025-10-31 21:38:35,098 - INFO - Fetching 5000 bars of H1 (16385) data for EURAUD
+2025-10-31 21:38:35,316 - INFO - Retrieved 5000 bars for EURAUD
+2025-10-31 21:38:36,175 - INFO - Model for EURAUD - Train accuracy: 0.871, Test accuracy: 0.505
+2025-10-31 21:38:36,193 - INFO - Trained and saved model for EURAUD
+2025-10-31 21:38:36,193 - INFO - Successfully trained model for EURAUD on H1
+2025-10-31 21:38:36,194 - INFO - Training model for EURCAD on M1 timeframe
+2025-10-31 21:38:36,194 - INFO - Fetching 5000 bars of M1 (1) data for EURCAD
+2025-10-31 21:38:36,236 - INFO - Retrieved 5000 bars for EURCAD
+2025-10-31 21:38:37,086 - INFO - Model for EURCAD - Train accuracy: 0.884, Test accuracy: 0.476
+2025-10-31 21:38:37,102 - INFO - Trained and saved model for EURCAD
+2025-10-31 21:38:37,102 - INFO - Successfully trained model for EURCAD on M1
+2025-10-31 21:38:37,103 - INFO - Training model for EURCAD on M5 timeframe
+2025-10-31 21:38:37,103 - INFO - Fetching 5000 bars of M5 (5) data for EURCAD
+2025-10-31 21:38:37,154 - INFO - Retrieved 5000 bars for EURCAD
+2025-10-31 21:38:38,005 - INFO - Model for EURCAD - Train accuracy: 0.885, Test accuracy: 0.506
+2025-10-31 21:38:38,023 - INFO - Trained and saved model for EURCAD
+2025-10-31 21:38:38,023 - INFO - Successfully trained model for EURCAD on M5
+2025-10-31 21:38:38,024 - INFO - Training model for EURCAD on M15 timeframe
+2025-10-31 21:38:38,024 - INFO - Fetching 5000 bars of M15 (15) data for EURCAD
+2025-10-31 21:38:38,100 - INFO - Retrieved 5000 bars for EURCAD
+2025-10-31 21:38:38,954 - INFO - Model for EURCAD - Train accuracy: 0.896, Test accuracy: 0.511
+2025-10-31 21:38:38,971 - INFO - Trained and saved model for EURCAD
+2025-10-31 21:38:38,971 - INFO - Successfully trained model for EURCAD on M15
+2025-10-31 21:38:38,971 - INFO - Training model for EURCAD on H1 timeframe
+2025-10-31 21:38:38,971 - INFO - Fetching 5000 bars of H1 (16385) data for EURCAD
+2025-10-31 21:38:39,187 - INFO - Retrieved 5000 bars for EURCAD
+2025-10-31 21:38:40,046 - INFO - Model for EURCAD - Train accuracy: 0.873, Test accuracy: 0.475
+2025-10-31 21:38:40,062 - INFO - Trained and saved model for EURCAD
+2025-10-31 21:38:40,062 - INFO - Successfully trained model for EURCAD on H1
+2025-10-31 21:38:40,062 - INFO - Training model for EURCHF on M1 timeframe
+2025-10-31 21:38:40,063 - INFO - Fetching 5000 bars of M1 (1) data for EURCHF
+2025-10-31 21:38:40,105 - INFO - Retrieved 5000 bars for EURCHF
+2025-10-31 21:38:40,931 - INFO - Model for EURCHF - Train accuracy: 0.870, Test accuracy: 0.537
+2025-10-31 21:38:40,948 - INFO - Trained and saved model for EURCHF
+2025-10-31 21:38:40,949 - INFO - Successfully trained model for EURCHF on M1
+2025-10-31 21:38:40,949 - INFO - Training model for EURCHF on M5 timeframe
+2025-10-31 21:38:40,949 - INFO - Fetching 5000 bars of M5 (5) data for EURCHF
+2025-10-31 21:38:40,991 - INFO - Retrieved 5000 bars for EURCHF
+2025-10-31 21:38:41,857 - INFO - Model for EURCHF - Train accuracy: 0.886, Test accuracy: 0.504
+2025-10-31 21:38:41,872 - INFO - Trained and saved model for EURCHF
+2025-10-31 21:38:41,873 - INFO - Successfully trained model for EURCHF on M5
+2025-10-31 21:38:41,873 - INFO - Training model for EURCHF on M15 timeframe
+2025-10-31 21:38:41,873 - INFO - Fetching 5000 bars of M15 (15) data for EURCHF
+2025-10-31 21:38:41,954 - INFO - Retrieved 5000 bars for EURCHF
+2025-10-31 21:38:42,817 - INFO - Model for EURCHF - Train accuracy: 0.863, Test accuracy: 0.481
+2025-10-31 21:38:42,833 - INFO - Trained and saved model for EURCHF
+2025-10-31 21:38:42,833 - INFO - Successfully trained model for EURCHF on M15
+2025-10-31 21:38:42,833 - INFO - Training model for EURCHF on H1 timeframe
+2025-10-31 21:38:42,833 - INFO - Fetching 5000 bars of H1 (16385) data for EURCHF
+2025-10-31 21:38:43,055 - INFO - Retrieved 5000 bars for EURCHF
+2025-10-31 21:38:43,926 - INFO - Model for EURCHF - Train accuracy: 0.873, Test accuracy: 0.499
+2025-10-31 21:38:43,943 - INFO - Trained and saved model for EURCHF
+2025-10-31 21:38:43,943 - INFO - Successfully trained model for EURCHF on H1
+2025-10-31 21:38:43,944 - INFO - Training model for EURJPY on M1 timeframe
+2025-10-31 21:38:43,944 - INFO - Fetching 5000 bars of M1 (1) data for EURJPY
+2025-10-31 21:38:43,983 - INFO - Retrieved 5000 bars for EURJPY
+2025-10-31 21:38:44,836 - INFO - Model for EURJPY - Train accuracy: 0.893, Test accuracy: 0.504
+2025-10-31 21:38:44,856 - INFO - Trained and saved model for EURJPY
+2025-10-31 21:38:44,857 - INFO - Successfully trained model for EURJPY on M1
+2025-10-31 21:38:44,857 - INFO - Training model for EURJPY on M5 timeframe
+2025-10-31 21:38:44,857 - INFO - Fetching 5000 bars of M5 (5) data for EURJPY
+2025-10-31 21:38:44,901 - INFO - Retrieved 5000 bars for EURJPY
+2025-10-31 21:38:45,752 - INFO - Model for EURJPY - Train accuracy: 0.892, Test accuracy: 0.498
+2025-10-31 21:38:45,770 - INFO - Trained and saved model for EURJPY
+2025-10-31 21:38:45,770 - INFO - Successfully trained model for EURJPY on M5
+2025-10-31 21:38:45,770 - INFO - Training model for EURJPY on M15 timeframe
+2025-10-31 21:38:45,770 - INFO - Fetching 5000 bars of M15 (15) data for EURJPY
+2025-10-31 21:38:45,847 - INFO - Retrieved 5000 bars for EURJPY
+2025-10-31 21:38:46,714 - INFO - Model for EURJPY - Train accuracy: 0.885, Test accuracy: 0.485
+2025-10-31 21:38:46,731 - INFO - Trained and saved model for EURJPY
+2025-10-31 21:38:46,732 - INFO - Successfully trained model for EURJPY on M15
+2025-10-31 21:38:46,732 - INFO - Training model for EURJPY on H1 timeframe
+2025-10-31 21:38:46,732 - INFO - Fetching 5000 bars of H1 (16385) data for EURJPY
+2025-10-31 21:38:46,733 - INFO - Retrieved 5000 bars for EURJPY
+2025-10-31 21:38:47,594 - INFO - Model for EURJPY - Train accuracy: 0.876, Test accuracy: 0.494
+2025-10-31 21:38:47,609 - INFO - Trained and saved model for EURJPY
+2025-10-31 21:38:47,609 - INFO - Successfully trained model for EURJPY on H1
+2025-10-31 21:38:47,609 - INFO - Training model for EURGBP on M1 timeframe
+2025-10-31 21:38:47,610 - INFO - Fetching 5000 bars of M1 (1) data for EURGBP
+2025-10-31 21:38:47,611 - INFO - Retrieved 5000 bars for EURGBP
+2025-10-31 21:38:48,450 - INFO - Model for EURGBP - Train accuracy: 0.879, Test accuracy: 0.507
+2025-10-31 21:38:48,466 - INFO - Trained and saved model for EURGBP
+2025-10-31 21:38:48,467 - INFO - Successfully trained model for EURGBP on M1
+2025-10-31 21:38:48,467 - INFO - Training model for EURGBP on M5 timeframe
+2025-10-31 21:38:48,467 - INFO - Fetching 5000 bars of M5 (5) data for EURGBP
+2025-10-31 21:38:48,508 - INFO - Retrieved 5000 bars for EURGBP
+2025-10-31 21:38:49,354 - INFO - Model for EURGBP - Train accuracy: 0.871, Test accuracy: 0.475
+2025-10-31 21:38:49,371 - INFO - Trained and saved model for EURGBP
+2025-10-31 21:38:49,371 - INFO - Successfully trained model for EURGBP on M5
+2025-10-31 21:38:49,371 - INFO - Training model for EURGBP on M15 timeframe
+2025-10-31 21:38:49,371 - INFO - Fetching 5000 bars of M15 (15) data for EURGBP
+2025-10-31 21:38:49,457 - INFO - Retrieved 5000 bars for EURGBP
+2025-10-31 21:38:50,317 - INFO - Model for EURGBP - Train accuracy: 0.914, Test accuracy: 0.460
+2025-10-31 21:38:50,336 - INFO - Trained and saved model for EURGBP
+2025-10-31 21:38:50,337 - INFO - Successfully trained model for EURGBP on M15
+2025-10-31 21:38:50,337 - INFO - Training model for EURGBP on H1 timeframe
+2025-10-31 21:38:50,337 - INFO - Fetching 5000 bars of H1 (16385) data for EURGBP
+2025-10-31 21:38:50,562 - INFO - Retrieved 5000 bars for EURGBP
+2025-10-31 21:38:51,434 - INFO - Model for EURGBP - Train accuracy: 0.894, Test accuracy: 0.509
+2025-10-31 21:38:51,451 - INFO - Trained and saved model for EURGBP
+2025-10-31 21:38:51,451 - INFO - Successfully trained model for EURGBP on H1
+2025-10-31 21:38:51,451 - INFO - Training model for EURNZD on M1 timeframe
+2025-10-31 21:38:51,451 - INFO - Fetching 5000 bars of M1 (1) data for EURNZD
+2025-10-31 21:38:51,494 - INFO - Retrieved 5000 bars for EURNZD
+2025-10-31 21:38:52,347 - INFO - Model for EURNZD - Train accuracy: 0.909, Test accuracy: 0.501
+2025-10-31 21:38:52,363 - INFO - Trained and saved model for EURNZD
+2025-10-31 21:38:52,364 - INFO - Successfully trained model for EURNZD on M1
+2025-10-31 21:38:52,364 - INFO - Training model for EURNZD on M5 timeframe
+2025-10-31 21:38:52,364 - INFO - Fetching 5000 bars of M5 (5) data for EURNZD
+2025-10-31 21:38:52,413 - INFO - Retrieved 5000 bars for EURNZD
+2025-10-31 21:38:53,271 - INFO - Model for EURNZD - Train accuracy: 0.880, Test accuracy: 0.503
+2025-10-31 21:38:53,288 - INFO - Trained and saved model for EURNZD
+2025-10-31 21:38:53,289 - INFO - Successfully trained model for EURNZD on M5
+2025-10-31 21:38:53,289 - INFO - Training model for EURNZD on M15 timeframe
+2025-10-31 21:38:53,289 - INFO - Fetching 5000 bars of M15 (15) data for EURNZD
+2025-10-31 21:38:53,363 - INFO - Retrieved 5000 bars for EURNZD
+2025-10-31 21:38:54,241 - INFO - Model for EURNZD - Train accuracy: 0.859, Test accuracy: 0.506
+2025-10-31 21:38:54,259 - INFO - Trained and saved model for EURNZD
+2025-10-31 21:38:54,259 - INFO - Successfully trained model for EURNZD on M15
+2025-10-31 21:38:54,260 - INFO - Training model for EURNZD on H1 timeframe
+2025-10-31 21:38:54,260 - INFO - Fetching 5000 bars of H1 (16385) data for EURNZD
+2025-10-31 21:38:54,485 - INFO - Retrieved 5000 bars for EURNZD
+2025-10-31 21:38:55,358 - INFO - Model for EURNZD - Train accuracy: 0.895, Test accuracy: 0.512
+2025-10-31 21:38:55,378 - INFO - Trained and saved model for EURNZD
+2025-10-31 21:38:55,378 - INFO - Successfully trained model for EURNZD on H1
+2025-10-31 21:38:55,378 - INFO - Training model for EURUSD on M1 timeframe
+2025-10-31 21:38:55,378 - INFO - Fetching 5000 bars of M1 (1) data for EURUSD
+2025-10-31 21:38:55,402 - INFO - Retrieved 5000 bars for EURUSD
+2025-10-31 21:38:56,250 - INFO - Model for EURUSD - Train accuracy: 0.877, Test accuracy: 0.514
+2025-10-31 21:38:56,270 - INFO - Trained and saved model for EURUSD
+2025-10-31 21:38:56,271 - INFO - Successfully trained model for EURUSD on M1
+2025-10-31 21:38:56,271 - INFO - Training model for EURUSD on M5 timeframe
+2025-10-31 21:38:56,271 - INFO - Fetching 5000 bars of M5 (5) data for EURUSD
+2025-10-31 21:38:56,309 - INFO - Retrieved 5000 bars for EURUSD
+2025-10-31 21:38:57,170 - INFO - Model for EURUSD - Train accuracy: 0.884, Test accuracy: 0.497
+2025-10-31 21:38:57,185 - INFO - Trained and saved model for EURUSD
+2025-10-31 21:38:57,186 - INFO - Successfully trained model for EURUSD on M5
+2025-10-31 21:38:57,186 - INFO - Training model for EURUSD on M15 timeframe
+2025-10-31 21:38:57,186 - INFO - Fetching 5000 bars of M15 (15) data for EURUSD
+2025-10-31 21:38:57,259 - INFO - Retrieved 5000 bars for EURUSD
+2025-10-31 21:38:58,113 - INFO - Model for EURUSD - Train accuracy: 0.889, Test accuracy: 0.512
+2025-10-31 21:38:58,130 - INFO - Trained and saved model for EURUSD
+2025-10-31 21:38:58,130 - INFO - Successfully trained model for EURUSD on M15
+2025-10-31 21:38:58,130 - INFO - Training model for EURUSD on H1 timeframe
+2025-10-31 21:38:58,130 - INFO - Fetching 5000 bars of H1 (16385) data for EURUSD
+2025-10-31 21:38:58,132 - INFO - Retrieved 5000 bars for EURUSD
+2025-10-31 21:38:59,001 - INFO - Model for EURUSD - Train accuracy: 0.906, Test accuracy: 0.483
+2025-10-31 21:38:59,017 - INFO - Trained and saved model for EURUSD
+2025-10-31 21:38:59,017 - INFO - Successfully trained model for EURUSD on H1
+2025-10-31 21:38:59,018 - INFO - Training model for GBPAUD on M1 timeframe
+2025-10-31 21:38:59,018 - INFO - Fetching 5000 bars of M1 (1) data for GBPAUD
+2025-10-31 21:38:59,050 - INFO - Retrieved 5000 bars for GBPAUD
+2025-10-31 21:38:59,912 - INFO - Model for GBPAUD - Train accuracy: 0.920, Test accuracy: 0.502
+2025-10-31 21:38:59,930 - INFO - Trained and saved model for GBPAUD
+2025-10-31 21:38:59,930 - INFO - Successfully trained model for GBPAUD on M1
+2025-10-31 21:38:59,931 - INFO - Training model for GBPAUD on M5 timeframe
+2025-10-31 21:38:59,931 - INFO - Fetching 5000 bars of M5 (5) data for GBPAUD
+2025-10-31 21:38:59,983 - INFO - Retrieved 5000 bars for GBPAUD
+2025-10-31 21:39:00,848 - INFO - Model for GBPAUD - Train accuracy: 0.884, Test accuracy: 0.494
+2025-10-31 21:39:00,863 - INFO - Trained and saved model for GBPAUD
+2025-10-31 21:39:00,863 - INFO - Successfully trained model for GBPAUD on M5
+2025-10-31 21:39:00,864 - INFO - Training model for GBPAUD on M15 timeframe
+2025-10-31 21:39:00,864 - INFO - Fetching 5000 bars of M15 (15) data for GBPAUD
+2025-10-31 21:39:00,944 - INFO - Retrieved 5000 bars for GBPAUD
+2025-10-31 21:39:01,802 - INFO - Model for GBPAUD - Train accuracy: 0.886, Test accuracy: 0.494
+2025-10-31 21:39:01,820 - INFO - Trained and saved model for GBPAUD
+2025-10-31 21:39:01,820 - INFO - Successfully trained model for GBPAUD on M15
+2025-10-31 21:39:01,820 - INFO - Training model for GBPAUD on H1 timeframe
+2025-10-31 21:39:01,820 - INFO - Fetching 5000 bars of H1 (16385) data for GBPAUD
+2025-10-31 21:39:02,032 - INFO - Retrieved 5000 bars for GBPAUD
+2025-10-31 21:39:02,902 - INFO - Model for GBPAUD - Train accuracy: 0.874, Test accuracy: 0.501
+2025-10-31 21:39:02,916 - INFO - Trained and saved model for GBPAUD
+2025-10-31 21:39:02,917 - INFO - Successfully trained model for GBPAUD on H1
+2025-10-31 21:39:02,917 - INFO - Training model for GBPCAD on M1 timeframe
+2025-10-31 21:39:02,917 - INFO - Fetching 5000 bars of M1 (1) data for GBPCAD
+2025-10-31 21:39:02,948 - INFO - Retrieved 5000 bars for GBPCAD
+2025-10-31 21:39:03,803 - INFO - Model for GBPCAD - Train accuracy: 0.877, Test accuracy: 0.495
+2025-10-31 21:39:03,819 - INFO - Trained and saved model for GBPCAD
+2025-10-31 21:39:03,819 - INFO - Successfully trained model for GBPCAD on M1
+2025-10-31 21:39:03,819 - INFO - Training model for GBPCAD on M5 timeframe
+2025-10-31 21:39:03,820 - INFO - Fetching 5000 bars of M5 (5) data for GBPCAD
+2025-10-31 21:39:03,878 - INFO - Retrieved 5000 bars for GBPCAD
+2025-10-31 21:39:04,749 - INFO - Model for GBPCAD - Train accuracy: 0.877, Test accuracy: 0.515
+2025-10-31 21:39:04,765 - INFO - Trained and saved model for GBPCAD
+2025-10-31 21:39:04,765 - INFO - Successfully trained model for GBPCAD on M5
+2025-10-31 21:39:04,765 - INFO - Training model for GBPCAD on M15 timeframe
+2025-10-31 21:39:04,766 - INFO - Fetching 5000 bars of M15 (15) data for GBPCAD
+2025-10-31 21:39:04,860 - INFO - Retrieved 5000 bars for GBPCAD
+2025-10-31 21:39:05,746 - INFO - Model for GBPCAD - Train accuracy: 0.884, Test accuracy: 0.498
+2025-10-31 21:39:05,769 - INFO - Trained and saved model for GBPCAD
+2025-10-31 21:39:05,770 - INFO - Successfully trained model for GBPCAD on M15
+2025-10-31 21:39:05,770 - INFO - Training model for GBPCAD on H1 timeframe
+2025-10-31 21:39:05,770 - INFO - Fetching 5000 bars of H1 (16385) data for GBPCAD
+2025-10-31 21:39:06,001 - INFO - Retrieved 5000 bars for GBPCAD
+2025-10-31 21:39:06,933 - INFO - Model for GBPCAD - Train accuracy: 0.861, Test accuracy: 0.491
+2025-10-31 21:39:06,952 - INFO - Trained and saved model for GBPCAD
+2025-10-31 21:39:06,952 - INFO - Successfully trained model for GBPCAD on H1
+2025-10-31 21:39:06,952 - INFO - Training model for GBPCHF on M1 timeframe
+2025-10-31 21:39:06,952 - INFO - Fetching 5000 bars of M1 (1) data for GBPCHF
+2025-10-31 21:39:06,983 - INFO - Retrieved 5000 bars for GBPCHF
+2025-10-31 21:39:07,825 - INFO - Model for GBPCHF - Train accuracy: 0.881, Test accuracy: 0.516
+2025-10-31 21:39:07,841 - INFO - Trained and saved model for GBPCHF
+2025-10-31 21:39:07,842 - INFO - Successfully trained model for GBPCHF on M1
+2025-10-31 21:39:07,842 - INFO - Training model for GBPCHF on M5 timeframe
+2025-10-31 21:39:07,842 - INFO - Fetching 5000 bars of M5 (5) data for GBPCHF
+2025-10-31 21:39:07,882 - INFO - Retrieved 5000 bars for GBPCHF
+2025-10-31 21:39:08,737 - INFO - Model for GBPCHF - Train accuracy: 0.849, Test accuracy: 0.471
+2025-10-31 21:39:08,755 - INFO - Trained and saved model for GBPCHF
+2025-10-31 21:39:08,755 - INFO - Successfully trained model for GBPCHF on M5
+2025-10-31 21:39:08,755 - INFO - Training model for GBPCHF on M15 timeframe
+2025-10-31 21:39:08,755 - INFO - Fetching 5000 bars of M15 (15) data for GBPCHF
+2025-10-31 21:39:08,834 - INFO - Retrieved 5000 bars for GBPCHF
+2025-10-31 21:39:09,697 - INFO - Model for GBPCHF - Train accuracy: 0.875, Test accuracy: 0.503
+2025-10-31 21:39:09,716 - INFO - Trained and saved model for GBPCHF
+2025-10-31 21:39:09,717 - INFO - Successfully trained model for GBPCHF on M15
+2025-10-31 21:39:09,717 - INFO - Training model for GBPCHF on H1 timeframe
+2025-10-31 21:39:09,717 - INFO - Fetching 5000 bars of H1 (16385) data for GBPCHF
+2025-10-31 21:39:09,938 - INFO - Retrieved 5000 bars for GBPCHF
+2025-10-31 21:39:10,801 - INFO - Model for GBPCHF - Train accuracy: 0.867, Test accuracy: 0.514
+2025-10-31 21:39:10,818 - INFO - Trained and saved model for GBPCHF
+2025-10-31 21:39:10,819 - INFO - Successfully trained model for GBPCHF on H1
+2025-10-31 21:39:10,819 - INFO - Training model for GBPJPY on M1 timeframe
+2025-10-31 21:39:10,819 - INFO - Fetching 5000 bars of M1 (1) data for GBPJPY
+2025-10-31 21:39:10,820 - INFO - Retrieved 5000 bars for GBPJPY
+2025-10-31 21:39:11,699 - INFO - Model for GBPJPY - Train accuracy: 0.880, Test accuracy: 0.521
+2025-10-31 21:39:11,716 - INFO - Trained and saved model for GBPJPY
+2025-10-31 21:39:11,717 - INFO - Successfully trained model for GBPJPY on M1
+2025-10-31 21:39:11,717 - INFO - Training model for GBPJPY on M5 timeframe
+2025-10-31 21:39:11,717 - INFO - Fetching 5000 bars of M5 (5) data for GBPJPY
+2025-10-31 21:39:11,759 - INFO - Retrieved 5000 bars for GBPJPY
+2025-10-31 21:39:12,623 - INFO - Model for GBPJPY - Train accuracy: 0.891, Test accuracy: 0.518
+2025-10-31 21:39:12,640 - INFO - Trained and saved model for GBPJPY
+2025-10-31 21:39:12,641 - INFO - Successfully trained model for GBPJPY on M5
+2025-10-31 21:39:12,641 - INFO - Training model for GBPJPY on M15 timeframe
+2025-10-31 21:39:12,641 - INFO - Fetching 5000 bars of M15 (15) data for GBPJPY
+2025-10-31 21:39:12,722 - INFO - Retrieved 5000 bars for GBPJPY
+2025-10-31 21:39:13,588 - INFO - Model for GBPJPY - Train accuracy: 0.902, Test accuracy: 0.495
+2025-10-31 21:39:13,604 - INFO - Trained and saved model for GBPJPY
+2025-10-31 21:39:13,605 - INFO - Successfully trained model for GBPJPY on M15
+2025-10-31 21:39:13,605 - INFO - Training model for GBPJPY on H1 timeframe
+2025-10-31 21:39:13,605 - INFO - Fetching 5000 bars of H1 (16385) data for GBPJPY
+2025-10-31 21:39:13,824 - INFO - Retrieved 5000 bars for GBPJPY
+2025-10-31 21:39:14,701 - INFO - Model for GBPJPY - Train accuracy: 0.888, Test accuracy: 0.495
+2025-10-31 21:39:14,717 - INFO - Trained and saved model for GBPJPY
+2025-10-31 21:39:14,717 - INFO - Successfully trained model for GBPJPY on H1
+2025-10-31 21:39:14,717 - INFO - Training model for GBPNZD on M1 timeframe
+2025-10-31 21:39:14,717 - INFO - Fetching 5000 bars of M1 (1) data for GBPNZD
+2025-10-31 21:39:14,746 - INFO - Retrieved 5000 bars for GBPNZD
+2025-10-31 21:39:15,617 - INFO - Model for GBPNZD - Train accuracy: 0.865, Test accuracy: 0.470
+2025-10-31 21:39:15,634 - INFO - Trained and saved model for GBPNZD
+2025-10-31 21:39:15,634 - INFO - Successfully trained model for GBPNZD on M1
+2025-10-31 21:39:15,634 - INFO - Training model for GBPNZD on M5 timeframe
+2025-10-31 21:39:15,634 - INFO - Fetching 5000 bars of M5 (5) data for GBPNZD
+2025-10-31 21:39:15,681 - INFO - Retrieved 5000 bars for GBPNZD
+2025-10-31 21:39:16,551 - INFO - Model for GBPNZD - Train accuracy: 0.878, Test accuracy: 0.509
+2025-10-31 21:39:16,568 - INFO - Trained and saved model for GBPNZD
+2025-10-31 21:39:16,569 - INFO - Successfully trained model for GBPNZD on M5
+2025-10-31 21:39:16,569 - INFO - Training model for GBPNZD on M15 timeframe
+2025-10-31 21:39:16,569 - INFO - Fetching 5000 bars of M15 (15) data for GBPNZD
+2025-10-31 21:39:16,643 - INFO - Retrieved 5000 bars for GBPNZD
+2025-10-31 21:39:17,508 - INFO - Model for GBPNZD - Train accuracy: 0.886, Test accuracy: 0.485
+2025-10-31 21:39:17,527 - INFO - Trained and saved model for GBPNZD
+2025-10-31 21:39:17,528 - INFO - Successfully trained model for GBPNZD on M15
+2025-10-31 21:39:17,528 - INFO - Training model for GBPNZD on H1 timeframe
+2025-10-31 21:39:17,528 - INFO - Fetching 5000 bars of H1 (16385) data for GBPNZD
+2025-10-31 21:39:17,717 - INFO - Retrieved 5000 bars for GBPNZD
+2025-10-31 21:39:18,575 - INFO - Model for GBPNZD - Train accuracy: 0.882, Test accuracy: 0.474
+2025-10-31 21:39:18,591 - INFO - Trained and saved model for GBPNZD
+2025-10-31 21:39:18,592 - INFO - Successfully trained model for GBPNZD on H1
+2025-10-31 21:39:18,592 - INFO - Training model for GBPUSD on M1 timeframe
+2025-10-31 21:39:18,592 - INFO - Fetching 5000 bars of M1 (1) data for GBPUSD
+2025-10-31 21:39:18,622 - INFO - Retrieved 5000 bars for GBPUSD
+2025-10-31 21:39:19,471 - INFO - Model for GBPUSD - Train accuracy: 0.880, Test accuracy: 0.508
+2025-10-31 21:39:19,487 - INFO - Trained and saved model for GBPUSD
+2025-10-31 21:39:19,488 - INFO - Successfully trained model for GBPUSD on M1
+2025-10-31 21:39:19,488 - INFO - Training model for GBPUSD on M5 timeframe
+2025-10-31 21:39:19,488 - INFO - Fetching 5000 bars of M5 (5) data for GBPUSD
+2025-10-31 21:39:19,525 - INFO - Retrieved 5000 bars for GBPUSD
+2025-10-31 21:39:20,397 - INFO - Model for GBPUSD - Train accuracy: 0.894, Test accuracy: 0.486
+2025-10-31 21:39:20,418 - INFO - Trained and saved model for GBPUSD
+2025-10-31 21:39:20,419 - INFO - Successfully trained model for GBPUSD on M5
+2025-10-31 21:39:20,419 - INFO - Training model for GBPUSD on M15 timeframe
+2025-10-31 21:39:20,419 - INFO - Fetching 5000 bars of M15 (15) data for GBPUSD
+2025-10-31 21:39:20,491 - INFO - Retrieved 5000 bars for GBPUSD
+2025-10-31 21:39:21,350 - INFO - Model for GBPUSD - Train accuracy: 0.897, Test accuracy: 0.499
+2025-10-31 21:39:21,367 - INFO - Trained and saved model for GBPUSD
+2025-10-31 21:39:21,367 - INFO - Successfully trained model for GBPUSD on M15
+2025-10-31 21:39:21,367 - INFO - Training model for GBPUSD on H1 timeframe
+2025-10-31 21:39:21,367 - INFO - Fetching 5000 bars of H1 (16385) data for GBPUSD
+2025-10-31 21:39:21,369 - INFO - Retrieved 5000 bars for GBPUSD
+2025-10-31 21:39:22,237 - INFO - Model for GBPUSD - Train accuracy: 0.878, Test accuracy: 0.495
+2025-10-31 21:39:22,254 - INFO - Trained and saved model for GBPUSD
+2025-10-31 21:39:22,255 - INFO - Successfully trained model for GBPUSD on H1
+2025-10-31 21:39:22,255 - INFO - Training model for NZDCAD on M1 timeframe
+2025-10-31 21:39:22,255 - INFO - Fetching 5000 bars of M1 (1) data for NZDCAD
+2025-10-31 21:39:22,283 - INFO - Retrieved 5000 bars for NZDCAD
+2025-10-31 21:39:23,148 - INFO - Model for NZDCAD - Train accuracy: 0.879, Test accuracy: 0.519
+2025-10-31 21:39:23,170 - INFO - Trained and saved model for NZDCAD
+2025-10-31 21:39:23,170 - INFO - Successfully trained model for NZDCAD on M1
+2025-10-31 21:39:23,171 - INFO - Training model for NZDCAD on M5 timeframe
+2025-10-31 21:39:23,171 - INFO - Fetching 5000 bars of M5 (5) data for NZDCAD
+2025-10-31 21:39:23,221 - INFO - Retrieved 5000 bars for NZDCAD
+2025-10-31 21:39:24,104 - INFO - Model for NZDCAD - Train accuracy: 0.879, Test accuracy: 0.524
+2025-10-31 21:39:24,120 - INFO - Trained and saved model for NZDCAD
+2025-10-31 21:39:24,120 - INFO - Successfully trained model for NZDCAD on M5
+2025-10-31 21:39:24,121 - INFO - Training model for NZDCAD on M15 timeframe
+2025-10-31 21:39:24,121 - INFO - Fetching 5000 bars of M15 (15) data for NZDCAD
+2025-10-31 21:39:24,201 - INFO - Retrieved 5000 bars for NZDCAD
+2025-10-31 21:39:25,074 - INFO - Model for NZDCAD - Train accuracy: 0.880, Test accuracy: 0.493
+2025-10-31 21:39:25,092 - INFO - Trained and saved model for NZDCAD
+2025-10-31 21:39:25,093 - INFO - Successfully trained model for NZDCAD on M15
+2025-10-31 21:39:25,093 - INFO - Training model for NZDCAD on H1 timeframe
+2025-10-31 21:39:25,093 - INFO - Fetching 5000 bars of H1 (16385) data for NZDCAD
+2025-10-31 21:39:25,308 - INFO - Retrieved 5000 bars for NZDCAD
+2025-10-31 21:39:26,168 - INFO - Model for NZDCAD - Train accuracy: 0.885, Test accuracy: 0.475
+2025-10-31 21:39:26,185 - INFO - Trained and saved model for NZDCAD
+2025-10-31 21:39:26,185 - INFO - Successfully trained model for NZDCAD on H1
+2025-10-31 21:39:26,185 - INFO - Training model for NZDCHF on M1 timeframe
+2025-10-31 21:39:26,185 - INFO - Fetching 5000 bars of M1 (1) data for NZDCHF
+2025-10-31 21:39:26,213 - INFO - Retrieved 5000 bars for NZDCHF
+2025-10-31 21:39:27,049 - INFO - Model for NZDCHF - Train accuracy: 0.873, Test accuracy: 0.534
+2025-10-31 21:39:27,068 - INFO - Trained and saved model for NZDCHF
+2025-10-31 21:39:27,068 - INFO - Successfully trained model for NZDCHF on M1
+2025-10-31 21:39:27,068 - INFO - Training model for NZDCHF on M5 timeframe
+2025-10-31 21:39:27,068 - INFO - Fetching 5000 bars of M5 (5) data for NZDCHF
+2025-10-31 21:39:27,117 - INFO - Retrieved 5000 bars for NZDCHF
+2025-10-31 21:39:27,967 - INFO - Model for NZDCHF - Train accuracy: 0.875, Test accuracy: 0.521
+2025-10-31 21:39:27,982 - INFO - Trained and saved model for NZDCHF
+2025-10-31 21:39:27,983 - INFO - Successfully trained model for NZDCHF on M5
+2025-10-31 21:39:27,983 - INFO - Training model for NZDCHF on M15 timeframe
+2025-10-31 21:39:27,983 - INFO - Fetching 5000 bars of M15 (15) data for NZDCHF
+2025-10-31 21:39:28,066 - INFO - Retrieved 5000 bars for NZDCHF
+2025-10-31 21:39:28,964 - INFO - Model for NZDCHF - Train accuracy: 0.863, Test accuracy: 0.500
+2025-10-31 21:39:28,982 - INFO - Trained and saved model for NZDCHF
+2025-10-31 21:39:28,982 - INFO - Successfully trained model for NZDCHF on M15
+2025-10-31 21:39:28,982 - INFO - Training model for NZDCHF on H1 timeframe
+2025-10-31 21:39:28,982 - INFO - Fetching 5000 bars of H1 (16385) data for NZDCHF
+2025-10-31 21:39:29,203 - INFO - Retrieved 5000 bars for NZDCHF
+2025-10-31 21:39:30,070 - INFO - Model for NZDCHF - Train accuracy: 0.865, Test accuracy: 0.505
+2025-10-31 21:39:30,086 - INFO - Trained and saved model for NZDCHF
+2025-10-31 21:39:30,087 - INFO - Successfully trained model for NZDCHF on H1
+2025-10-31 21:39:30,087 - INFO - Training model for NZDJPY on M1 timeframe
+2025-10-31 21:39:30,087 - INFO - Fetching 5000 bars of M1 (1) data for NZDJPY
+2025-10-31 21:39:30,120 - INFO - Retrieved 5000 bars for NZDJPY
+2025-10-31 21:39:30,978 - INFO - Model for NZDJPY - Train accuracy: 0.860, Test accuracy: 0.486
+2025-10-31 21:39:30,994 - INFO - Trained and saved model for NZDJPY
+2025-10-31 21:39:30,994 - INFO - Successfully trained model for NZDJPY on M1
+2025-10-31 21:39:30,994 - INFO - Training model for NZDJPY on M5 timeframe
+2025-10-31 21:39:30,994 - INFO - Fetching 5000 bars of M5 (5) data for NZDJPY
+2025-10-31 21:39:31,041 - INFO - Retrieved 5000 bars for NZDJPY
+2025-10-31 21:39:31,912 - INFO - Model for NZDJPY - Train accuracy: 0.891, Test accuracy: 0.546
+2025-10-31 21:39:31,936 - INFO - Trained and saved model for NZDJPY
+2025-10-31 21:39:31,936 - INFO - Successfully trained model for NZDJPY on M5
+2025-10-31 21:39:31,936 - INFO - Training model for NZDJPY on M15 timeframe
+2025-10-31 21:39:31,936 - INFO - Fetching 5000 bars of M15 (15) data for NZDJPY
+2025-10-31 21:39:32,009 - INFO - Retrieved 5000 bars for NZDJPY
+2025-10-31 21:39:32,906 - INFO - Model for NZDJPY - Train accuracy: 0.874, Test accuracy: 0.505
+2025-10-31 21:39:32,923 - INFO - Trained and saved model for NZDJPY
+2025-10-31 21:39:32,924 - INFO - Successfully trained model for NZDJPY on M15
+2025-10-31 21:39:32,924 - INFO - Training model for NZDJPY on H1 timeframe
+2025-10-31 21:39:32,924 - INFO - Fetching 5000 bars of H1 (16385) data for NZDJPY
+2025-10-31 21:39:33,183 - INFO - Retrieved 5000 bars for NZDJPY
+2025-10-31 21:39:34,052 - INFO - Model for NZDJPY - Train accuracy: 0.894, Test accuracy: 0.507
+2025-10-31 21:39:34,069 - INFO - Trained and saved model for NZDJPY
+2025-10-31 21:39:34,070 - INFO - Successfully trained model for NZDJPY on H1
+2025-10-31 21:39:34,070 - INFO - Training model for NZDUSD on M1 timeframe
+2025-10-31 21:39:34,070 - INFO - Fetching 5000 bars of M1 (1) data for NZDUSD
+2025-10-31 21:39:34,100 - INFO - Retrieved 5000 bars for NZDUSD
+2025-10-31 21:39:34,939 - INFO - Model for NZDUSD - Train accuracy: 0.862, Test accuracy: 0.542
+2025-10-31 21:39:34,954 - INFO - Trained and saved model for NZDUSD
+2025-10-31 21:39:34,955 - INFO - Successfully trained model for NZDUSD on M1
+2025-10-31 21:39:34,956 - INFO - Training model for NZDUSD on M5 timeframe
+2025-10-31 21:39:34,956 - INFO - Fetching 5000 bars of M5 (5) data for NZDUSD
+2025-10-31 21:39:35,004 - INFO - Retrieved 5000 bars for NZDUSD
+2025-10-31 21:39:35,871 - INFO - Model for NZDUSD - Train accuracy: 0.898, Test accuracy: 0.512
+2025-10-31 21:39:35,890 - INFO - Trained and saved model for NZDUSD
+2025-10-31 21:39:35,891 - INFO - Successfully trained model for NZDUSD on M5
+2025-10-31 21:39:35,891 - INFO - Training model for NZDUSD on M15 timeframe
+2025-10-31 21:39:35,891 - INFO - Fetching 5000 bars of M15 (15) data for NZDUSD
+2025-10-31 21:39:35,970 - INFO - Retrieved 5000 bars for NZDUSD
+2025-10-31 21:39:36,837 - INFO - Model for NZDUSD - Train accuracy: 0.871, Test accuracy: 0.497
+2025-10-31 21:39:36,852 - INFO - Trained and saved model for NZDUSD
+2025-10-31 21:39:36,852 - INFO - Successfully trained model for NZDUSD on M15
+2025-10-31 21:39:36,852 - INFO - Training model for NZDUSD on H1 timeframe
+2025-10-31 21:39:36,852 - INFO - Fetching 5000 bars of H1 (16385) data for NZDUSD
+2025-10-31 21:39:37,061 - INFO - Retrieved 5000 bars for NZDUSD
+2025-10-31 21:39:37,923 - INFO - Model for NZDUSD - Train accuracy: 0.849, Test accuracy: 0.503
+2025-10-31 21:39:37,940 - INFO - Trained and saved model for NZDUSD
+2025-10-31 21:39:37,940 - INFO - Successfully trained model for NZDUSD on H1
+2025-10-31 21:39:37,940 - INFO - Training model for USDCAD on M1 timeframe
+2025-10-31 21:39:37,940 - INFO - Fetching 5000 bars of M1 (1) data for USDCAD
+2025-10-31 21:39:37,942 - INFO - Retrieved 5000 bars for USDCAD
+2025-10-31 21:39:38,793 - INFO - Model for USDCAD - Train accuracy: 0.866, Test accuracy: 0.517
+2025-10-31 21:39:38,811 - INFO - Trained and saved model for USDCAD
+2025-10-31 21:39:38,811 - INFO - Successfully trained model for USDCAD on M1
+2025-10-31 21:39:38,811 - INFO - Training model for USDCAD on M5 timeframe
+2025-10-31 21:39:38,811 - INFO - Fetching 5000 bars of M5 (5) data for USDCAD
+2025-10-31 21:39:38,855 - INFO - Retrieved 5000 bars for USDCAD
+2025-10-31 21:39:39,732 - INFO - Model for USDCAD - Train accuracy: 0.866, Test accuracy: 0.504
+2025-10-31 21:39:39,747 - INFO - Trained and saved model for USDCAD
+2025-10-31 21:39:39,748 - INFO - Successfully trained model for USDCAD on M5
+2025-10-31 21:39:39,748 - INFO - Training model for USDCAD on M15 timeframe
+2025-10-31 21:39:39,748 - INFO - Fetching 5000 bars of M15 (15) data for USDCAD
+2025-10-31 21:39:39,822 - INFO - Retrieved 5000 bars for USDCAD
+2025-10-31 21:39:40,688 - INFO - Model for USDCAD - Train accuracy: 0.895, Test accuracy: 0.504
+2025-10-31 21:39:40,705 - INFO - Trained and saved model for USDCAD
+2025-10-31 21:39:40,706 - INFO - Successfully trained model for USDCAD on M15
+2025-10-31 21:39:40,706 - INFO - Training model for USDCAD on H1 timeframe
+2025-10-31 21:39:40,706 - INFO - Fetching 5000 bars of H1 (16385) data for USDCAD
+2025-10-31 21:39:40,913 - INFO - Retrieved 5000 bars for USDCAD
+2025-10-31 21:39:41,774 - INFO - Model for USDCAD - Train accuracy: 0.900, Test accuracy: 0.523
+2025-10-31 21:39:41,790 - INFO - Trained and saved model for USDCAD
+2025-10-31 21:39:41,791 - INFO - Successfully trained model for USDCAD on H1
+2025-10-31 21:39:41,791 - INFO - Training model for USDCHF on M1 timeframe
+2025-10-31 21:39:41,791 - INFO - Fetching 5000 bars of M1 (1) data for USDCHF
+2025-10-31 21:39:41,831 - INFO - Retrieved 5000 bars for USDCHF
+2025-10-31 21:39:42,673 - INFO - Model for USDCHF - Train accuracy: 0.904, Test accuracy: 0.511
+2025-10-31 21:39:42,689 - INFO - Trained and saved model for USDCHF
+2025-10-31 21:39:42,689 - INFO - Successfully trained model for USDCHF on M1
+2025-10-31 21:39:42,689 - INFO - Training model for USDCHF on M5 timeframe
+2025-10-31 21:39:42,689 - INFO - Fetching 5000 bars of M5 (5) data for USDCHF
+2025-10-31 21:39:42,691 - INFO - Retrieved 5000 bars for USDCHF
+2025-10-31 21:39:43,543 - INFO - Model for USDCHF - Train accuracy: 0.883, Test accuracy: 0.507
+2025-10-31 21:39:43,560 - INFO - Trained and saved model for USDCHF
+2025-10-31 21:39:43,560 - INFO - Successfully trained model for USDCHF on M5
+2025-10-31 21:39:43,560 - INFO - Training model for USDCHF on M15 timeframe
+2025-10-31 21:39:43,561 - INFO - Fetching 5000 bars of M15 (15) data for USDCHF
+2025-10-31 21:39:43,642 - INFO - Retrieved 5000 bars for USDCHF
+2025-10-31 21:39:44,502 - INFO - Model for USDCHF - Train accuracy: 0.883, Test accuracy: 0.493
+2025-10-31 21:39:44,520 - INFO - Trained and saved model for USDCHF
+2025-10-31 21:39:44,520 - INFO - Successfully trained model for USDCHF on M15
+2025-10-31 21:39:44,521 - INFO - Training model for USDCHF on H1 timeframe
+2025-10-31 21:39:44,521 - INFO - Fetching 5000 bars of H1 (16385) data for USDCHF
+2025-10-31 21:39:44,727 - INFO - Retrieved 5000 bars for USDCHF
+2025-10-31 21:39:45,595 - INFO - Model for USDCHF - Train accuracy: 0.874, Test accuracy: 0.474
+2025-10-31 21:39:45,616 - INFO - Trained and saved model for USDCHF
+2025-10-31 21:39:45,616 - INFO - Successfully trained model for USDCHF on H1
+2025-10-31 21:39:45,617 - INFO - Training model for USDJPY on M1 timeframe
+2025-10-31 21:39:45,617 - INFO - Fetching 5000 bars of M1 (1) data for USDJPY
+2025-10-31 21:39:45,644 - INFO - Retrieved 5000 bars for USDJPY
+2025-10-31 21:39:46,508 - INFO - Model for USDJPY - Train accuracy: 0.891, Test accuracy: 0.492
+2025-10-31 21:39:46,525 - INFO - Trained and saved model for USDJPY
+2025-10-31 21:39:46,526 - INFO - Successfully trained model for USDJPY on M1
+2025-10-31 21:39:46,526 - INFO - Training model for USDJPY on M5 timeframe
+2025-10-31 21:39:46,526 - INFO - Fetching 5000 bars of M5 (5) data for USDJPY
+2025-10-31 21:39:46,563 - INFO - Retrieved 5000 bars for USDJPY
+2025-10-31 21:39:47,430 - INFO - Model for USDJPY - Train accuracy: 0.900, Test accuracy: 0.477
+2025-10-31 21:39:47,446 - INFO - Trained and saved model for USDJPY
+2025-10-31 21:39:47,446 - INFO - Successfully trained model for USDJPY on M5
+2025-10-31 21:39:47,446 - INFO - Training model for USDJPY on M15 timeframe
+2025-10-31 21:39:47,446 - INFO - Fetching 5000 bars of M15 (15) data for USDJPY
+2025-10-31 21:39:47,524 - INFO - Retrieved 5000 bars for USDJPY
+2025-10-31 21:39:48,391 - INFO - Model for USDJPY - Train accuracy: 0.890, Test accuracy: 0.490
+2025-10-31 21:39:48,407 - INFO - Trained and saved model for USDJPY
+2025-10-31 21:39:48,408 - INFO - Successfully trained model for USDJPY on M15
+2025-10-31 21:39:48,408 - INFO - Training model for USDJPY on H1 timeframe
+2025-10-31 21:39:48,408 - INFO - Fetching 5000 bars of H1 (16385) data for USDJPY
+2025-10-31 21:39:48,409 - INFO - Retrieved 5000 bars for USDJPY
+2025-10-31 21:39:49,281 - INFO - Model for USDJPY - Train accuracy: 0.888, Test accuracy: 0.498
+2025-10-31 21:39:49,299 - INFO - Trained and saved model for USDJPY
+2025-10-31 21:39:49,299 - INFO - Successfully trained model for USDJPY on H1
+2025-10-31 21:39:49,300 - INFO - Training model for XAGUSD on M1 timeframe
+2025-10-31 21:39:49,300 - INFO - Fetching 5000 bars of M1 (1) data for XAGUSD
+2025-10-31 21:39:49,301 - INFO - Retrieved 5000 bars for XAGUSD
+2025-10-31 21:39:50,161 - INFO - Model for XAGUSD - Train accuracy: 0.888, Test accuracy: 0.485
+2025-10-31 21:39:50,178 - INFO - Trained and saved model for XAGUSD
+2025-10-31 21:39:50,178 - INFO - Successfully trained model for XAGUSD on M1
+2025-10-31 21:39:50,178 - INFO - Training model for XAGUSD on M5 timeframe
+2025-10-31 21:39:50,179 - INFO - Fetching 5000 bars of M5 (5) data for XAGUSD
+2025-10-31 21:39:50,218 - INFO - Retrieved 5000 bars for XAGUSD
+2025-10-31 21:39:51,094 - INFO - Model for XAGUSD - Train accuracy: 0.871, Test accuracy: 0.521
+2025-10-31 21:39:51,111 - INFO - Trained and saved model for XAGUSD
+2025-10-31 21:39:51,111 - INFO - Successfully trained model for XAGUSD on M5
+2025-10-31 21:39:51,112 - INFO - Training model for XAGUSD on M15 timeframe
+2025-10-31 21:39:51,112 - INFO - Fetching 5000 bars of M15 (15) data for XAGUSD
+2025-10-31 21:39:51,187 - INFO - Retrieved 5000 bars for XAGUSD
+2025-10-31 21:39:52,055 - INFO - Model for XAGUSD - Train accuracy: 0.880, Test accuracy: 0.513
+2025-10-31 21:39:52,072 - INFO - Trained and saved model for XAGUSD
+2025-10-31 21:39:52,073 - INFO - Successfully trained model for XAGUSD on M15
+2025-10-31 21:39:52,073 - INFO - Training model for XAGUSD on H1 timeframe
+2025-10-31 21:39:52,073 - INFO - Fetching 5000 bars of H1 (16385) data for XAGUSD
+2025-10-31 21:39:52,157 - INFO - Retrieved 5000 bars for XAGUSD
+2025-10-31 21:39:53,020 - INFO - Model for XAGUSD - Train accuracy: 0.890, Test accuracy: 0.487
+2025-10-31 21:39:53,036 - INFO - Trained and saved model for XAGUSD
+2025-10-31 21:39:53,037 - INFO - Successfully trained model for XAGUSD on H1
+2025-10-31 21:39:53,037 - INFO - Training model for XAUUSD on M1 timeframe
+2025-10-31 21:39:53,037 - INFO - Fetching 5000 bars of M1 (1) data for XAUUSD
+2025-10-31 21:39:53,038 - INFO - Retrieved 5000 bars for XAUUSD
+2025-10-31 21:39:53,915 - INFO - Model for XAUUSD - Train accuracy: 0.894, Test accuracy: 0.501
+2025-10-31 21:39:53,938 - INFO - Trained and saved model for XAUUSD
+2025-10-31 21:39:53,938 - INFO - Successfully trained model for XAUUSD on M1
+2025-10-31 21:39:53,939 - INFO - Training model for XAUUSD on M5 timeframe
+2025-10-31 21:39:53,939 - INFO - Fetching 5000 bars of M5 (5) data for XAUUSD
+2025-10-31 21:39:53,981 - INFO - Retrieved 5000 bars for XAUUSD
+2025-10-31 21:39:54,843 - INFO - Model for XAUUSD - Train accuracy: 0.890, Test accuracy: 0.501
+2025-10-31 21:39:54,859 - INFO - Trained and saved model for XAUUSD
+2025-10-31 21:39:54,859 - INFO - Successfully trained model for XAUUSD on M5
+2025-10-31 21:39:54,859 - INFO - Training model for XAUUSD on M15 timeframe
+2025-10-31 21:39:54,860 - INFO - Fetching 5000 bars of M15 (15) data for XAUUSD
+2025-10-31 21:39:54,931 - INFO - Retrieved 5000 bars for XAUUSD
+2025-10-31 21:39:55,805 - INFO - Model for XAUUSD - Train accuracy: 0.859, Test accuracy: 0.515
+2025-10-31 21:39:55,822 - INFO - Trained and saved model for XAUUSD
+2025-10-31 21:39:55,823 - INFO - Successfully trained model for XAUUSD on M15
+2025-10-31 21:39:55,823 - INFO - Training model for XAUUSD on H1 timeframe
+2025-10-31 21:39:55,823 - INFO - Fetching 5000 bars of H1 (16385) data for XAUUSD
+2025-10-31 21:39:55,913 - INFO - Retrieved 5000 bars for XAUUSD
+2025-10-31 21:39:56,805 - INFO - Model for XAUUSD - Train accuracy: 0.866, Test accuracy: 0.486
+2025-10-31 21:39:56,822 - INFO - Trained and saved model for XAUUSD
+2025-10-31 21:39:56,822 - INFO - Successfully trained model for XAUUSD on H1
+2025-10-31 21:39:56,822 - INFO - Training completed: 120 successful, 0 failed
+2025-10-31 21:39:56,822 - INFO - All models trained successfully!

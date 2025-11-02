@@ -182,12 +182,12 @@ class TradingEngine:
                 # For JPY pairs: 1 pip = 0.01, for others: 1 pip = 0.0001
                 if "JPY" in symbol:
                     pip_size = 0.01
-                    # Convert points to pips, minimum 25 pips
-                    min_stop_pips = max(stops_level / 10, 25)
+                    # Convert points to pips, minimum 15 pips
+                    min_stop_pips = max(stops_level / 10, 15)
                 else:
                     pip_size = 0.0001
-                    # Convert points to pips, minimum 25 pips
-                    min_stop_pips = max(stops_level / 10, 25)
+                    # Convert points to pips, minimum 15 pips
+                    min_stop_pips = max(stops_level / 10, 15)
 
                 min_stop_distance = min_stop_pips * pip_size
 
@@ -246,12 +246,12 @@ class TradingEngine:
                 # For JPY pairs: 1 pip = 0.01, for others: 1 pip = 0.0001
                 if "JPY" in symbol:
                     pip_size = 0.01
-                    # Convert points to pips, minimum 25 pips
-                    min_stop_pips = max(stops_level / 10, 25)
+                    # Convert points to pips, minimum 15 pips
+                    min_stop_pips = max(stops_level / 10, 15)
                 else:
                     pip_size = 0.0001
-                    # Convert points to pips, minimum 25 pips
-                    min_stop_pips = max(stops_level / 10, 25)
+                    # Convert points to pips, minimum 15 pips
+                    min_stop_pips = max(stops_level / 10, 15)
 
                 min_stop_distance = min_stop_pips * pip_size
 

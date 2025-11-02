@@ -1,0 +1,110 @@
+OPTIMIZATION VERSION COMPARISON
+================================
+
+┌─────────────────────────┬──────────────┬──────────────┬─────────────┐
+│ Parameter               │ 2-Hour       │ 24-Hour      │ Improvement │
+├─────────────────────────┼──────────────┼──────────────┼─────────────┤
+│ FOREX/JPY PARAMETERS                                                │
+├─────────────────────────┼──────────────┼──────────────┼─────────────┤
+│ SL Pips                 │ 4 [15-30]    │ 5 [15-35]    │ +25%        │
+│ TP Pips                 │ 4 [60-120]   │ 5 [60-120]   │ +25%        │
+│ Breakeven Trigger       │ 2 [15,25]    │ 3 [15,20,25] │ +50%        │
+│ Trailing Activation     │ 2 [20,25]    │ 2 [20,25]    │ Same        │
+│ Trailing Distance       │ 2 [10,15]    │ 2 [10,15]    │ Same        │
+│ Entry Hour Start        │ 2 [6,8]      │ 2 [6,8]      │ Same        │
+│ Entry Hour End          │ 2 [16,18]    │ 2 [16,18]    │ Same        │
+│ Max Holding Hours       │ 2 [6,12]     │ 2 [6,12]     │ Same        │
+│ Monday Entry Delay      │ 1 [10]       │ 1 [10]       │ Same        │
+│ Friday Early Exit       │ 1 [20]       │ 3 [19,20,21] │ +200%       │
+│ Best Entry Days         │ 1 pattern    │ 2 patterns   │ +100%       │
+├─────────────────────────┼──────────────┼──────────────┼─────────────┤
+│ METALS PARAMETERS                                                   │
+├─────────────────────────┼──────────────┼──────────────┼─────────────┤
+│ SL Pips                 │ 4 [300-1000] │ 5 [300-1200] │ +25%        │
+│ TP Pips                 │ 4 [1200-3000]│ 5 [1200-3600]│ +25%        │
+│ Breakeven Trigger       │ 2 [300,700]  │ 3 [300,500,  │ +50%        │
+│                         │              │    700]      │             │
+│ Max Holding Hours       │ 2 [4,8]      │ 2 [4,8]      │ Same        │
+│ Other Parameters        │ Same as Forex│ Same as Forex│ Same        │
+├─────────────────────────┼──────────────┼──────────────┼─────────────┤
+│ EXECUTION METRICS                                                   │
+├─────────────────────────┼──────────────┼──────────────┼─────────────┤
+│ Combinations/Symbol     │ 832          │ 10,944       │ 13.2x       │
+│ Total Execution Time    │ 2.1 hours    │ 22.8 hours   │ 10.9x       │
+│ Coverage Efficiency     │ Good         │ Comprehensive│ Excellent   │
+│ Time/Combo Ratio        │ 1.0x         │ 0.83x        │ More Eff.   │
+└─────────────────────────┴──────────────┴──────────────┴─────────────┘
+
+KEY DIFFERENCES EXPLAINED
+==========================
+
+STOP LOSS (SL):
+  2-Hour: [15, 20, 25, 30] - 4 levels
+  24-Hour: [15, 20, 25, 30, 35] - 5 levels
+  → Adds 35 pip SL for wider stop strategies
+
+TAKE PROFIT (TP):
+  2-Hour: [60, 75, 90, 120] - 4 levels
+  24-Hour: [60, 75, 90, 105, 120] - 5 levels
+  → Adds 105 pip TP (tests 1:3 ratio with 35 pip SL)
+
+BREAKEVEN:
+  2-Hour: [15, 25] - 2 levels (tight vs loose)
+  24-Hour: [15, 20, 25] - 3 levels (tight/medium/loose)
+  → Adds medium 20 pip option
+
+FRIDAY EXIT:
+  2-Hour: [20] - 1 option (8 PM MT5 time)
+  24-Hour: [19, 20, 21] - 3 options (7-9 PM MT5)
+  → Tests different weekend risk management approaches
+
+BEST DAYS:
+  2-Hour: Tue-Fri only (skip Monday)
+  24-Hour: Tue-Fri OR Mon-Thu (2 patterns)
+  → Quantifies Monday volatility impact
+
+METALS SL/TP:
+  2-Hour: [300-1000] / [1200-3000]
+  24-Hour: [300-1200] / [1200-3600]
+  → Wider range for large metal movements
+
+RECOMMENDATION BY USE CASE
+===========================
+
+Use 2-Hour Version When:
+✓ Quick validation needed
+✓ Testing code changes
+✓ Weekly parameter checks
+✓ Limited time available
+✓ Initial exploration
+
+Use 24-Hour Version When:
+✓ Initial production setup
+✓ Quarterly re-optimization
+✓ Major parameter discovery
+✓ Comprehensive analysis needed
+✓ Full weekend available
+
+EFFICIENCY ANALYSIS
+===================
+24-Hour version tests 13.2x more combinations
+But only takes 10.9x more time
+→ 21% MORE EFFICIENT per combination tested
+
+This is because:
+1. Fixed overhead (data loading) amortized across more combos
+2. No user wait time between runs
+3. Optimal batch processing
+
+BOTTOM LINE
+===========
+2-Hour: Fast, good coverage, sufficient for routine work
+24-Hour: Comprehensive, optimal coverage, best for production
+
+Both maintain same quality features:
+✓ MT5 time-based logic
+✓ 22:30 hard close
+✓ Breakeven/trailing stops
+✓ 1:3 minimum R/R enforcement
+
+Choose based on your time availability and optimization goals.
