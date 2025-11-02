@@ -30,14 +30,14 @@ class SymbolSelector:
             with open(self.optimal_params_path, 'r') as f:
                 self.optimal_params = json.load(f)
         except FileNotFoundError:
-            print(f"❌ Error: Optimal parameters file not found at {self.optimal_params_path}")
+            print(f"[ERROR] Error: Optimal parameters file not found at {self.optimal_params_path}")
             self.optimal_params = {}
         
         try:
             with open(self.config_path, 'r') as f:
                 self.config = json.load(f)
         except FileNotFoundError:
-            print(f"❌ Error: Config file not found at {self.config_path}")
+            print(f"[ERROR] Error: Config file not found at {self.config_path}")
             self.config = {'trading': {'symbols': []}}
 
     def get_all_symbols(self) -> List[str]:
@@ -171,7 +171,7 @@ class SymbolSelector:
     def display_detailed_view(self, symbol: str):
         """Display detailed view of a specific symbol"""
         if symbol not in self.optimal_params:
-            print(f"\n❌ No data found for {symbol}")
+            print(f"\n[ERROR] No data found for {symbol}")
             return
         
         params = self.optimal_params[symbol]['H1']
@@ -185,9 +185,9 @@ class SymbolSelector:
         
         # Validation Status
         if validated:
-            print(f"\n✅ Validation: {Fore.GREEN}PASSED{Style.RESET_ALL} - Profitable across all 3-year periods")
+            print(f"\n[OK] Validation: {Fore.GREEN}PASSED{Style.RESET_ALL} - Profitable across all 3-year periods")
         else:
-            print(f"\n⚠️  Validation: {Fore.RED}FAILED{Style.RESET_ALL} - Not profitable in all periods")
+            print(f"\n[WARNING] Validation: {Fore.RED}FAILED{Style.RESET_ALL} - Not profitable in all periods")
         
         # Performance Metrics
         print(f"\n{Fore.YELLOW}BACKTEST PERFORMANCE:{Style.RESET_ALL}")

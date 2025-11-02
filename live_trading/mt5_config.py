@@ -37,10 +37,10 @@ class MT5ConfigManager:
             self.config['mt5']['server'] = os.getenv('MT5_SERVER', '')
             
         except FileNotFoundError:
-            print(f"{Fore.RED}❌ Error: Config file not found at {self.config_path}{Style.RESET_ALL}")
+            print(f"{Fore.RED}[ERROR] Error: Config file not found at {self.config_path}{Style.RESET_ALL}")
             self.config = {}
         except KeyError:
-            print(f"{Fore.YELLOW}⚠ Warning: 'mt5' section missing in config{Style.RESET_ALL}")
+            print(f"{Fore.YELLOW}[WARNING] Warning: 'mt5' section missing in config{Style.RESET_ALL}")
     
     def save_config(self):
         """Save credentials to .env and other settings to config.json"""
@@ -71,7 +71,7 @@ class MT5ConfigManager:
             print(f"{Fore.GREEN}[OK] Other settings saved to config.json{Style.RESET_ALL}")
             return True
         except Exception as e:
-            print(f"{Fore.RED}❌ Error saving config: {e}{Style.RESET_ALL}")
+            print(f"{Fore.RED}[ERROR] Error saving config: {e}{Style.RESET_ALL}")
             return False
     
     def display_current_config(self):
@@ -179,12 +179,12 @@ class MT5ConfigManager:
         
         if confirm == 'y':
             if self.save_config():
-                print(f"\n{Fore.GREEN}✅ MT5 login settings saved successfully!{Style.RESET_ALL}")
-                print(f"{Fore.YELLOW}⚠️  Remember to restart the trading system for changes to take effect.{Style.RESET_ALL}")
+                print(f"\n{Fore.GREEN}[OK] MT5 login settings saved successfully!{Style.RESET_ALL}")
+                print(f"{Fore.YELLOW}[WARNING] Remember to restart the trading system for changes to take effect.{Style.RESET_ALL}")
             else:
-                print(f"\n{Fore.RED}❌ Failed to save settings.{Style.RESET_ALL}")
+                print(f"\n{Fore.RED}[ERROR] Failed to save settings.{Style.RESET_ALL}")
         else:
-            print(f"\n{Fore.YELLOW}ℹ️  Changes discarded.{Style.RESET_ALL}")
+            print(f"\n{Fore.YELLOW}[INFO] Changes discarded.{Style.RESET_ALL}")
     
     def quick_broker_setup(self):
         """Quick setup for common brokers"""
@@ -270,10 +270,10 @@ class MT5ConfigManager:
         
         # Save
         if self.save_config():
-            print(f"\n{Fore.GREEN}✅ {broker['name']} configured successfully!{Style.RESET_ALL}")
-            print(f"{Fore.YELLOW}⚠️  Remember to restart the trading system for changes to take effect.{Style.RESET_ALL}")
+            print(f"\n{Fore.GREEN}[OK] {broker['name']} configured successfully!{Style.RESET_ALL}")
+            print(f"{Fore.YELLOW}[WARNING] Remember to restart the trading system for changes to take effect.{Style.RESET_ALL}")
         else:
-            print(f"\n{Fore.RED}❌ Failed to save settings.{Style.RESET_ALL}")
+            print(f"\n{Fore.RED}[ERROR] Failed to save settings.{Style.RESET_ALL}")
     
     def test_connection(self):
         """Test MT5 connection with current settings"""
@@ -292,17 +292,17 @@ class MT5ConfigManager:
             # Initialize MT5
             if not mt5.initialize(path=path, login=login, password=password, server=server, timeout=timeout):
                 error_code = mt5.last_error()
-                print(f"{Fore.RED}❌ Connection failed: {error_code}{Style.RESET_ALL}")
+                print(f"{Fore.RED}[ERROR] Connection failed: {error_code}{Style.RESET_ALL}")
                 return False
             
             # Get account info
             account_info = mt5.account_info()
             if account_info is None:
-                print(f"{Fore.RED}❌ Failed to get account info{Style.RESET_ALL}")
+                print(f"{Fore.RED}[ERROR] Failed to get account info{Style.RESET_ALL}")
                 mt5.shutdown()
                 return False
             
-            print(f"\n{Fore.GREEN}✅ Connection successful!{Style.RESET_ALL}\n")
+            print(f"\n{Fore.GREEN}[OK] Connection successful!{Style.RESET_ALL}\n")
             print(f"Account: {account_info.login}")
             print(f"Server: {account_info.server}")
             print(f"Balance: ${account_info.balance:,.2f}")
@@ -314,10 +314,10 @@ class MT5ConfigManager:
             return True
             
         except ImportError:
-            print(f"{Fore.RED}❌ MetaTrader5 module not installed{Style.RESET_ALL}")
+            print(f"{Fore.RED}[ERROR] MetaTrader5 module not installed{Style.RESET_ALL}")
             return False
         except Exception as e:
-            print(f"{Fore.RED}❌ Error: {e}{Style.RESET_ALL}")
+            print(f"{Fore.RED}[ERROR] Error: {e}{Style.RESET_ALL}")
             return False
     
     def run(self):
