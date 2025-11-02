@@ -247,9 +247,9 @@ def main():
     """Main entry point"""
     selector = SymbolSelector()
     
-    print(f"\n{Fore.CYAN}╔═══════════════════════════════════════════════════════════╗{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}║        FX-AI SYMBOL SELECTOR & CONTROL CENTER             ║{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}╚═══════════════════════════════════════════════════════════╝{Style.RESET_ALL}")
+    print(f"\n{Fore.CYAN}{'='*59}{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}     FX-AI SYMBOL SELECTOR & CONTROL CENTER             {Style.RESET_ALL}")
+    print(f"{Fore.CYAN}{'='*59}{Style.RESET_ALL}")
     
     selector.interactive_mode()
     
