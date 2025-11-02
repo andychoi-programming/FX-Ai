@@ -1,4 +1,4 @@
-2@echo off
+@echo off
 REM FX-Ai Trading System Startup Script
 REM Version 1.5.0 - November 2, 2025
 
