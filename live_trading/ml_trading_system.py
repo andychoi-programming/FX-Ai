@@ -338,12 +338,23 @@ class MLTradingSystem:
                 direction = 1 if position.type == mt5.POSITION_TYPE_BUY else -1
 
                 # Calculate current profit in pips
-                pip_value = 0.0001 if symbol.endswith('JPY') else 0.00001
-                current_profit_pips = (current_price - entry_price) / pip_value * direction
+                if 'XAU' in symbol or 'XAG' in symbol:
+                    pip_value = 0.10  # Metals: 1 pip = 0.10
+                elif symbol.endswith('JPY'):
+                    pip_value = 0.01  # JPY pairs: 1 pip = 0.01
+                else:
+                    pip_value = 0.0001  # Standard forex: 1 pip = 0.0001
+                
+                current_profit_pips = abs(current_price - entry_price) / pip_value * direction
 
-                # Breakeven management
-                if current_profit_pips >= breakeven_trigger and current_sl == entry_price:
-                    new_sl = entry_price
+                # Breakeven management - move SL to breakeven + small buffer
+                if current_profit_pips >= breakeven_trigger and current_sl != entry_price:
+                    # Set SL slightly above/below entry to avoid validation errors
+                    buffer = pip_value * 2  # 2 pip buffer
+                    if direction == 1:  # Buy
+                        new_sl = entry_price + buffer  # SL slightly above entry for profit lock
+                    else:  # Sell
+                        new_sl = entry_price - buffer  # SL slightly below entry for profit lock
                     self._modify_position_sl(ticket, new_sl, "Breakeven")
 
                 # Trailing stop management
