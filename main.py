@@ -919,15 +919,21 @@ class FXAiApplication:
                                 sl_atr_multiplier:.1f}x ATR), " f"TP: {tp_display} ({
                                 tp_atr_multiplier:.1f}x ATR)")
 
-                # Check if trading is allowed (before 22:30)
+                # Check if trading is allowed (before 22:30 MT5 server time)
                 if self.config.get('trading', {}).get('day_trading_only', True):
-                    current_time = datetime.now().time()
+                    # Get MT5 server time instead of local computer time
+                    server_time = self.mt5_connector.get_server_time()
+                    if server_time:
+                        current_time = server_time.time()
+                    else:
+                        current_time = datetime.now().time()  # Fallback to local time if server time unavailable
+                    
                     close_hour = self.config.get('trading', {}).get('close_hour', 22)
                     close_minute = self.config.get('trading', {}).get('close_minute', 30)
                     close_time = time(close_hour, close_minute)
                     
                     if current_time >= close_time:
-                        self.logger.info(f"Trading halted: Current time {current_time} is after trading close time {close_hour:02d}:{close_minute:02d}")
+                        self.logger.info(f"Trading halted: MT5 server time {current_time} is after trading close time {close_hour:02d}:{close_minute:02d}")
                         signals = []  # Clear all signals to prevent trading
 
                 # 4. Execute trades with risk management
@@ -1436,13 +1442,21 @@ class FXAiApplication:
             self.logger.error(f"Error monitoring trade {ticket}: {e}")
 
     async def check_day_trading_closure(self):
-        """Check if positions should be closed for day trading - FIXED"""
+        """Check if positions should be closed for day trading - uses MT5 server time"""
         try:
             if not self.config.get('trading', {}).get(
                     'day_trading_only', True):
                 return
 
-            current_time = datetime.now().time()
+            # Get MT5 server time instead of local computer time
+            server_time = self.mt5_connector.get_server_time()
+            if server_time:
+                current_time = server_time.time()
+                today = server_time.date()
+            else:
+                current_time = datetime.now().time()  # Fallback to local time
+                today = datetime.now().date()
+            
             # Get close time from config, default to 22:30 (10:30 PM)
             close_hour = self.config.get('trading', {}).get('close_hour', 22)
             close_minute = self.config.get('trading', {}).get('close_minute', 30)
@@ -1452,7 +1466,6 @@ class FXAiApplication:
             # today
             if current_time >= close_time:
                 # Check if we already closed positions today
-                today = datetime.now().date()
                 if hasattr(
                         self,
                         '_last_closure_date') and self._last_closure_date == today:
