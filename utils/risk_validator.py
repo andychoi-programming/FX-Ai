@@ -35,6 +35,8 @@ class RiskValidator:
             risk_pips = risk_distance / point
             if 'JPY' in symbol:
                 risk_pips = risk_pips / 100
+            elif 'XAU' in symbol or 'XAG' in symbol:
+                risk_pips = risk_pips / 10  # Metals: 1 pip = 0.10 units
 
             # Validate risk is reasonable - asset-specific limits
             if risk_pips <= 0:
