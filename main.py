@@ -744,6 +744,7 @@ class FXAiApplication:
                             optimal_params = self.param_manager.get_optimal_parameters(symbol, 'H1')
                             sl_pips = optimal_params.get('sl_pips', 200)  # Default 200 pips for XAUUSD
                             stop_loss_distance = sl_pips * 0.01  # Metals: 1 pip = 0.01
+                            sl_atr_multiplier = stop_loss_distance / atr_value if atr_value > 0 else 0  # For logging only
                             self.logger.info(
                                 f"{symbol} using optimized metal stop loss: {sl_pips} pips = {stop_loss_distance:.5f}")
                         elif atr_value > 0:
