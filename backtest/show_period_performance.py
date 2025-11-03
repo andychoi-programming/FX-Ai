@@ -50,7 +50,7 @@ for sym in params:
 sorted_symbols = sorted(results.items(), key=lambda x: x[1]['total_pnl'], reverse=True)
 
 print("\n" + "=" * 100)
-print("📅 PERIOD ANALYSIS - TOP 4 SYMBOLS BY YEAR")
+print("[PERIOD ANALYSIS] PERIOD ANALYSIS - TOP 4 SYMBOLS BY YEAR")
 print("=" * 100)
 
 for i, (sym, data) in enumerate(sorted_symbols[:4], 1):
@@ -68,7 +68,7 @@ for i, (sym, data) in enumerate(sorted_symbols[:4], 1):
 
 # Calculate last 3 months and 1 month for top symbols
 print("\n\n" + "=" * 100)
-print("📊 RECENT PERFORMANCE - LAST 3 MONTHS & 1 MONTH (Oct-Nov 2025)")
+print("[RECENT PERFORMANCE] RECENT PERFORMANCE - LAST 3 MONTHS & 1 MONTH (Oct-Nov 2025)")
 print("=" * 100)
 print("\nNote: Analyzing trades from Aug 2025 onwards for recent performance...")
 

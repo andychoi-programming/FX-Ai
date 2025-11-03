@@ -215,13 +215,13 @@ def train_metal_models():
                 logger.info(f"Training model for {symbol} {timeframe}...")
                 ml_predictor.train_symbol_model(symbol, timeframe, X, y)
                 
-                logger.info(f"✓ Successfully trained {symbol} {timeframe} model")
+                logger.info(f"[OK] Successfully trained {symbol} {timeframe} model")
                 
             except Exception as e:
                 logger.error(f"Error training {symbol} {timeframe}: {e}")
                 continue
         
-        logger.info(f"\n✓ Completed training all timeframes for {symbol}")
+        logger.info(f"\n[OK] Completed training all timeframes for {symbol}")
     
     # Shutdown MT5
     mt5.shutdown()
@@ -234,7 +234,7 @@ def train_metal_models():
         for timeframe in timeframes:
             model_path = Path(f"models/{symbol}_{timeframe}_model.pkl")
             if model_path.exists():
-                logger.info(f"  ✓ {symbol}_{timeframe}_model.pkl")
+                logger.info(f"  [OK] {symbol}_{timeframe}_model.pkl")
 
 if __name__ == "__main__":
     train_metal_models()

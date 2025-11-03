@@ -38,8 +38,8 @@ print(f'Utilization: {total_hrs/24*100:.1f}% of 24 hours')
 print()
 
 if total_hrs <= 24:
-    print(f'✓ FITS IN 24-HOUR WINDOW')
-    print(f'✓ Safety buffer: {24-total_hrs:.1f} hours')
+    print(f'[OK] FITS IN 24-HOUR WINDOW')
+    print(f'[OK] Safety buffer: {24-total_hrs:.1f} hours')
 else:
-    print(f'⚠ EXCEEDS 24 hours by {total_hrs-24:.1f} hours')
+    print(f'[WARNING] EXCEEDS 24 hours by {total_hrs-24:.1f} hours')
     print(f'  Total time needed: {total_hrs:.1f} hours')

@@ -966,7 +966,7 @@ def main():
     for symbol, data in results.items():
         if 'H1' in data and data['H1'].get('all_periods_profitable'):
             params = data['H1']['optimal_params']
-            print(f"{symbol:8} - SL:{params['sl_pips']:4} TP:{params['tp_pips']:4} - ✓ VALIDATED")
+            print(f"{symbol:8} - SL:{params['sl_pips']:4} TP:{params['tp_pips']:4} - [VALIDATED]")
 
 if __name__ == "__main__":
     main()

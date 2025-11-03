@@ -47,10 +47,10 @@ results_3m.sort(key=lambda x: x['pnl'], reverse=True)
 results_1m.sort(key=lambda x: x['pnl'], reverse=True)
 
 print("\n" + "=" * 100)
-print("📊 ALL 30 SYMBOLS - RECENT PERFORMANCE RANKINGS")
+print("[ALL SYMBOLS] ALL 30 SYMBOLS - RECENT PERFORMANCE RANKINGS")
 print("=" * 100)
 
-print("\n🏆 TOP 4 MOST PROFITABLE - LAST 3 MONTHS (Aug-Oct 2025)")
+print("\n[TOP 4 3M] TOP 4 MOST PROFITABLE - LAST 3 MONTHS (Aug-Oct 2025)")
 print("-" * 100)
 print(f"{'Rank':<6} {'Symbol':<10} {'PnL':<18} {'Trades':<10} {'Win Rate':<12}")
 print("-" * 100)
@@ -58,7 +58,7 @@ print("-" * 100)
 for i, data in enumerate(results_3m[:4], 1):
     print(f"{i:<6} {data['symbol']:<10} ${data['pnl']:>15,.2f} {data['trades']:>8} {data['win_rate']:>8.1f}%")
 
-print("\n\n🔥 TOP 4 MOST PROFITABLE - LAST 1 MONTH (Oct 2025)")
+print("\n\n[HOT] TOP 4 MOST PROFITABLE - LAST 1 MONTH (Oct 2025)")
 print("-" * 100)
 print(f"{'Rank':<6} {'Symbol':<10} {'PnL':<18} {'Trades':<10} {'Win Rate':<12}")
 print("-" * 100)
@@ -73,7 +73,7 @@ for data in results_3m[:4]:
 for data in results_1m[:4]:
     combined_symbols.add(data['symbol'])
 
-print("\n\n⭐ COMBINED TOP PERFORMERS (appear in either top 4 list):")
+print("\n\n[TOP PERFORMERS] COMBINED TOP PERFORMERS (appear in either top 4 list):")
 print("-" * 100)
 print(f"{'Symbol':<10} {'3-Month PnL':<18} {'1-Month PnL':<18} {'Combined':<18}")
 print("-" * 100)
@@ -96,7 +96,7 @@ for data in combined_data:
 
 # Show full rankings
 print("\n\n" + "=" * 100)
-print("📋 COMPLETE RANKINGS - LAST 3 MONTHS")
+print("[COMPLETE 3M] COMPLETE RANKINGS - LAST 3 MONTHS")
 print("=" * 100)
 print(f"{'Rank':<6} {'Symbol':<10} {'PnL':<18} {'Trades':<10} {'Win Rate':<12}")
 print("-" * 100)
@@ -105,7 +105,7 @@ for i, data in enumerate(results_3m, 1):
     print(f"{i:<6} {data['symbol']:<10} ${data['pnl']:>15,.2f} {data['trades']:>8} {data['win_rate']:>8.1f}%")
 
 print("\n\n" + "=" * 100)
-print("📋 COMPLETE RANKINGS - LAST 1 MONTH")
+print("[COMPLETE 1M] COMPLETE RANKINGS - LAST 1 MONTH")
 print("=" * 100)
 print(f"{'Rank':<6} {'Symbol':<10} {'PnL':<18} {'Trades':<10} {'Win Rate':<12}")
 print("-" * 100)

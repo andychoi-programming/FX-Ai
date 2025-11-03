@@ -786,6 +786,7 @@ class FXAiApplication:
 
                         # Calculate take profit using adaptive ATR multiplier or optimized parameters
                         take_profit = None
+                        tp_atr_multiplier = 0  # Initialize to avoid reference errors
                         if atr_value > 0:
                             # Use optimized TP for metals, ATR-based for forex
                             if 'XAU' in symbol or 'XAG' in symbol or 'GOLD' in symbol:
@@ -794,6 +795,7 @@ class FXAiApplication:
                                 tp_pips = optimal_params.get('tp_pips', 600)  # Default 600 pips for metals
                                 # Convert TP pips to distance
                                 take_profit_distance = tp_pips * 0.01  # Metals: 1 pip = 0.01
+                                tp_atr_multiplier = take_profit_distance / atr_value if atr_value > 0 else 0  # Calculate for logging
                                 self.logger.info(f"{symbol} using optimized metal take profit: {tp_pips} pips = {take_profit_distance:.5f}")
                             else:
                                 # Use ATR-based TP for forex

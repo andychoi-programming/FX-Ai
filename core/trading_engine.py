@@ -309,7 +309,7 @@ class TradingEngine:
                 actual_sl_distance = abs(price - stop_loss)
                 if actual_sl_distance < min_stop_distance:
                     logger.debug(
-                        f"⚠️  BROKER MINIMUM STOP: Required "
+                        f"[WARNING] BROKER MINIMUM STOP: Required "
                         f"{min_stop_distance:.5f}, have "
                         f"{actual_sl_distance:.5f}")
                     # Adjust to meet broker minimum
@@ -328,7 +328,7 @@ class TradingEngine:
                 actual_tp_distance = abs(price - take_profit)
                 if actual_tp_distance < min_stop_distance:
                     logger.debug(
-                        f"⚠️  BROKER MINIMUM TP: Required "
+                        f"[WARNING] BROKER MINIMUM TP: Required "
                         f"{min_stop_distance:.5f}, have "
                         f"{actual_tp_distance:.5f}")
                     # Adjust to meet broker minimum
@@ -342,7 +342,7 @@ class TradingEngine:
             # CRITICAL DEBUG: Enhanced diagnostic for EURJPY SL bug
             if "EURJPY" in symbol and stop_loss is not None:
                 logger.debug(f"\n{'=' * 60}")
-                logger.debug("🚨 CRITICAL DEBUG: EURJPY ORDER PLACEMENT")
+                logger.debug("[CRITICAL] CRITICAL DEBUG: EURJPY ORDER PLACEMENT")
                 logger.debug(f"Symbol: {symbol}")
                 logger.debug(f"Order Type: {order_type}")
                 logger.debug(f"Entry Price: {price} (type: {type(price)})")
@@ -448,16 +448,16 @@ class TradingEngine:
 
                         if modify_result and modify_result.retcode != mt5.TRADE_RETCODE_DONE:
                             logger.debug(
-                                f"⚠️  WARNING: SLTP modification failed: "
+                                f"[WARNING] SLTP modification failed: "
                                 f"{modify_result.comment}")
                             logger.warning(
                                 f"Failed to set SL/TP for position {position_ticket}: "
                                 f"{modify_result.comment}")
                         else:
-                            logger.debug("✅ SLTP modification successful")
+                            logger.debug("[OK] SLTP modification successful")
                     else:
                         logger.debug(
-                            "âš ï¸  WARNING: No position found to modify SL/TP")
+                            "[WARNING] No position found to modify SL/TP")
 
                 # CRITICAL FIX: Enhanced verification with detailed diagnostics
                 await asyncio.sleep(0.5)  # Wait for position to register
@@ -499,13 +499,13 @@ class TradingEngine:
                                 f"Stop loss mismatch for {symbol}: expected "
                                 f"{stop_loss}, got {actual_sl}")
                         else:
-                            logger.debug("✅ SL set correctly")
+                            logger.debug("[OK] SL set correctly")
 
                     if take_profit is not None:
                         tp_mismatch = abs(actual_tp - take_profit)
                         if tp_mismatch > 0.01:
                             logger.debug(
-                                f"ðŸš¨ WARNING: TP mismatch! Expected {take_profit}, got {actual_tp}")
+                                f"[WARNING] TP mismatch! Expected {take_profit}, got {actual_tp}")
 
                     logger.debug("=" * 50)
                 else:
@@ -568,7 +568,7 @@ class TradingEngine:
                             position)
                         if not validation['overall_valid']:
                             logger.error(
-                                f"🚨 POSITION VALIDATION FAILED for "
+                                f"[ERROR] POSITION VALIDATION FAILED for "
                                 f"{position.symbol} position "
                                 f"{position.ticket}:")
                             for issue in validation['issues']:
@@ -1158,7 +1158,7 @@ class TradingEngine:
                 # reasonable
                 if risk_pips <= 0:
                     logger.error(
-                        f"🚨 RISK CALCULATION ERROR: Negative risk {
+                        f"[ERROR] RISK CALCULATION ERROR: Negative risk {
                             risk_pips:.1f} pips for " f"{
                             position.symbol} position {
                             position.ticket}")
@@ -1168,11 +1168,11 @@ class TradingEngine:
 
                 if risk_pips < 5:
                     logger.warning(
-                        f"⚠️ VERY TIGHT RISK: {risk_pips:.1f} pips for "
+                        f"[WARNING] VERY TIGHT RISK: {risk_pips:.1f} pips for "
                         f"{position.symbol} position {position.ticket}")
                 elif risk_pips > 500:
                     logger.warning(
-                        f"⚠️ VERY WIDE RISK: {risk_pips:.1f} pips for "
+                        f"[WARNING] VERY WIDE RISK: {risk_pips:.1f} pips for "
                         f"{position.symbol} position {position.ticket}")
 
                 # Breakeven and trailing stop logic

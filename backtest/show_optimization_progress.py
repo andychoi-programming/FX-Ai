@@ -52,7 +52,7 @@ def monitor_progress():
     completed_symbols = []
     for line in lines:
         if "PASSED ALL VALIDATIONS" in line or "FAILED VALIDATION" in line:
-            symbol = line.split("✓✓✓")[-1].split("✗✗✗")[-1].split("PASSED")[0].split("FAILED")[0].strip()
+            symbol = line.split("[PASSED]")[-1].split("[FAILED]")[-1].split("PASSED")[0].split("FAILED")[0].strip()
             completed_symbols.append(symbol)
     
     if completed_symbols:
@@ -60,7 +60,7 @@ def monitor_progress():
         print(f"Completed Symbols: {len(completed_symbols)}/30")
         print(f"{'=' * 100}")
         for sym in completed_symbols:
-            print(f"  ✓ {sym}")
+            print(f"  [OK] {sym}")
     
     print("\n" + "=" * 100)
     print(f"Total Log Lines: {len(lines)}")

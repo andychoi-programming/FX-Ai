@@ -16,7 +16,7 @@ def estimate_time():
     num_symbols = 30
     param_combinations = 16384  # 4^7 combinations
     
-    print("\n📊 SCOPE:")
+    print("\n[SCOPE] SCOPE:")
     print(f"  • Symbols: {num_symbols}")
     print(f"  • Parameter combinations per symbol: {param_combinations:,}")
     print(f"  • Training period: 3 years (2022-10-31 to 2025-10-31)")
@@ -24,7 +24,7 @@ def estimate_time():
     
     # Backtest timing estimates
     print("\n" + "=" * 80)
-    print("🔄 PARAMETER OPTIMIZATION (Backtesting)")
+    print("[OPTIMIZATION] PARAMETER OPTIMIZATION (Backtesting)")
     print("=" * 80)
     
     # Based on observed performance
@@ -61,14 +61,14 @@ def estimate_time():
     # Conservative estimate with overhead
     conservative_hours = total_hours * 1.2  # Add 20% for overhead
     
-    print(f"\n  📅 Estimated Completion:")
+    print(f"\n  [ESTIMATED COMPLETION] Estimated Completion:")
     print(f"    • Best case: {total_hours:.1f} hours")
     print(f"    • Conservative: {conservative_hours:.1f} hours")
     print(f"    • Worst case: {conservative_hours * 1.2:.1f} hours")
     
     # Model training estimates
     print("\n" + "=" * 80)
-    print("🤖 MODEL RETRAINING (Optional)")
+    print("[MODEL RETRAINING] MODEL RETRAINING (Optional)")
     print("=" * 80)
     
     # Model training is much faster than optimization
@@ -87,7 +87,7 @@ def estimate_time():
     
     # Combined estimate
     print("\n" + "=" * 80)
-    print("📊 COMBINED TOTAL (Optimization + Model Retraining)")
+    print("[COMBINED TOTAL] COMBINED TOTAL (Optimization + Model Retraining)")
     print("=" * 80)
     
     combined_hours = conservative_hours + total_model_hours
@@ -111,7 +111,7 @@ def estimate_time():
     
     # Recommendations
     print("\n" + "=" * 80)
-    print("💡 RECOMMENDATIONS")
+    print("[RECOMMENDATIONS] RECOMMENDATIONS")
     print("=" * 80)
     
     print(f"""
@@ -137,7 +137,7 @@ def estimate_time():
     """)
     
     print("=" * 80)
-    print("🎯 QUICK ANSWER: ~{:.0f}-{:.0f} hours total".format(
+    print("[QUICK ANSWER] QUICK ANSWER: ~{:.0f}-{:.0f} hours total".format(
         total_hours, combined_hours
     ))
     print("=" * 80 + "\n")
@@ -153,7 +153,7 @@ def estimate_time():
         f.write(f"Total: ~{combined_hours:.1f} hours\n\n")
         f.write("Recommendation: Run overnight for best results\n")
     
-    print(f"📄 Estimate saved to: {estimate_file}\n")
+    print(f"[FILE] Estimate saved to: {estimate_file}\n")
 
 if __name__ == "__main__":
     estimate_time()

@@ -63,7 +63,7 @@ def main():
 
         if trades_df.empty:
             logger.error("Backtest failed - no trades generated")
-            print("❌ Backtest failed - no trades were generated")
+            print("[ERROR] Backtest failed - no trades were generated")
             return
 
         # Calculate performance metrics
@@ -89,15 +89,15 @@ def main():
         logger.info("Saving results...")
         engine.save_results(trades_df)
 
-        print("✅ Backtest completed successfully!")
-        print(f"📊 Results saved to: {config.results_dir}/")
-        print(f"📈 Performance report: {config.performance_report_path}")
+        print("[OK] Backtest completed successfully!")
+        print(f"[INFO] Results saved to: {config.results_dir}/")
+        print(f"[PERFORMANCE] Performance report: {config.performance_report_path}")
         if config.save_trades_to_csv:
-            print(f"📋 Trades CSV: {config.trades_csv_path}")
+            print(f"[TRADES] Trades CSV: {config.trades_csv_path}")
 
     except Exception as e:
         logger.error(f"Backtest failed with error: {e}")
-        print(f"❌ Backtest failed: {e}")
+        print(f"[ERROR] Backtest failed: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

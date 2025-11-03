@@ -53,7 +53,7 @@ class PositionMonitor:
                         alerts.append(alert_msg)
 
                         if self.alerts_enabled:
-                            logger.warning(f"🚨 POSITION ALERT: {alert_msg}")
+                            logger.warning(f"[CRITICAL] POSITION ALERT: {alert_msg}")
 
             # Check for new positions
             new_tickets = set(current_positions.keys()) - set(self.last_positions.keys())
@@ -63,7 +63,7 @@ class PositionMonitor:
                 alerts.append(alert_msg)
 
                 if self.alerts_enabled:
-                    logger.info(f"📈 NEW POSITION: {alert_msg}")
+                    logger.info(f"[NEW POSITION] {alert_msg}")
 
             # Update last positions
             self.last_positions = current_positions.copy()
@@ -104,7 +104,7 @@ class PositionMonitor:
                     risk_pips = abs(current['price_open'] - current['sl']) / pip_size
 
                 if risk_pips < 10:  # Very tight stop
-                    changes.append(f"⚠️ VERY TIGHT SL: {risk_pips:.1f} pips")
+                    changes.append(f"[WARNING] VERY TIGHT SL: {risk_pips:.1f} pips")
 
         return changes
 

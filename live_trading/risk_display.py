@@ -16,19 +16,19 @@ def load_config():
         with open(config_path, 'r') as f:
             return json.load(f)
     except FileNotFoundError:
-        print("❌ Error: config.json not found!")
+        print("[ERROR] Config.json not found!")
         return None
     except json.JSONDecodeError:
-        print("❌ Error: Invalid JSON in config.json!")
+        print("[ERROR] Invalid JSON in config.json!")
         return None
 
 def display_risk_parameters():
     """Display risk management parameters in a formatted way"""
 
     print("=" * 60)
-    print("🎯 FX-AI RISK MANAGEMENT PARAMETERS")
+    print("FX-AI RISK MANAGEMENT PARAMETERS")
     print("=" * 60)
-    print(f"📅 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print()
 
     config = load_config()
@@ -43,7 +43,7 @@ def display_risk_parameters():
     risk_per_trade = trading_config.get('risk_per_trade', 50.0)
     risk_type = trading_config.get('risk_type', 'fixed_dollar')
 
-    print("💰 RISK DOLLAR AMOUNT PER TRADE")
+    print("RISK DOLLAR AMOUNT PER TRADE")
     print("-" * 40)
     print(f"Amount:          ${risk_per_trade:.2f}")
     print(f"Risk Type:       {risk_type.replace('_', ' ').title()}")
@@ -53,7 +53,7 @@ def display_risk_parameters():
     # Maximum Daily Loss
     max_daily_loss = trading_config.get('max_daily_loss', 200.0)
 
-    print("📉 MAXIMUM DAILY LOSS")
+    print("MAXIMUM DAILY LOSS")
     print("-" * 40)
     print(f"Daily Loss Limit: ${max_daily_loss:.2f}")
     print(f"Risk per Trade:   ${risk_per_trade:.2f}")
@@ -63,14 +63,14 @@ def display_risk_parameters():
     # Maximum Amount of Trades at a Time
     max_positions = trading_config.get('max_positions', 5)
 
-    print("📊 MAXIMUM TRADES AT A TIME")
+    print("MAXIMUM TRADES AT A TIME")
     print("-" * 40)
     print(f"Concurrent Positions: {max_positions}")
     print(f"Per Symbol Limit:    {'Yes' if trading_config.get('prevent_multiple_positions_per_symbol', True) else 'No'}")
     print()
 
     # Additional Risk Settings
-    print("⚙️  ADDITIONAL RISK SETTINGS")
+    print("ADDITIONAL RISK SETTINGS")
     print("-" * 40)
     print(f"Stop Loss Method:     {risk_config.get('stop_loss_method', 'atr_based').replace('_', ' ').title()}")
     print(f"ATR Multiplier:       {risk_config.get('atr_multiplier', 1.5)}x")
@@ -79,7 +79,7 @@ def display_risk_parameters():
     print()
 
     # Position Sizing Details
-    print("📏 POSITION SIZING DETAILS")
+    print("POSITION SIZING DETAILS")
     print("-" * 40)
     print(f"Min Lot Size:         {trading_config.get('min_lot_size', 0.01)}")
     print(f"Max Lot Size:         {trading_config.get('max_lot_size', 1.0)}")
@@ -87,7 +87,7 @@ def display_risk_parameters():
     print()
 
     # Trading Filters
-    print("🔍 TRADING FILTERS")
+    print("TRADING FILTERS")
     print("-" * 40)
     print(f"News Filter:          {'Enabled' if trading_config.get('enable_news_filter', True) else 'Disabled'}")
     print(f"Session Filter:       {'Enabled' if trading_config.get('enable_session_filter', True) else 'Disabled'}")
@@ -96,7 +96,7 @@ def display_risk_parameters():
     print()
 
     # Summary
-    print("📋 SUMMARY")
+    print("SUMMARY")
     print("-" * 40)
     total_risk_capacity = max_positions * risk_per_trade
     print(f"Total Risk Capacity:  ${total_risk_capacity:.2f} (at max positions)")
@@ -105,8 +105,8 @@ def display_risk_parameters():
     print()
 
     print("=" * 60)
-    print("✅ Risk parameters loaded successfully!")
-    print("💡 Remember: Always test with demo account first!")
+    print("[OK] Risk parameters loaded successfully!")
+    print("NOTE: Always test with demo account first!")
     print("=" * 60)
 
 def main():
@@ -114,7 +114,7 @@ def main():
     try:
         display_risk_parameters()
     except Exception as e:
-        print(f"❌ Error displaying risk parameters: {e}")
+        print(f"[ERROR] Error displaying risk parameters: {e}")
         return 1
     return 0
 

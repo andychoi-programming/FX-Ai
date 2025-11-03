@@ -575,7 +575,7 @@ class MLBacktester:
         num_symbols = len(sorted_symbols)
         num_to_show = min(5, num_symbols)
 
-        print(f"\n🏆 TOP {num_to_show} BEST PERFORMING SYMBOLS:")
+        print(f"\n[TOP] TOP {num_to_show} BEST PERFORMING SYMBOLS:")
         for i, (symbol, perf) in enumerate(sorted_symbols[:num_to_show], 1):
             trades = perf['trades']
             if trades > 0:
@@ -583,7 +583,7 @@ class MLBacktester:
                 print(f"{i}. {symbol}: ${perf['total_pnl']:.2f} P&L, "
                       f"{win_rate:.1%} win rate, {trades} trades")
 
-        print(f"\n📉 TOP {num_to_show} WORST PERFORMING SYMBOLS:")
+        print(f"\n[TOP WORST] TOP {num_to_show} WORST PERFORMING SYMBOLS:")
         for i, (symbol, perf) in enumerate(sorted_symbols[-num_to_show:], 1):
             trades = perf['trades']
             if trades > 0:
@@ -597,7 +597,7 @@ class MLBacktester:
         profitable_symbols = sum(1 for perf in symbol_perf.values() if perf['total_pnl'] > 0)
         active_symbols = sum(1 for perf in symbol_perf.values() if perf['trades'] > 0)
 
-        print("\n📊 OVERALL STATISTICS:")
+        print("\n[OVERALL STATS] OVERALL STATISTICS:")
         print(f"  Total Symbols: {len(symbol_perf)}")
         print(f"  Active Symbols: {active_symbols}")
         print(f"  Profitable Symbols: {profitable_symbols}")
@@ -615,17 +615,17 @@ class MLBacktester:
 
         # Provide recommendations based on analysis
         if profitable_symbols > 0:
-            print(f"\n✅ RECOMMENDED SYMBOLS TO TRADE: {profitable_symbols}/{len(symbol_perf)} symbols profitable")
+            print(f"\n[RECOMMENDED] RECOMMENDED SYMBOLS TO TRADE: {profitable_symbols}/{len(symbol_perf)} symbols profitable")
             print("Focus on the top performing symbols above for best results.")
 
         if total_pnl > 0:
-            print("\n📈 STRATEGY SHOWS OVERALL PROFITABILITY")
+            print("\n[PROFITABLE] STRATEGY SHOWS OVERALL PROFITABILITY")
             print("The ML-based approach with optimized parameters shows positive results.")
         else:
-            print("\n⚠️  STRATEGY NEEDS FURTHER OPTIMIZATION")
+            print("\n[WARNING] STRATEGY NEEDS FURTHER OPTIMIZATION")
             print("Consider retraining ML models with balanced buy/sell data.")
 
-        print("\n🔧 KEY SETTINGS TO MAINTAIN:")
+        print("\n[KEY SETTINGS] KEY SETTINGS TO MAINTAIN:")
         print("  - Risk per trade: $50")
         print("  - Max positions: 3")
         print("  - Trading hours: 08:00-20:00 GMT")

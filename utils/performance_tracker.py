@@ -207,28 +207,28 @@ class PerformanceTracker:
             return "No trades executed yet"
         
         summary = f"""
-╔═══════════════════════════════════════════════════════════╗
-║           FX-AI PERFORMANCE SUMMARY                       ║
-╠═══════════════════════════════════════════════════════════╣
-║ Total Trades:     {stats['total_trades']:>6}    Win Rate:      {stats['win_rate']:>6.2f}% ║
-║ Wins / Losses:    {stats['winning_trades']:>3} / {stats['losing_trades']:<3}                          ║
-╠═══════════════════════════════════════════════════════════╣
-║ Net Profit:       ${stats['net_profit']:>8.2f}                          ║
-║ Total Profit:     ${stats['total_profit']:>8.2f}                          ║
-║ Total Loss:       ${stats['total_loss']:>8.2f}                          ║
-║ Profit Factor:    {stats['profit_factor']:>8.2f}                          ║
-╠═══════════════════════════════════════════════════════════╣
-║ Avg Win:          ${stats['avg_win']:>8.2f}                          ║
-║ Avg Loss:         ${stats['avg_loss']:>8.2f}                          ║
-║ Expectancy:       ${stats['expectancy']:>8.2f}                          ║
-╠═══════════════════════════════════════════════════════════╣
-║ Peak Profit:      ${stats['peak_profit']:>8.2f}                          ║
-║ Peak Drawdown:    ${stats['peak_drawdown']:>8.2f}                          ║
-║ Current Drawdown: ${stats['current_drawdown']:>8.2f}                          ║
-╠═══════════════════════════════════════════════════════════╣
-║ Session Running:  {stats['session_hours']:>6.2f} hours                      ║
-║ Trades/Hour:      {stats['trades_per_hour']:>6.2f}                            ║
-╚═══════════════════════════════════════════════════════════╝
+===============================================================
+           FX-AI PERFORMANCE SUMMARY                       
+===============================================================
+ Total Trades:     {stats['total_trades']:>6}    Win Rate:      {stats['win_rate']:>6.2f}% 
+ Wins / Losses:    {stats['winning_trades']:>3} / {stats['losing_trades']:<3}                          
+===============================================================
+ Net Profit:       ${stats['net_profit']:>8.2f}                          
+ Total Profit:     ${stats['total_profit']:>8.2f}                          
+ Total Loss:       ${stats['total_loss']:>8.2f}                          
+ Profit Factor:    {stats['profit_factor']:>8.2f}                          
+===============================================================
+ Avg Win:          ${stats['avg_win']:>8.2f}                          
+ Avg Loss:         ${stats['avg_loss']:>8.2f}                          
+ Expectancy:       ${stats['expectancy']:>8.2f}                          
+===============================================================
+ Peak Profit:      ${stats['peak_profit']:>8.2f}                          
+ Peak Drawdown:    ${stats['peak_drawdown']:>8.2f}                          
+ Current Drawdown: ${stats['current_drawdown']:>8.2f}                          
+===============================================================
+ Session Running:  {stats['session_hours']:>6.2f} hours                      
+ Trades/Hour:      {stats['trades_per_hour']:>6.2f}                            
+===============================================================
 """
         return summary
     

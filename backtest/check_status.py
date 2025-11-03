@@ -10,7 +10,7 @@ def quick_status():
     log_file = Path("robust_optimization.log")
     
     if not log_file.exists():
-        print("❌ Optimization not started yet")
+        print("[ERROR] Optimization not started yet")
         return
     
     with open(log_file, 'r', encoding='utf-8') as f:
@@ -35,27 +35,27 @@ def quick_status():
     # Count completed
     for line in lines:
         if "PASSED ALL VALIDATIONS" in line:
-            sym = line.split("✓✓✓")[1].split("PASSED")[0].strip()
-            completed.append((sym, "✓ PASSED"))
+            sym = line.split("[OK]")[1].split("PASSED")[0].strip()
+            completed.append((sym, "[OK] PASSED"))
         elif "FAILED VALIDATION" in line:
-            sym = line.split("✗✗✗")[1].split("FAILED")[0].strip()
-            completed.append((sym, "✗ FAILED"))
+            sym = line.split("[FAILED]")[1].split("FAILED")[0].strip()
+            completed.append((sym, "[FAILED] FAILED"))
     
     print("\n" + "=" * 80)
-    print("🔄 OPTIMIZATION STATUS")
+    print("[OPTIMIZATION STATUS] OPTIMIZATION STATUS")
     print("=" * 80)
     
-    print(f"\n📊 Overall Progress: {len(completed)}/30 symbols completed")
+    print(f"\n[OVERALL PROGRESS] Overall Progress: {len(completed)}/30 symbols completed")
     
     if current_symbol:
-        print(f"\n🎯 Current Symbol: {current_symbol}")
+        print(f"\n[CURRENT SYMBOL] Current Symbol: {current_symbol}")
         
         if current_progress:
             done, total = current_progress.split('/')
             pct = (int(done) / int(total)) * 100
             bar_length = 40
             filled = int(bar_length * int(done) / int(total))
-            bar = "█" * filled + "░" * (bar_length - filled)
+            bar = "#" * filled + "-" * (bar_length - filled)
             print(f"   Progress: [{bar}] {pct:.1f}%")
             print(f"   Parameters: {done}/{total}")
             
@@ -69,19 +69,19 @@ def quick_status():
                 print(f"   Estimated time remaining: ~{est_hours:.1f} hours ({est_mins:.0f} mins)")
     
     if latest_best:
-        print(f"\n💎 Latest Best Result:")
+        print(f"\n[LATEST BEST] Latest Best Result:")
         info = latest_best.split(" - INFO - ")[-1] if " - INFO - " in latest_best else latest_best
         print(f"   {info.strip()}")
     
     if completed:
-        print(f"\n✅ Completed Symbols ({len(completed)}):")
+        print(f"\n[COMPLETED SYMBOLS] Completed Symbols ({len(completed)}):")
         for sym, status in completed[-10:]:  # Show last 10
             print(f"   {status} {sym}")
         if len(completed) > 10:
             print(f"   ... and {len(completed) - 10} more")
     
     print("\n" + "=" * 80)
-    print("💡 To see full details, check: robust_optimization.log")
+    print("[FULL DETAILS] To see full details, check: robust_optimization.log")
     print("=" * 80 + "\n")
 
 if __name__ == "__main__":

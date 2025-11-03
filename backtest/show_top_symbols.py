@@ -25,10 +25,10 @@ for sym in params:
 results.sort(key=lambda x: x['pnl'], reverse=True)
 
 print("\n" + "=" * 80)
-print("🏆 TOP PERFORMING SYMBOLS - 3-YEAR BACKTEST RESULTS")
+print("[TOP PERFORMING] TOP PERFORMING SYMBOLS - 3-YEAR BACKTEST RESULTS")
 print("=" * 80)
 
-print("\n📊 TOP 4 MOST PROFITABLE:")
+print("\n[TOP 4] TOP 4 MOST PROFITABLE:")
 print("-" * 80)
 print(f"{'Rank':<6} {'Symbol':<10} {'Total PnL':<15} {'Trades':<8} {'Win Rate':<12} {'W/L':<10}")
 print("-" * 80)
@@ -42,7 +42,7 @@ for i, data in enumerate(results[:4], 1):
 print("-" * 80)
 print(f"{'TOP 4 COMBINED:':<26} ${top_4_pnl:>12,.2f}")
 
-print("\n\n📈 ALL 30 SYMBOLS RANKED BY PROFITABILITY:")
+print("\n\n[ALL SYMBOLS] ALL 30 SYMBOLS RANKED BY PROFITABILITY:")
 print("-" * 80)
 print(f"{'Rank':<6} {'Symbol':<10} {'Total PnL':<15} {'Trades':<8} {'Win Rate':<12}")
 print("-" * 80)

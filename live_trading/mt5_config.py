@@ -107,9 +107,9 @@ class MT5ConfigManager:
     
     def update_login_settings(self):
         """Interactive update of MT5 login settings"""
-        print(f"\n{Fore.CYAN}═══════════════════════════════════════════════════════════{Style.RESET_ALL}")
+        print(f"\n{Fore.CYAN}==========================================================={Style.RESET_ALL}")
         print(f"{Fore.CYAN}              UPDATE MT5 LOGIN SETTINGS                     {Style.RESET_ALL}")
-        print(f"{Fore.CYAN}═══════════════════════════════════════════════════════════{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}==========================================================={Style.RESET_ALL}")
         
         mt5_config = self.config.get('mt5', {})
         
@@ -166,9 +166,9 @@ class MT5ConfigManager:
         self.config['mt5'] = mt5_config
         
         # Confirm and save
-        print(f"\n{Fore.YELLOW}═══════════════════════════════════════════════════════════{Style.RESET_ALL}")
+        print(f"\n{Fore.YELLOW}==========================================================={Style.RESET_ALL}")
         print(f"{Fore.YELLOW}                   CONFIRM CHANGES                          {Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}═══════════════════════════════════════════════════════════{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}==========================================================={Style.RESET_ALL}")
         
         print(f"\nAccount Number:  {Fore.GREEN}{mt5_config.get('login', 'Not set')}{Style.RESET_ALL}")
         print(f"Password:        {Fore.GREEN}{'*' * len(str(mt5_config.get('password', '')))}{Style.RESET_ALL}")
@@ -188,9 +188,9 @@ class MT5ConfigManager:
     
     def quick_broker_setup(self):
         """Quick setup for common brokers"""
-        print(f"\n{Fore.CYAN}═══════════════════════════════════════════════════════════{Style.RESET_ALL}")
+        print(f"\n{Fore.CYAN}==========================================================={Style.RESET_ALL}")
         print(f"{Fore.CYAN}              QUICK BROKER SETUP                            {Style.RESET_ALL}")
-        print(f"{Fore.CYAN}═══════════════════════════════════════════════════════════{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}==========================================================={Style.RESET_ALL}")
         
         brokers = {
             '1': {
@@ -349,9 +349,9 @@ class MT5ConfigManager:
 
 def main():
     """Main entry point"""
-    print(f"\n{Fore.CYAN}╔═══════════════════════════════════════════════════════════╗{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}║           MT5 LOGIN CONFIGURATION TOOL                    ║{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}╚═══════════════════════════════════════════════════════════╝{Style.RESET_ALL}")
+    print(f"\n{Fore.CYAN}==========================================================={Style.RESET_ALL}")
+    print(f"{Fore.CYAN}           MT5 LOGIN CONFIGURATION TOOL                     {Style.RESET_ALL}")
+    print(f"{Fore.CYAN}==========================================================={Style.RESET_ALL}")
     
     manager = MT5ConfigManager()
     manager.run()

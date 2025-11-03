@@ -68,9 +68,9 @@ def analyze_training_data_bias():
             print(f"Direction distribution: {direction_dist.to_dict()}")
 
             if 'sell' in direction_dist and direction_dist['sell'] == total_trades:
-                print("⚠️  CRITICAL: ALL TRADES ARE SELLS - MODEL HAS SEVERE DIRECTION BIAS")
+                print("[CRITICAL] CRITICAL: ALL TRADES ARE SELLS - MODEL HAS SEVERE DIRECTION BIAS")
             elif 'buy' in direction_dist and direction_dist['buy'] == total_trades:
-                print("⚠️  CRITICAL: ALL TRADES ARE BUYS - MODEL HAS SEVERE DIRECTION BIAS")
+                print("[CRITICAL] CRITICAL: ALL TRADES ARE BUYS - MODEL HAS SEVERE DIRECTION BIAS")
 
             # Analyze by symbol groups
             jpy_symbols = ['USDJPY', 'CHFJPY', 'AUDJPY', 'CADJPY', 'EURJPY', 'GBPJPY', 'NZDJPY']
@@ -83,7 +83,7 @@ def analyze_training_data_bias():
                     print(f"\n{group_name} crosses direction distribution: {group_directions.to_dict()}")
 
                     if len(group_directions) == 1:
-                        print(f"⚠️  {group_name} crosses: ONLY {list(group_directions.keys())[0].upper()} TRADES")
+                        print(f"[WARNING] {group_name} crosses: ONLY {list(group_directions.keys())[0].upper()} TRADES")
 
     else:
         # Analyze actual training data
@@ -106,7 +106,7 @@ def analyze_training_data_bias():
                 print(".2f")
 
                 if imbalance_ratio > 3:
-                    print("⚠️  SEVERE CLASS IMBALANCE - This could cause bias toward majority class")
+                    print("[WARNING] SEVERE CLASS IMBALANCE - This could cause bias toward majority class")
         else:
             print("No obvious target column found")
 
