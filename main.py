@@ -922,7 +922,7 @@ class FXAiApplication:
                 # Check if trading is allowed (before 22:30 MT5 server time)
                 if self.config.get('trading', {}).get('day_trading_only', True):
                     # Get MT5 server time instead of local computer time
-                    server_time = self.mt5_connector.get_server_time()
+                    server_time = self.mt5.get_server_time()
                     if server_time:
                         current_time = server_time.time()
                     else:
@@ -1449,7 +1449,7 @@ class FXAiApplication:
                 return
 
             # Get MT5 server time instead of local computer time
-            server_time = self.mt5_connector.get_server_time()
+            server_time = self.mt5.get_server_time()
             if server_time:
                 current_time = server_time.time()
                 today = server_time.date()
