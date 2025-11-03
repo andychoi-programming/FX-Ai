@@ -179,13 +179,17 @@ class TradingEngine:
                 stops_level = getattr(symbol_info, 'trade_stops_level', 0)
 
                 # Calculate minimum stop distance in PIPS, not points
-                # For JPY pairs: 1 pip = 0.01, for others: 1 pip = 0.0001
-                if "JPY" in symbol:
-                    pip_size = 0.01
+                # Metals: 1 pip = 0.10, JPY: 1 pip = 0.01, others: 1 pip = 0.0001
+                if 'XAU' in symbol or 'XAG' in symbol or 'GOLD' in symbol:
+                    pip_size = 0.10  # Metals
+                    # Metals: minimum 50 pips due to wider spreads
+                    min_stop_pips = max(stops_level / 100, 50)
+                elif "JPY" in symbol:
+                    pip_size = 0.01  # JPY pairs
                     # Convert points to pips, minimum 15 pips
                     min_stop_pips = max(stops_level / 10, 15)
                 else:
-                    pip_size = 0.0001
+                    pip_size = 0.0001  # Standard forex
                     # Convert points to pips, minimum 15 pips
                     min_stop_pips = max(stops_level / 10, 15)
 
@@ -243,13 +247,17 @@ class TradingEngine:
                 stops_level = getattr(symbol_info, 'trade_stops_level', 0)
 
                 # Calculate minimum stop distance in PIPS, not points
-                # For JPY pairs: 1 pip = 0.01, for others: 1 pip = 0.0001
-                if "JPY" in symbol:
-                    pip_size = 0.01
+                # Metals: 1 pip = 0.10, JPY: 1 pip = 0.01, others: 1 pip = 0.0001
+                if 'XAU' in symbol or 'XAG' in symbol or 'GOLD' in symbol:
+                    pip_size = 0.10  # Metals
+                    # Metals: minimum 50 pips due to wider spreads
+                    min_stop_pips = max(stops_level / 100, 50)
+                elif "JPY" in symbol:
+                    pip_size = 0.01  # JPY pairs
                     # Convert points to pips, minimum 15 pips
                     min_stop_pips = max(stops_level / 10, 15)
                 else:
-                    pip_size = 0.0001
+                    pip_size = 0.0001  # Standard forex
                     # Convert points to pips, minimum 15 pips
                     min_stop_pips = max(stops_level / 10, 15)
 
