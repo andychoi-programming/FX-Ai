@@ -738,30 +738,22 @@ class FXAiApplication:
                         # than fixed percentage)
                         atr_value = technical_signals.get(
                             'atr', {}).get('value', 0)
-                        if atr_value > 0:
+                        
+                        # For metals, use optimized sl_pips directly from parameter manager
+                        if 'XAU' in symbol or 'XAG' in symbol or 'GOLD' in symbol:
+                            optimal_params = self.param_manager.get_optimal_parameters(symbol, 'H1')
+                            sl_pips = optimal_params.get('sl_pips', 200)  # Default 200 pips for XAUUSD
+                            stop_loss_distance = sl_pips * 0.01  # Metals: 1 pip = 0.01
+                            self.logger.info(
+                                f"{symbol} using optimized metal stop loss: {sl_pips} pips = {stop_loss_distance:.5f}")
+                        elif atr_value > 0:
                             self.logger.debug(
                                 f"{symbol}: ATR available ({atr_value:.5f}) - "
                                 f"proceeding with signal")
-                            # Use adaptive ATR multiplier for stop loss distance
-                            # Use higher multipliers for precious metals to
-                            # meet broker requirements
+                            # Use adaptive ATR multiplier for stop loss distance (forex only)
                             base_multiplier = adaptive_params.get(
-                                'stop_loss_atr_multiplier', 3.0)  # Increased from 2.0
-                            if 'XAU' in symbol or 'XAG' in symbol:
-                                # Precious metals need higher multipliers due
-                                # to lower ATR on M1 timeframe
-                                if 'XAUUSD' in symbol:
-                                    # XAUUSD ATR is very wide, reduce
-                                    # multiplier to allow proper position
-                                    # sizing
-                                    sl_atr_multiplier = 0.3  # Much lower multiplier for XAUUSD
-                                else:
-                                    # Keep 4.0 for XAGUSD
-                                    sl_atr_multiplier = max(
-                                        base_multiplier, 4.0)
-                            else:
-                                sl_atr_multiplier = base_multiplier
-
+                                'stop_loss_atr_multiplier', 3.0)
+                            sl_atr_multiplier = base_multiplier
                             stop_loss_distance = atr_value * sl_atr_multiplier
                             self.logger.debug(
                                 f"{symbol} ATR-based stop loss: "
