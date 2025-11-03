@@ -743,7 +743,7 @@ class FXAiApplication:
                         if 'XAU' in symbol or 'XAG' in symbol or 'GOLD' in symbol:
                             optimal_params = self.param_manager.get_optimal_parameters(symbol, 'H1')
                             sl_pips = optimal_params.get('sl_pips', 200)  # Default 200 pips for XAUUSD
-                            stop_loss_distance = sl_pips * 0.01  # Metals: 1 pip = 0.01
+                            stop_loss_distance = sl_pips * 0.10  # Metals: 1 pip = 0.10 (10 points)
                             sl_atr_multiplier = stop_loss_distance / atr_value if atr_value > 0 else 0  # For logging only
                             self.logger.info(
                                 f"{symbol} using optimized metal stop loss: {sl_pips} pips = {stop_loss_distance:.5f}")
@@ -787,7 +787,7 @@ class FXAiApplication:
                                 optimal_params = self.param_manager.get_optimal_parameters(symbol, 'H1')
                                 tp_pips = optimal_params.get('tp_pips', 600)  # Default 600 pips for metals
                                 # Convert TP pips to distance
-                                take_profit_distance = tp_pips * 0.01  # Metals: 1 pip = 0.01
+                                take_profit_distance = tp_pips * 0.10  # Metals: 1 pip = 0.10 (10 points)
                                 tp_atr_multiplier = take_profit_distance / atr_value if atr_value > 0 else 0  # Calculate for logging
                                 self.logger.info(f"{symbol} using optimized metal take profit: {tp_pips} pips = {take_profit_distance:.5f}")
                             else:
