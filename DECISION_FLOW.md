@@ -1,8 +1,8 @@
-# Trade Decision & SL/TP Flow
+﻿# Trade Decision & SL/TP Flow
 
-## ✅ YES - All 3 Analyzers Influence Trade Decisions
+## [+] YES - All 3 Analyzers Influence Trade Decisions
 
-### 📊 Signal Calculation (Weighted Average)
+### [CHART] Signal Calculation (Weighted Average)
 
 The system combines all 3 analyzers into a **weighted signal strength**:
 
@@ -18,7 +18,7 @@ signal_strength = (
 
 **Trade Decision**: Only opens trade if `signal_strength > 0.4` (40% threshold)
 
-### 🎯 Trade Direction Decision
+### [TARGET] Trade Direction Decision
 
 1. **Primary**: ML Predictor determines BUY/SELL direction
 2. **Override**: Reinforcement Learning agent can override ML if enabled
@@ -26,9 +26,9 @@ signal_strength = (
 
 ---
 
-## ✅ YES - SL/TP NOW ADJUSTED BY ALL 3 ANALYZERS!
+## [+] YES - SL/TP NOW ADJUSTED BY ALL 3 ANALYZERS!
 
-### 🛑 Stop Loss Calculation
+### [STOP] Stop Loss Calculation
 
 **Base Calculation** (Technical Analyzer ATR):
 
@@ -62,13 +62,13 @@ stop_loss_distance = base_sl_distance * sl_adjustment_factor
 ```
 
 **Sources**:
-- ✅ Technical Analyzer → ATR value (base calculation)
-- ✅ Sentiment Analyzer → Adjusts SL tightness based on market mood
-- ✅ Fundamental Analyzer → Adjusts SL for news events and fundamental strength
-- ✅ Parameter Manager → Optimized sl_pips (for metals)
-- ✅ Adaptive Learning → ATR multiplier adjustments
+- [+] Technical Analyzer → ATR value (base calculation)
+- [+] Sentiment Analyzer → Adjusts SL tightness based on market mood
+- [+] Fundamental Analyzer → Adjusts SL for news events and fundamental strength
+- [+] Parameter Manager → Optimized sl_pips (for metals)
+- [+] Adaptive Learning → ATR multiplier adjustments
 
-### 🎯 Take Profit Calculation
+### [TARGET] Take Profit Calculation
 
 **Base Calculation** (Technical Analyzer ATR):
 
@@ -104,42 +104,42 @@ take_profit_distance = base_tp_distance * tp_adjustment_factor
 ```
 
 **Sources**:
-- ✅ Technical Analyzer → ATR value (base calculation)
-- ✅ Sentiment Analyzer → Extends/tightens TP based on market mood
-- ✅ Fundamental Analyzer → Adjusts TP for news events and fundamental strength
-- ✅ Parameter Manager → Optimized tp_pips (for metals)
-- ✅ Adaptive Learning → ATR multiplier adjustments
+- [+] Technical Analyzer → ATR value (base calculation)
+- [+] Sentiment Analyzer → Extends/tightens TP based on market mood
+- [+] Fundamental Analyzer → Adjusts TP for news events and fundamental strength
+- [+] Parameter Manager → Optimized tp_pips (for metals)
+- [+] Adaptive Learning → ATR multiplier adjustments
 
 ---
 
-## 📈 What Each Analyzer Actually Does
+## [TREND] What Each Analyzer Actually Does
 
 ### 1. **Technical Analyzer** (`analysis/technical_analyzer.py`)
 - **Purpose**: Calculate indicators (RSI, MACD, Bollinger Bands, ATR, ADX, etc.)
 - **Used For**:
-  - ✅ Trade decision (25% weight in signal_strength)
-  - ✅ SL calculation (ATR value)
-  - ✅ TP calculation (ATR value)
-  - ✅ Regime detection (trending/ranging)
+  - [+] Trade decision (25% weight in signal_strength)
+  - [+] SL calculation (ATR value)
+  - [+] TP calculation (ATR value)
+  - [+] Regime detection (trending/ranging)
 - **Output**: `technical_score` (0-1), ATR value, indicator values
 
 ### 2. **Sentiment Analyzer** (`analysis/sentiment_analyzer.py`)
 - **Purpose**: Analyze market sentiment from news/social media
 - **Used For**:
-  - ✅ Trade decision (20% weight in signal_strength)
-  - ❌ SL/TP calculation (NOT used)
+  - [+] Trade decision (20% weight in signal_strength)
+  - [-] SL/TP calculation (NOT used)
 - **Output**: `sentiment_score` (0-1)
 
 ### 3. **Fundamental Analyzer** (`analysis/fundamental_analyzer.py`)
 - **Purpose**: Economic calendar, news events, correlations
 - **Used For**:
-  - ✅ Trade decision (15% weight in signal_strength)
-  - ❌ SL/TP calculation (NOT used)
+  - [+] Trade decision (15% weight in signal_strength)
+  - [-] SL/TP calculation (NOT used)
 - **Output**: `fundamental_score` (0-1)
 
 ---
 
-## 🔄 Complete Trade Flow
+## [CYCLE] Complete Trade Flow
 
 ```
 1. Collect Data
@@ -174,19 +174,19 @@ take_profit_distance = base_tp_distance * tp_adjustment_factor
 
 ---
 
-## 💡 Key Insights
+## [IDEA] Key Insights
 
 ### What Works Well:
-✅ All 3 analyzers influence **WHETHER** to trade (decision)
-✅ Technical ATR provides dynamic, market-adaptive SL/TP
-✅ Sentiment + Fundamental help filter out weak signals
+[+] All 3 analyzers influence **WHETHER** to trade (decision)
+[+] Technical ATR provides dynamic, market-adaptive SL/TP
+[+] Sentiment + Fundamental help filter out weak signals
 
 ### New Intelligent Risk Management:
-✅ **SL/TP now dynamically adjust based on market conditions**:
-- ✅ Widen SL during high-impact news events (protect from volatility spikes)
-- ✅ Tighten TP during negative sentiment (take profits before reversal)
-- ✅ Extend TP with strong fundamentals (ride the trend longer)
-- ✅ Adjust SL based on sentiment strength (confident vs defensive positioning)
+[+] **SL/TP now dynamically adjust based on market conditions**:
+- [+] Widen SL during high-impact news events (protect from volatility spikes)
+- [+] Tighten TP during negative sentiment (take profits before reversal)
+- [+] Extend TP with strong fundamentals (ride the trend longer)
+- [+] Adjust SL based on sentiment strength (confident vs defensive positioning)
 
 ### Current Behavior:
 - **Trade Entry**: Multi-factor decision (all 3 analyzers)
@@ -194,7 +194,7 @@ take_profit_distance = base_tp_distance * tp_adjustment_factor
 
 ---
 
-## 📊 Current Weights (Adaptive)
+## [CHART] Current Weights (Adaptive)
 
 These weights are stored in `data/signal_weights.json` and **automatically adjusted** by adaptive learning based on performance:
 

@@ -1,6 +1,6 @@
-# SL/TP Enhancement Summary
+﻿# SL/TP Enhancement Summary
 
-## ✅ Implementation Complete
+## [+] Implementation Complete
 
 ### Changes Made
 
@@ -100,7 +100,7 @@ take_profit_distance = take_profit_distance * tp_adjustment_factor
 
 ---
 
-## 📊 Adjustment Matrix
+## [CHART] Adjustment Matrix
 
 ### Stop Loss (SL)
 
@@ -123,7 +123,7 @@ take_profit_distance = take_profit_distance * tp_adjustment_factor
 
 ---
 
-## 🎯 Example Scenarios
+## [TARGET] Example Scenarios
 
 ### Scenario 1: Strong Bullish Setup
 - **Sentiment**: 0.75 (strong positive)
@@ -154,7 +154,7 @@ take_profit_distance = take_profit_distance * tp_adjustment_factor
 
 ---
 
-## 🔍 Testing Recommendations
+## [SEARCH] Testing Recommendations
 
 1. **Monitor Logs**: Check for adjustment factor messages
    - Look for: "Total SL adjustment factor: X.XXx"
@@ -175,17 +175,17 @@ take_profit_distance = take_profit_distance * tp_adjustment_factor
 
 ---
 
-## 📝 Next Steps
+## [NOTE] Next Steps
 
-1. ✅ Code implemented and tested (no syntax errors)
-2. ✅ Documentation updated (DECISION_FLOW.md)
-3. 🔄 **Ready to run live** - Monitor first 10-20 trades
-4. 📊 **Collect data** - Compare adjusted vs non-adjusted performance
-5. 🎯 **Fine-tune** - Adjust multipliers based on results
+1. [+] Code implemented and tested (no syntax errors)
+2. [+] Documentation updated (DECISION_FLOW.md)
+3. [CYCLE] **Ready to run live** - Monitor first 10-20 trades
+4. [CHART] **Collect data** - Compare adjusted vs non-adjusted performance
+5. [TARGET] **Fine-tune** - Adjust multipliers based on results
 
 ---
 
-## 🚀 Expected Benefits
+## [>>] Expected Benefits
 
 1. **Better Risk Management**:
    - Avoid volatility spikes during news
