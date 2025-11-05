@@ -1050,6 +1050,10 @@ class FXAiApplication:
 
                         if trade_result.get('success', False):
                             self.session_stats['total_trades'] += 1
+                            
+                            # Record trade for daily limit tracking (ONE TRADE PER SYMBOL PER DAY)
+                            self.risk_manager.record_trade(signal['symbol'])
+                            self.logger.info(f"{signal['symbol']}: Trade executed and recorded - no more trades allowed today")
 
                             # ===== REINFORCEMENT LEARNING EXPERIENCE =====
                             if self.reinforcement_agent and self.reinforcement_agent.enabled:

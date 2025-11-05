@@ -34,7 +34,12 @@ class RiskManager:
         self.symbol_cooldowns = {}  # symbol -> cooldown_end_time
         self.cooldown_minutes = config.get('risk_management', {}).get('symbol_cooldown_minutes', 5)  # 5 minute cooldown
         
+        # Daily trade tracking per symbol (ONE TRADE PER SYMBOL PER DAY)
+        self.daily_trades_per_symbol = {}  # symbol -> {'date': 'YYYY-MM-DD', 'count': N}
+        self.max_trades_per_symbol_per_day = 1  # Hard limit: 1 trade per symbol per day
+        
         logger.info(f"Risk Manager initialized with ${self.risk_per_trade} risk per trade, max_positions={self.max_positions}")
+        logger.info(f"Daily trade limit: {self.max_trades_per_symbol_per_day} trade per symbol per day")
     
     def calculate_position_size(self, 
                                symbol: str, 
@@ -368,7 +373,54 @@ class RiskManager:
         """Reset daily statistics"""
         self.daily_loss = 0.0
         self.open_positions.clear()
-        logger.info("Daily stats reset")
+        self.daily_trades_per_symbol.clear()  # Reset daily trade counter
+        logger.info("Daily stats reset (including per-symbol trade counters)")
+    
+    def has_traded_today(self, symbol: str) -> bool:
+        """Check if symbol has already been traded today (MT5 server time)"""
+        from datetime import datetime
+        
+        # Get MT5 server time
+        server_time = mt5.symbol_info_tick(symbol)
+        if server_time:
+            current_date = datetime.fromtimestamp(server_time.time).strftime('%Y-%m-%d')
+        else:
+            # Fallback to local time if MT5 not available
+            current_date = datetime.now().strftime('%Y-%m-%d')
+        
+        # Check if symbol has trade record for today
+        if symbol in self.daily_trades_per_symbol:
+            trade_info = self.daily_trades_per_symbol[symbol]
+            
+            # If it's a new day, reset the counter
+            if trade_info['date'] != current_date:
+                self.daily_trades_per_symbol[symbol] = {'date': current_date, 'count': 0}
+                return False
+            
+            # Check if already traded today
+            if trade_info['count'] >= self.max_trades_per_symbol_per_day:
+                logger.info(f"{symbol}: Already traded today ({current_date}), skipping")
+                return True
+        
+        return False
+    
+    def record_trade(self, symbol: str):
+        """Record that a trade was executed for this symbol today"""
+        from datetime import datetime
+        
+        # Get MT5 server time
+        server_time = mt5.symbol_info_tick(symbol)
+        if server_time:
+            current_date = datetime.fromtimestamp(server_time.time).strftime('%Y-%m-%d')
+        else:
+            current_date = datetime.now().strftime('%Y-%m-%d')
+        
+        # Update trade counter
+        if symbol not in self.daily_trades_per_symbol:
+            self.daily_trades_per_symbol[symbol] = {'date': current_date, 'count': 0}
+        
+        self.daily_trades_per_symbol[symbol]['count'] += 1
+        logger.info(f"{symbol}: Trade recorded for {current_date} (count: {self.daily_trades_per_symbol[symbol]['count']})")
     
     def can_trade(self, symbol: str) -> bool:
         """Quick check if trading is allowed"""
@@ -376,6 +428,12 @@ class RiskManager:
         
         logger.debug(f"Checking if can trade {symbol}: daily_loss={self.daily_loss}, max_daily_loss={self.max_daily_loss}")
         
+        # CHECK #1: Daily trade limit per symbol (ONE TRADE PER DAY)
+        if self.has_traded_today(symbol):
+            logger.warning(f"{symbol}: Already traded today - ONE trade per symbol per day limit")
+            return False
+        
+        # CHECK #2: Daily loss limit
         if self.daily_loss >= self.max_daily_loss:
             logger.warning(f"Daily loss limit reached: ${self.daily_loss:.2f}")
             return False
