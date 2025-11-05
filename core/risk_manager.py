@@ -20,11 +20,28 @@ class RiskManager:
         """Initialize risk manager"""
         self.config = config
         
-        # Risk parameters
-        self.risk_per_trade = config.get('trading', {}).get('risk_per_trade', 50.0)  # Dollar risk
-        self.max_positions = config.get('trading', {}).get('max_positions', 3)
-        self.max_daily_loss = config.get('trading', {}).get('max_daily_loss', 200.0)
-        self.max_spread = config.get('trading', {}).get('max_spread', 3.0)
+        # Try to read from new trading_rules section, fallback to old locations
+        trading_rules = config.get('trading_rules', {})
+        trading_config = config.get('trading', {})
+        risk_config = config.get('risk_management', {})
+        
+        # Risk parameters (prefer trading_rules, fallback to legacy)
+        risk_limits = trading_rules.get('risk_limits', {})
+        self.risk_per_trade = risk_limits.get('risk_per_trade', trading_config.get('risk_per_trade', 50.0))
+        self.max_daily_loss = risk_limits.get('max_daily_loss', trading_config.get('max_daily_loss', 200.0))
+        
+        # Position limits
+        position_limits = trading_rules.get('position_limits', {})
+        self.max_positions = position_limits.get('max_positions', trading_config.get('max_positions', 3))
+        self.max_trades_per_symbol_per_day = position_limits.get('max_trades_per_symbol_per_day', 1)
+        
+        # Entry rules
+        entry_rules = trading_rules.get('entry_rules', {})
+        self.max_spread = entry_rules.get('max_spread', trading_config.get('max_spread', 3.0))
+        
+        # Cooldown rules
+        cooldown_rules = trading_rules.get('cooldown_rules', {})
+        self.cooldown_minutes = cooldown_rules.get('symbol_cooldown_minutes', risk_config.get('symbol_cooldown_minutes', 5))
         
         # Position tracking
         self.open_positions = {}
@@ -32,14 +49,13 @@ class RiskManager:
         
         # Cooldown tracking to prevent immediate reopening after losses
         self.symbol_cooldowns = {}  # symbol -> cooldown_end_time
-        self.cooldown_minutes = config.get('risk_management', {}).get('symbol_cooldown_minutes', 5)  # 5 minute cooldown
         
         # Daily trade tracking per symbol (ONE TRADE PER SYMBOL PER DAY)
         self.daily_trades_per_symbol = {}  # symbol -> {'date': 'YYYY-MM-DD', 'count': N}
-        self.max_trades_per_symbol_per_day = 1  # Hard limit: 1 trade per symbol per day
         
         logger.info(f"Risk Manager initialized with ${self.risk_per_trade} risk per trade, max_positions={self.max_positions}")
         logger.info(f"Daily trade limit: {self.max_trades_per_symbol_per_day} trade per symbol per day")
+        logger.info(f"Max spread: {self.max_spread} pips, Cooldown: {self.cooldown_minutes} minutes")
     
     def calculate_position_size(self, 
                                symbol: str, 
