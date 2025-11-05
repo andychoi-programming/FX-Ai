@@ -601,6 +601,39 @@ class FXAiApplication:
                                 f"{symbol} fallback stop loss: 2% of entry = "
                                 f"{stop_loss_distance:.5f}")
 
+                        # ===== SENTIMENT & FUNDAMENTAL ADJUSTMENTS FOR SL =====
+                        # Adjust stop loss based on sentiment and fundamental analysis
+                        sl_adjustment_factor = 1.0  # Default: no adjustment
+                        
+                        # Sentiment-based SL adjustment
+                        if sentiment_score > 0.7:
+                            # Strong positive sentiment: Tighten SL (ride winners, protect gains)
+                            sl_adjustment_factor *= 0.90  # Reduce SL distance by 10%
+                            self.logger.info(f"{symbol}: Strong positive sentiment ({sentiment_score:.2f}) - tightening SL by 10%")
+                        elif sentiment_score < 0.3:
+                            # Strong negative sentiment: Widen SL (give room, avoid premature stops)
+                            sl_adjustment_factor *= 1.15  # Increase SL distance by 15%
+                            self.logger.info(f"{symbol}: Strong negative sentiment ({sentiment_score:.2f}) - widening SL by 15%")
+                        
+                        # Fundamental-based SL adjustment
+                        fundamental_score = fundamental_data.get(symbol, {}).get('score', 0.5)
+                        high_impact_news = fundamental_data.get(symbol, {}).get('high_impact_news_soon', False)
+                        
+                        if high_impact_news:
+                            # High-impact news coming: Widen SL to avoid being stopped out by volatility
+                            sl_adjustment_factor *= 1.20  # Increase SL distance by 20%
+                            self.logger.info(f"{symbol}: High-impact news detected - widening SL by 20%")
+                        elif fundamental_score < 0.3:
+                            # Weak fundamentals: Widen SL slightly (less confident trade)
+                            sl_adjustment_factor *= 1.10  # Increase SL distance by 10%
+                            self.logger.info(f"{symbol}: Weak fundamentals ({fundamental_score:.2f}) - widening SL by 10%")
+                        
+                        # Apply adjustment
+                        stop_loss_distance = stop_loss_distance * sl_adjustment_factor
+                        
+                        if sl_adjustment_factor != 1.0:
+                            self.logger.info(f"{symbol}: Total SL adjustment factor: {sl_adjustment_factor:.2f}x (distance: {stop_loss_distance:.5f})")
+
                         # No minimum SL restriction - use optimized parameters directly
                         # The stop_loss_distance is already calculated using optimized values from
                         # DynamicParameterManager or adaptive learning
@@ -637,6 +670,40 @@ class FXAiApplication:
                                     'take_profit_atr_multiplier', 6.0)
                                 tp_atr_multiplier = base_tp_multiplier
                                 take_profit_distance = atr_value * tp_atr_multiplier
+
+                            # ===== SENTIMENT & FUNDAMENTAL ADJUSTMENTS FOR TP =====
+                            # Adjust take profit based on sentiment and fundamental analysis
+                            tp_adjustment_factor = 1.0  # Default: no adjustment
+                            
+                            # Sentiment-based TP adjustment
+                            if sentiment_score > 0.7:
+                                # Strong positive sentiment: Extend TP (ride the trend)
+                                tp_adjustment_factor *= 1.15  # Increase TP distance by 15%
+                                self.logger.info(f"{symbol}: Strong positive sentiment ({sentiment_score:.2f}) - extending TP by 15%")
+                            elif sentiment_score < 0.3:
+                                # Strong negative sentiment: Tighten TP (take profits quickly)
+                                tp_adjustment_factor *= 0.90  # Reduce TP distance by 10%
+                                self.logger.info(f"{symbol}: Strong negative sentiment ({sentiment_score:.2f}) - tightening TP by 10%")
+                            
+                            # Fundamental-based TP adjustment
+                            if fundamental_score > 0.7:
+                                # Strong fundamentals: Extend TP (trend likely to continue)
+                                tp_adjustment_factor *= 1.20  # Increase TP distance by 20%
+                                self.logger.info(f"{symbol}: Strong fundamentals ({fundamental_score:.2f}) - extending TP by 20%")
+                            elif fundamental_score < 0.3:
+                                # Weak fundamentals: Tighten TP (take profits early)
+                                tp_adjustment_factor *= 0.85  # Reduce TP distance by 15%
+                                self.logger.info(f"{symbol}: Weak fundamentals ({fundamental_score:.2f}) - tightening TP by 15%")
+                            elif high_impact_news:
+                                # High-impact news: Tighten TP (lock in gains before volatility)
+                                tp_adjustment_factor *= 0.90  # Reduce TP distance by 10%
+                                self.logger.info(f"{symbol}: High-impact news detected - tightening TP by 10%")
+                            
+                            # Apply adjustment
+                            take_profit_distance = take_profit_distance * tp_adjustment_factor
+                            
+                            if tp_adjustment_factor != 1.0:
+                                self.logger.info(f"{symbol}: Total TP adjustment factor: {tp_adjustment_factor:.2f}x (distance: {take_profit_distance:.5f})")
 
                             if ml_prediction.get('direction') == 1:  # BUY
                                 take_profit = entry_price + take_profit_distance
