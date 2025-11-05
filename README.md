@@ -2140,6 +2140,623 @@ Track these metrics:
 
 ---
 
+## 📋 Trading Rules Configuration
+
+All trading rules are now consolidated in one place: `config/config.json` under the `trading_rules` section. This makes it easy to view, modify, and manage all trading constraints from a single location.
+
+### Trading Rules Quick Reference
+
+| Rule Category | Key Rules | Values |
+|---------------|-----------|---------|
+| **Position Limits** | Max positions | 30 total |
+| | Max per symbol | 1 at a time |
+| | **Trades per symbol/day** | **1** ⭐ |
+| | Prevent multiple positions | true |
+| **Time Restrictions** | **Close time** | **22:30** ⭐ |
+| | Day trading only | true |
+| | Close before weekend | true |
+| | Close on shutdown | true |
+| **Risk Limits** | Risk per trade | $50 fixed |
+| | Max daily loss | $500 |
+| | Max consecutive losses | 3 |
+| | Max daily trades | 10 |
+| **Position Sizing** | Min lot size | 0.01 |
+| | Max lot size | 1.0 |
+| | Risk calculation | pip-based |
+| | Margin safety | 95% |
+| **Entry Rules** | Min signal strength | 0.4 |
+| | Max spread | 3 pips |
+| | Min risk/reward | 2:1 |
+| | ML confirmation | required |
+| | Technical confirmation | required |
+| **SL Rules** | Method | ATR-based |
+| | Forex multiplier | 3.0x ATR |
+| | Metals multiplier | 2.5x ATR |
+| | Max SL | 50 pips |
+| | Sentiment adjustment | enabled |
+| | Fundamental adjustment | enabled |
+| **TP Rules** | Method | ATR-based |
+| | Forex multiplier | 6.0x ATR |
+| | Metals multiplier | 5.0x ATR |
+| | Sentiment adjustment | enabled |
+| | Fundamental adjustment | enabled |
+| **Exit Rules** | Trailing stop | enabled |
+| | Trail activation | 20 pips profit |
+| | Trail distance | 15 pips |
+| | Breakeven | enabled |
+| | Breakeven activation | 15 pips |
+| **Cooldown Rules** | Symbol cooldown | 5 minutes |
+| | After loss cooldown | enabled |
+| **News Filter** | High-impact avoidance | enabled |
+| | News buffer | 60 minutes |
+| **Session Filter** | Preferred sessions | London, New York, Overlap |
+
+#### Critical Rules (Always Enforced)
+
+1. **22:30 Close Time** - All positions closed at 22:30 MT5 server time
+2. **One Trade Per Symbol Per Day** - Maximum 1 trade per symbol per day
+3. **$50 Fixed Risk** - Every trade risks exactly $50
+4. **2:1 Risk/Reward** - Minimum 2:1 TP:SL ratio required
+5. **Max 3 Pips Spread** - No trade if spread > 3 pips
+
+#### Modification Examples
+
+**Change close time to 21:00:**
+
+```json
+"time_restrictions": {
+  "close_hour": 21,
+  "close_minute": 0
+}
+```
+
+**Allow 2 trades per symbol per day:**
+
+```json
+"position_limits": {
+  "max_trades_per_symbol_per_day": 2
+}
+```
+
+**Increase risk to $100 per trade:**
+
+```json
+"risk_limits": {
+  "risk_per_trade": 100.0,
+  "max_daily_loss": 1000.0
+}
+```
+
+**Tighter spread requirement (2 pips):**
+
+```json
+"entry_rules": {
+  "max_spread": 2.0
+}
+```
+
+#### Key Takeaways
+
+- **Single Source of Truth**: All rules in `config/config.json` trading_rules section
+- **Easy to Modify**: Change one value, affects entire system
+- **Critical Rules**: 22:30 close, 1 trade/day, $50 risk, 2:1 RR, 3 pip spread
+- **Adaptive Rules**: ATR-based SL/TP, sentiment/fundamental adjustments, news protection
+- **Risk Management**: Fixed dollar risk, daily limits, position limits, cooldowns
+
+### Complete Trading Rules Configuration
+
+#### Configuration Location
+
+```json
+File: config/config.json
+Section: "trading_rules"
+```
+
+#### Position Limits
+
+```json
+"position_limits": {
+  "max_positions": 30,                          // Maximum total open positions
+  "max_positions_per_symbol": 1,               // Only 1 position per symbol at a time
+  "prevent_multiple_positions_per_symbol": true,
+  "max_trades_per_symbol_per_day": 1           // ⭐ ONE trade per symbol per day
+}
+```
+
+**Rules:**
+- ✅ Maximum 30 positions across all symbols
+- ✅ Only 1 open position per symbol at any time
+- ✅ **ONE trade per symbol per day** (no re-entry same day)
+- ✅ If no opportunity, no trade is acceptable
+
+#### Time Restrictions
+
+```json
+"time_restrictions": {
+  "day_trading_only": true,        // Close all positions before day end
+  "close_hour": 22,                // ⭐ Close time: 22:30 MT5 server time
+  "close_minute": 30,
+  "close_before_weekend": true,    // Close all before weekend
+  "close_on_shutdown": true        // Close all on system shutdown
+}
+```
+
+**Rules:**
+- ✅ **All trades closed at 22:30** (MT5 server time)
+- ✅ No overnight positions
+- ✅ All positions closed before weekend
+- ✅ System closes all trades on shutdown
+
+#### Risk Limits
+
+```json
+"risk_limits": {
+  "risk_per_trade": 50.0,          // Fixed $50 risk per trade
+  "risk_type": "fixed_dollar",
+  "max_daily_loss": 500.0,         // Stop trading if lose $500 in a day
+  "max_consecutive_losses": 3,     // Pause after 3 losses in a row
+  "pause_after_losses": true,
+  "max_daily_trades": 10           // Maximum 10 trades per day total
+}
+```
+
+**Rules:**
+- ✅ Fixed $50 risk per trade (not percentage)
+- ✅ Stop trading if daily loss reaches $500
+- ✅ Pause trading after 3 consecutive losses
+- ✅ Maximum 10 trades per day across all symbols
+
+#### Position Sizing
+
+```json
+"position_sizing": {
+  "min_lot_size": 0.01,
+  "max_lot_size": 1.0,
+  "risk_calculation_method": "pip_based",
+  "margin_safety_factor": 0.95
+}
+```
+
+**Rules:**
+- ✅ Position size calculated to risk exactly $50
+- ✅ Minimum 0.01 lots, maximum 1.0 lots
+- ✅ Based on pip distance to stop loss
+- ✅ 95% margin safety factor
+
+#### Entry Rules
+
+```json
+"entry_rules": {
+  "min_signal_strength": 0.4,          // Minimum 0.4 signal strength
+  "max_spread": 3.0,                   // Maximum 3 pips spread
+  "min_risk_reward_ratio": 2.0,        // Minimum 2:1 risk/reward
+  "require_ml_confirmation": true,
+  "require_technical_confirmation": true
+}
+```
+
+**Rules:**
+- ✅ Signal strength must be > 0.4
+- ✅ Spread must be < 3 pips
+- ✅ Risk/Reward ratio must be > 2:1 (TP at least 2x SL)
+- ✅ ML model must confirm direction
+- ✅ Technical indicators must confirm
+
+#### Stop Loss Rules
+
+```json
+"stop_loss_rules": {
+  "method": "atr_based",
+  "sl_atr_multiplier_forex": 3.0,      // Forex: SL = ATR × 3.0
+  "sl_atr_multiplier_metals": 2.5,     // Metals: SL = ATR × 2.5
+  "default_sl_pips": 20,
+  "max_sl_pips": 50,
+  "sl_adjustment_sentiment": true,     // Adjust SL based on sentiment
+  "sl_adjustment_fundamental": true    // Adjust SL based on fundamentals
+}
+```
+
+**Rules:**
+- ✅ SL based on ATR (dynamic, market-adaptive)
+- ✅ Forex: 3.0× ATR, Metals: 2.5× ATR
+- ✅ Adjusted by sentiment (0.9x-1.15x)
+- ✅ Adjusted by fundamentals (1.0x-1.2x)
+- ✅ Maximum 50 pips stop loss
+
+**SL Adjustments:**
+| Condition | Adjustment | Reason |
+|-----------|-----------|---------|
+| Strong positive sentiment (>0.7) | 0.90× (tighter) | Protect gains |
+| Strong negative sentiment (<0.3) | 1.15× (wider) | Avoid premature stops |
+| High-impact news (<1hr) | 1.20× (wider) | Survive volatility spike |
+| Weak fundamentals (<0.3) | 1.10× (wider) | Less confident trade |
+
+#### Take Profit Rules
+
+```json
+"take_profit_rules": {
+  "method": "atr_based",
+  "tp_atr_multiplier_forex": 6.0,      // Forex: TP = ATR × 6.0
+  "tp_atr_multiplier_metals": 5.0,     // Metals: TP = ATR × 5.0
+  "default_tp_pips": 40,
+  "tp_adjustment_sentiment": true,     // Adjust TP based on sentiment
+  "tp_adjustment_fundamental": true    // Adjust TP based on fundamentals
+}
+```
+
+**Rules:**
+- ✅ TP based on ATR (dynamic, market-adaptive)
+- ✅ Forex: 6.0× ATR, Metals: 5.0× ATR
+- ✅ Adjusted by sentiment (0.9x-1.15x)
+- ✅ Adjusted by fundamentals (0.85x-1.2x)
+
+**TP Adjustments:**
+| Condition | Adjustment | Reason |
+|-----------|-----------|---------|
+| Strong positive sentiment (>0.7) | 1.15× (extend) | Ride the trend |
+| Strong negative sentiment (<0.3) | 0.90× (tighten) | Quick profit |
+| Strong fundamentals (>0.7) | 1.20× (extend) | Trend continues |
+| Weak fundamentals (<0.3) | 0.85× (tighten) | Take profits early |
+| High-impact news (<1hr) | 0.90× (tighten) | Lock gains before volatility |
+
+#### Exit Rules
+
+```json
+"exit_rules": {
+  "trailing_stop_enabled": true,
+  "trailing_activation_pips": 20,      // Activate after 20 pips profit
+  "trailing_distance_pips": 15,        // Trail 15 pips behind
+  "breakeven_enabled": true,
+  "breakeven_activation_pips": 15      // Move to breakeven at 15 pips
+}
+```
+
+**Rules:**
+- ✅ Trailing stop activates at 20 pips profit
+- ✅ Trails 15 pips behind current price
+- ✅ Breakeven activated at 15 pips profit
+- ✅ Protects gains automatically
+
+#### Cooldown Rules
+
+```json
+"cooldown_rules": {
+  "symbol_cooldown_minutes": 5,        // 5-minute cooldown after closing
+  "cooldown_after_loss": true          // Cooldown applies after losses
+}
+```
+
+**Rules:**
+- ✅ 5-minute cooldown per symbol after position closes
+- ✅ Prevents revenge trading
+- ✅ Allows system to reassess market
+
+#### News Filter
+
+```json
+"news_filter": {
+  "enabled": true,
+  "avoid_high_impact_news": true,
+  "news_buffer_minutes": 60           // Avoid trading 60 min before/after news
+}
+```
+
+**Rules:**
+- ✅ Avoid high-impact news events
+- ✅ 60-minute buffer before/after news
+- ✅ Widen SL if news within 1 hour
+- ✅ Tighten TP if news within 1 hour
+
+#### Session Filter
+
+```json
+"session_filter": {
+  "enabled": true,
+  "preferred_sessions": ["london", "newyork", "overlap"]
+}
+```
+
+**Rules:**
+- ✅ Trade during liquid sessions only
+- ✅ London, New York, or overlap periods
+- ✅ Avoid Asian session (low liquidity)
+
+#### Key Trading Rules Summary
+
+**Critical Rules (Always Enforced)**
+
+1. **22:30 Close Time** - All positions closed at 22:30 MT5 server time
+2. **One Trade Per Symbol Per Day** - Maximum 1 trade per symbol per day
+3. **$50 Fixed Risk** - Every trade risks exactly $50
+4. **2:1 Risk/Reward** - Minimum 2:1 TP:SL ratio required
+5. **Max 3 Pips Spread** - No trade if spread > 3 pips
+
+**Adaptive Rules (Market-Dependent)**
+
+1. **ATR-Based SL/TP** - Dynamic based on current volatility
+2. **Sentiment Adjustments** - Tighter/wider SL & TP based on sentiment
+3. **Fundamental Adjustments** - Adjust for economic strength
+4. **News Protection** - Wider SL, tighter TP near high-impact news
+5. **Trailing Stop** - Locks in profits automatically
+
+#### Rule Enforcement
+
+**RiskManager (core/risk_manager.py)**
+- ✅ Enforces position limits
+- ✅ Tracks daily trades per symbol
+- ✅ Enforces daily loss limits
+- ✅ Manages cooldowns
+- ✅ Validates spreads
+
+**TradingEngine (core/trading_engine.py)**
+- ✅ Places orders
+- ✅ Sets SL/TP levels
+- ✅ Manages trailing stops
+- ✅ Closes positions at 22:30
+
+**Main Trading Loop (main.py)**
+- ✅ Checks time restrictions
+- ✅ Validates signal strength
+- ✅ Calculates SL/TP with adjustments
+- ✅ Enforces risk/reward ratios
+- ✅ Records trades for daily limits
+
+#### Testing Rules
+
+**Test Script: `test_daily_limit.py`**
+
+Run to verify daily trade limit:
+
+```bash
+python test_daily_limit.py
+```
+
+**Expected Output:**
+
+```
+Testing EURUSD:
+  Has traded today? False
+  Can trade? True
+  [ACTION] Trade executed for EURUSD
+  Has traded today (after trade)? True
+  Can trade again? False
+```
+
+#### Benefits of Consolidated Rules
+
+1. **Easy to Find** - All rules in one place
+2. **Easy to Modify** - Change one value, affects entire system
+3. **Easy to Understand** - Clear structure and comments
+4. **Easy to Test** - Verify rules in isolation
+5. **Easy to Document** - Single source of truth
+
+#### Version History
+
+- **v3.0** - Consolidated all trading rules into `trading_rules` section
+- **v2.5** - Added one trade per symbol per day rule
+- **v2.0** - Added sentiment/fundamental SL/TP adjustments
+- **v1.5** - Added 22:30 close time configuration
+- **v1.0** - Initial trading rules in separate config sections
+
+### Daily Trade Limit Rule Implementation
+
+#### Rule Overview
+
+The system enforces a strict **one trade per symbol per day** rule to prevent overtrading and ensure disciplined position management. This rule is implemented across multiple system components for comprehensive enforcement.
+
+#### Configuration
+
+Located in `config/config.json`:
+
+```json
+"trading_rules": {
+  "position_limits": {
+    "max_trades_per_symbol_per_day": 1,
+    "prevent_multiple_positions_per_symbol": true
+  }
+}
+```
+
+#### How the Rule Works
+
+1. **Daily Reset**: Trade count resets at midnight (00:00) system time
+2. **Symbol Tracking**: Each symbol (EURUSD, GBPUSD, etc.) tracked separately
+3. **No Re-entry**: Once traded, no more trades for that symbol until next day
+4. **Database Storage**: Trade history stored in `data/performance_history.db`
+
+#### Implementation Details
+
+**RiskManager (core/risk_manager.py)**
+
+```python
+def has_traded_today(self, symbol: str) -> bool:
+    """Check if symbol has been traded today"""
+    today = datetime.now().date()
+    return self.daily_trades.get(symbol, {}).get('date') == today
+
+def record_trade(self, symbol: str, trade_data: dict):
+    """Record a trade for daily limit tracking"""
+    today = datetime.now().date()
+    self.daily_trades[symbol] = {
+        'date': today,
+        'count': 1,
+        'last_trade': datetime.now()
+    }
+
+def can_trade(self, symbol: str) -> bool:
+    """Check if trading is allowed for symbol"""
+    if self.has_traded_today(symbol):
+        return False
+    # Additional checks...
+    return True
+```
+
+**Main Trading Loop (main.py)**
+
+```python
+# Check daily trade limit before trading
+if not risk_manager.can_trade(symbol):
+    logger.info(f"Daily trade limit reached for {symbol}, skipping")
+    continue
+
+# Execute trade
+if trade_executed:
+    risk_manager.record_trade(symbol, trade_data)
+```
+
+#### Behavior Scenarios
+
+**Scenario 1: Normal Trading Day**
+
+```
+EURUSD: No previous trades today
+→ can_trade() returns True
+→ Trade executed
+→ record_trade() called
+→ EURUSD marked as traded today
+→ Next EURUSD signal: can_trade() returns False
+```
+
+**Scenario 2: Multiple Symbols**
+
+```
+EURUSD: Traded today → cannot trade again
+GBPUSD: No trades today → can trade
+USDJPY: No trades today → can trade
+```
+
+**Scenario 3: Day Boundary**
+
+```
+Time: 23:59 (Day 1)
+EURUSD: Traded today → cannot trade
+
+Time: 00:01 (Day 2)
+EURUSD: Trade count resets → can trade again
+```
+
+**Scenario 4: System Restart**
+
+```
+System restarted midday
+→ Daily trades loaded from database
+→ Previous trades still count toward daily limit
+→ No reset until midnight
+```
+
+#### Testing the Rule
+
+**Test Script: `test_daily_limit.py`**
+
+```python
+from core.risk_manager import RiskManager
+
+# Test the daily limit functionality
+risk_manager = RiskManager()
+
+# Test EURUSD
+print("Testing EURUSD:")
+print(f"  Has traded today? {risk_manager.has_traded_today('EURUSD')}")
+print(f"  Can trade? {risk_manager.can_trade('EURUSD')}")
+
+# Simulate trade
+if risk_manager.can_trade('EURUSD'):
+    print("  [ACTION] Trade executed for EURUSD")
+    risk_manager.record_trade('EURUSD', {'profit': 25.0})
+
+print(f"  Has traded today (after trade)? {risk_manager.has_traded_today('EURUSD')}")
+print(f"  Can trade again? {risk_manager.can_trade('EURUSD')}")
+```
+
+**Expected Output:**
+
+```
+Testing EURUSD:
+  Has traded today? False
+  Can trade? True
+  [ACTION] Trade executed for EURUSD
+  Has traded today (after trade)? True
+  Can trade again? False
+```
+
+#### Database Storage
+
+Trades stored in `data/performance_history.db`:
+
+```sql
+CREATE TABLE daily_trades (
+    symbol TEXT PRIMARY KEY,
+    trade_date DATE,
+    trade_count INTEGER,
+    last_trade_time TIMESTAMP
+);
+```
+
+**Data Persistence:**
+
+- Survives system restarts
+- Maintains counts across trading sessions
+- Automatically resets at midnight
+
+#### Advantages
+
+1. **Prevents Overtrading**
+   - Limits exposure per symbol per day
+   - Forces quality over quantity
+
+2. **Risk Control**
+   - Reduces correlation risk
+   - Allows time for position assessment
+
+3. **Capital Preservation**
+   - Prevents revenge trading same symbol
+   - Gives time to reassess market conditions
+
+4. **Performance Analysis**
+   - Clear daily performance per symbol
+   - Easier to track winning/losing patterns
+
+5. **System Stability**
+   - Reduces MT5 API load
+   - Prevents excessive position management
+
+#### Monitoring
+
+**Check Daily Status:**
+
+```python
+# In Python console or script
+from core.risk_manager import RiskManager
+rm = RiskManager()
+print(rm.daily_trades)  # View all daily trade counts
+```
+
+**Database Query:**
+
+```sql
+SELECT symbol, trade_date, trade_count
+FROM daily_trades
+WHERE trade_date = date('now');
+```
+
+#### Edge Cases Handled
+
+1. **Midnight Reset**: Automatic reset at 00:00 system time
+2. **System Restart**: Loads previous trades from database
+3. **Multiple Sessions**: Database prevents double-counting
+4. **Date Changes**: Handles daylight saving time transitions
+5. **Database Corruption**: Graceful fallback to empty state
+
+#### Integration Points
+
+- **RiskManager**: Core enforcement logic
+- **TradingEngine**: Pre-trade validation
+- **Main Loop**: Trade execution and recording
+- **Database**: Persistent storage
+- **Logging**: Comprehensive audit trail
+
+---
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details.
