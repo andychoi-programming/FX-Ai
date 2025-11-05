@@ -1,77 +1,41 @@
-"""import sqlite3
-
+"""
 Check Adaptive Learning Status
 
-Shows what the system has learned and if it will apply changes to next tradesconn = sqlite3.connect('data/performance_history.db')
-
-"""cursor = conn.cursor()
-
+Shows what the system has learned and if it will apply changes to next trades
+"""
 import sqlite3
+import os
+from datetime import datetime, timedelta
 
-import os# Check total trades
-
-from datetime import datetime, timedeltacursor.execute('SELECT COUNT(*) FROM trades')
-
-total = cursor.fetchone()[0]
-
-def check_learning_status():print(f'Total trades recorded: {total}')
-
-    db_path = 'data/adaptive_learning.db'
-
-    if total > 0:
-
-    if not os.path.exists(db_path):    # Top symbols
-
-        print("[WARNING] Adaptive learning database not found!")    cursor.execute('''
-
-        print(f"Expected at: {db_path}")        SELECT symbol, COUNT(*), AVG(profit), SUM(profit) 
-
-        return        FROM trades 
-
-            GROUP BY symbol 
-
-    conn = sqlite3.connect(db_path)        ORDER BY SUM(profit) DESC 
-
-    cursor = conn.cursor()        LIMIT 5
-
-        ''')
-
-    print("=" * 80)    print('\nTop 5 symbols by profit:')
-
-    print("ADAPTIVE LEARNING STATUS CHECK")    for row in cursor.fetchall():
-
-    print("=" * 80)        print(f'  {row[0]}: {row[1]} trades, avg=${row[2]:.2f}, total=${row[3]:.2f}')
-
-    print()    
-
-        # Recent trades
-
-    # Check tables    cursor.execute('''
-
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")        SELECT timestamp, symbol, direction, profit, profit_pct 
-
-    tables = cursor.fetchall()        FROM trades 
-
-    print(f"Database tables: {[t[0] for t in tables]}")        ORDER BY timestamp DESC 
-
-    print()        LIMIT 5
-
-        ''')
-
-    # Check total trades    print('\nMost recent 5 trades:')
-
-    cursor.execute("SELECT COUNT(*) FROM trades")    for row in cursor.fetchall():
-
-    total_trades = cursor.fetchone()[0]        print(f'  {row[0]} | {row[1]} {row[2]} | ${row[3]:.2f} ({row[4]:.2f}%)')
-
-    print(f"Total trades recorded: {total_trades}")else:
-
-    print()    print('\nNo trades recorded yet. System will learn as trades complete.')
-
+def check_learning_status():
+    db_path = 'data/performance_history.db'
     
-
-    # Check recent trades (last 24 hours)conn.close()
-
+    if not os.path.exists(db_path):
+        print("[WARNING] Adaptive learning database not found!")
+        print(f"Expected at: {db_path}")
+        return
+        
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    print("=" * 80)
+    print("ADAPTIVE LEARNING STATUS CHECK")
+    print("=" * 80)
+    print()
+    
+    # Check tables
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    tables = cursor.fetchall()
+    print(f"Database tables: {[t[0] for t in tables]}")
+    print()
+    
+    # Check total trades
+    cursor.execute("SELECT COUNT(*) FROM trades")
+    total_trades = cursor.fetchone()[0]
+    print(f"Total trades recorded: {total_trades}")
+    print()
+    
+    # Check recent trades (last 24 hours)
     yesterday = (datetime.now() - timedelta(days=1)).isoformat()
     cursor.execute("""
         SELECT COUNT(*) FROM trades 

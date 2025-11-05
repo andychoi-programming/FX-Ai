@@ -1901,6 +1901,7 @@ stop_loss_distance = base_sl_distance * sl_adjustment_factor
 ```
 
 **Adjustment Sources**:
+
 - [+] Technical Analyzer → ATR value (base calculation)
 - [+] Sentiment Analyzer → Adjusts SL tightness based on market mood
 - [+] Fundamental Analyzer → Adjusts SL for news events and fundamental strength
@@ -1943,6 +1944,7 @@ take_profit_distance = base_tp_distance * tp_adjustment_factor
 ```
 
 **Adjustment Sources**:
+
 - [+] Technical Analyzer → ATR value (base calculation)
 - [+] Sentiment Analyzer → Extends/tightens TP based on market mood
 - [+] Fundamental Analyzer → Adjusts TP for news events and fundamental strength
@@ -1977,29 +1979,35 @@ take_profit_distance = base_tp_distance * tp_adjustment_factor
 ### [TARGET] Example Trading Scenarios
 
 #### Scenario 1: Strong Bullish Setup
+
 - **Sentiment**: 0.75 (strong positive)
 - **Fundamentals**: 0.80 (strong)
 - **News**: None
 
 **Adjustments**:
+
 - SL: 0.90x (tighter - protect gains)
 - TP: 1.15 × 1.20 = 1.38x (much longer - ride the trend!)
 
 #### Scenario 2: Uncertain Market
+
 - **Sentiment**: 0.25 (strong negative)
 - **Fundamentals**: 0.30 (weak)
 - **News**: High-impact in 30min
 
 **Adjustments**:
+
 - SL: 1.15 × 1.10 × 1.20 = 1.52x (much wider - survive volatility)
 - TP: 0.90 × 0.85 × 0.90 = 0.69x (much tighter - quick profit)
 
 #### Scenario 3: News Event Coming
+
 - **Sentiment**: 0.50 (neutral)
 - **Fundamentals**: 0.55 (neutral)
 - **News**: High-impact in 45min
 
 **Adjustments**:
+
 - SL: 1.20x (wider - protected from news spike)
 - TP: 0.90x (tighter - take profits before volatility)
 
@@ -2007,7 +2015,7 @@ take_profit_distance = base_tp_distance * tp_adjustment_factor
 
 ### [CYCLE] Complete Trade Flow
 
-```
+```text
 1. Collect Data
    ├─ Technical Analyzer → indicators, ATR
    ├─ Sentiment Analyzer → sentiment score
@@ -2043,11 +2051,13 @@ take_profit_distance = base_tp_distance * tp_adjustment_factor
 ### [IDEA] What Makes This System Intelligent
 
 **Multi-Factor Trade Entry**:
+
 - [+] All 3 analyzers influence WHETHER to trade
 - [+] Technical ATR provides dynamic, market-adaptive base levels
 - [+] Sentiment + Fundamental help filter out weak signals
 
 **Context-Aware Risk Management**:
+
 - [+] SL/TP dynamically adjust based on market conditions
 - [+] Widen SL during high-impact news events (protect from volatility spikes)
 - [+] Tighten TP during negative sentiment (take profits before reversal)
@@ -2055,6 +2065,7 @@ take_profit_distance = base_tp_distance * tp_adjustment_factor
 - [+] Adjust SL based on sentiment strength (confident vs defensive positioning)
 
 **Current Behavior**:
+
 - **Trade Entry**: Multi-factor decision (all 3 analyzers)
 - **Trade Exit**: Multi-factor decision (ATR + Sentiment + Fundamentals)
 
@@ -2064,7 +2075,7 @@ take_profit_distance = base_tp_distance * tp_adjustment_factor
 
 These weights are stored in `data/signal_weights.json` and **automatically adjusted** by adaptive learning based on performance:
 
-```json
+```text
 {
   "technical_score": 0.25,      // Can increase if technical analysis performs well
   "ml_prediction": 0.30,        // Can increase if ML predictions are accurate
@@ -2084,7 +2095,7 @@ The system continuously learns which components are most predictive and adjusts 
 
 Look for these adjustment messages:
 
-```
+```text
 [INFO] EURUSD: Strong positive sentiment (0.75) - tightening SL by 10%
 [INFO] EURUSD: Strong fundamentals (0.80) - extending TP by 20%
 [INFO] EURUSD: Total SL adjustment factor: 0.90x (distance: 0.00045)
@@ -2094,6 +2105,7 @@ Look for these adjustment messages:
 #### Monitor Performance
 
 Track these metrics:
+
 - How often are adjustments triggered?
 - What's the typical adjustment range?
 - Do adjusted trades perform better?
