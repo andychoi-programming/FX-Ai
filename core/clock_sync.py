@@ -200,18 +200,37 @@ class ClockSynchronizer:
 
     def get_synced_time(self) -> datetime:
         """
-        Get the most accurate available time (NTP > Local, MT5 used only for validation)
+        Get the most accurate available time (MT5 > NTP cache > Local)
 
         Returns:
-            Most accurate UTC datetime available
+            Most accurate datetime available (uses MT5 server time for trading)
         """
-        # Try NTP first (most reliable)
+        # Use MT5 server time first (most relevant for trading)
+        if self.mt5_connector:
+            try:
+                mt5_time = self.mt5_connector.get_server_time()
+                if mt5_time:
+                    return mt5_time
+            except Exception:
+                pass
+        
+        # Fall back to local system time (NTP queries only in background sync thread)
+        return datetime.now(timezone.utc)
+    
+    def get_ntp_synced_time(self) -> datetime:
+        """
+        Get NTP-synchronized time (slow - queries NTP servers)
+        Use get_synced_time() for fast MT5 server time instead
+
+        Returns:
+            NTP time or local time as fallback
+        """
+        # Try NTP (slow - queries network)
         ntp_time = self._get_ntp_time()
         if ntp_time:
             return ntp_time
 
         # Fall back to local system time
-        # Note: MT5 time not used here as it might be in different timezone
         return datetime.now(timezone.utc)
 
     def get_sync_status(self) -> Dict:

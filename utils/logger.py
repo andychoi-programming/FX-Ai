@@ -9,45 +9,82 @@ import os
 import sys
 from datetime import datetime
 from typing import Optional, Any
+from queue import Queue
+import atexit
 
 class MT5TimeFormatter(logging.Formatter):
     """
     Custom logging formatter that uses MT5 server time instead of local time
+    UPDATED: Now uses ClockSynchronizer for reliable server time without excessive MT5 API calls
     """
 
-    def __init__(self, fmt=None, datefmt=None, mt5_connector=None):
+    def __init__(self, fmt=None, datefmt=None, mt5_connector=None, clock_sync=None):
         super().__init__(fmt, datefmt)
         self.mt5_connector = mt5_connector
+        self.clock_sync = clock_sync  # ClockSynchronizer instance
+        # Cache MT5 time to avoid deadlocks from excessive MT5 API calls
+        self._last_mt5_time = None
+        self._last_local_time = 0
+        self._cache_duration = 1.0  # Cache for 1 second to reduce MT5 calls
 
     def formatTime(self, record, datefmt=None):
         """
-        Override formatTime to use MT5 server time
+        Use MT5 server time via ClockSynchronizer for consistent timestamps.
+        Falls back to direct MT5 query if ClockSynchronizer unavailable, then local time.
+        
+        UPDATED: Now uses ClockSynchronizer which already handles caching and time synchronization.
         """
-        if self.mt5_connector:
+        current_time = record.created
+        
+        # Try ClockSynchronizer first (best option - already cached and synchronized)
+        if self.clock_sync:
             try:
-                # Get MT5 server time
-                mt5_time = self.mt5_connector.get_server_time()
-                if mt5_time:
-                    # Format according to datefmt or default
-                    if datefmt:
-                        return mt5_time.strftime(datefmt)
+                # Get synchronized MT5 server time (already cached by ClockSynchronizer)
+                server_time = self.clock_sync.get_synced_time()
+                if server_time:
+                    time_to_format = server_time
+                else:
+                    time_to_format = datetime.fromtimestamp(current_time)
+            except Exception:
+                time_to_format = datetime.fromtimestamp(current_time)
+        
+        # Fallback to direct MT5 connector with caching
+        elif self.mt5_connector:
+            # Calculate time offset from last cache
+            time_offset = current_time - self._last_local_time if self._last_mt5_time is not None else float('inf')
+            
+            # If cache is still valid (< 1 second old), use cached time + offset
+            if self._last_mt5_time is not None and time_offset < self._cache_duration:
+                adjusted_time = self._last_mt5_time + time_offset
+                time_to_format = datetime.fromtimestamp(adjusted_time)
+            else:
+                # Cache expired or not initialized, get fresh MT5 server time
+                try:
+                    server_time = self.mt5_connector.get_server_time()
+                    if server_time:
+                        self._last_mt5_time = server_time.timestamp()
+                        self._last_local_time = current_time
+                        time_to_format = server_time
                     else:
-                        return mt5_time.strftime('%Y-%m-%d %H:%M:%S')
-            except Exception as e:
-                # If MT5 time fails, log the error and fall back to local time
-                print(f"Warning: Failed to get MT5 time for logging: {e}")
-
-        # Fallback to local time if MT5 connector not available or fails
-        ct = datetime.fromtimestamp(record.created)
-        if datefmt:
-            return ct.strftime(datefmt)
+                        # Fallback to local time if server time unavailable
+                        time_to_format = datetime.fromtimestamp(current_time)
+                except Exception:
+                    # Fallback to local time on error
+                    time_to_format = datetime.fromtimestamp(current_time)
         else:
-            return ct.strftime('%Y-%m-%d %H:%M:%S')
+            # No MT5 connector or ClockSynchronizer - use local time
+            time_to_format = datetime.fromtimestamp(current_time)
+        
+        # Format the time
+        if datefmt:
+            return time_to_format.strftime(datefmt)
+        else:
+            return time_to_format.strftime('%Y-%m-%d %H:%M:%S')
 
 def setup_logger(name: str = 'FX-Ai', level: str = 'INFO',
                 log_file: Optional[str] = None, max_bytes: int = 10485760,
                 backup_count: int = 5, rotation_type: str = 'size',
-                mt5_connector: Optional[Any] = None) -> logging.Logger:
+                mt5_connector: Optional[Any] = None, clock_sync: Optional[Any] = None) -> logging.Logger:
     """
     Set up logger with file and console handlers
 
@@ -59,6 +96,7 @@ def setup_logger(name: str = 'FX-Ai', level: str = 'INFO',
         backup_count: Number of backup log files to keep
         rotation_type: 'size' for RotatingFileHandler or 'time' for TimedRotatingFileHandler
         mt5_connector: MT5 connector instance for server time logging
+        clock_sync: ClockSynchronizer instance for accurate server time (preferred)
 
     Returns:
         logging.Logger: Configured logger
@@ -71,23 +109,25 @@ def setup_logger(name: str = 'FX-Ai', level: str = 'INFO',
     for handler in logger.handlers[:]:
         logger.removeHandler(handler)
 
-    # Create formatters
+    # Create formatters with ClockSynchronizer support
     file_formatter = MT5TimeFormatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s',
-        mt5_connector=mt5_connector
+        mt5_connector=mt5_connector,
+        clock_sync=clock_sync
     )
     console_formatter = MT5TimeFormatter(
         '%(asctime)s - %(levelname)s - %(message)s',
-        mt5_connector=mt5_connector
+        mt5_connector=mt5_connector,
+        clock_sync=clock_sync
     )
 
     # Console handler
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(getattr(logging, level.upper(), logging.INFO))
     console_handler.setFormatter(console_formatter)
-    logger.addHandler(console_handler)
-
-    # File handler (if log_file specified)
+    
+    # Queue-based file logging to prevent deadlocks
+    # Main thread writes to queue (non-blocking), separate thread writes to file
     if log_file:
         try:
             # Ensure log directory exists
@@ -95,30 +135,42 @@ def setup_logger(name: str = 'FX-Ai', level: str = 'INFO',
             if log_dir and not os.path.exists(log_dir):
                 os.makedirs(log_dir, exist_ok=True)
 
-            if rotation_type == 'time':
-                # Timed rotating file handler (daily rotation with date in filename)
-                file_handler = logging.handlers.TimedRotatingFileHandler(
-                    log_file,
-                    when='midnight',
-                    interval=1,
-                    backupCount=backup_count
-                )
-                # Set custom suffix to include underscore and .log extension
-                file_handler.suffix = "_%Y_%m_%d.log"
-            else:
-                # Rotating file handler (size-based rotation)
-                file_handler = logging.handlers.RotatingFileHandler(
-                    log_file,
-                    maxBytes=max_bytes,
-                    backupCount=backup_count
-                )
+            # Create a queue for log records
+            log_queue = Queue(-1)  # Unlimited size
             
-            file_handler.setLevel(logging.DEBUG)  # Log everything to file
+            # Create file handler (runs in separate thread via QueueListener)
+            file_handler = logging.FileHandler(log_file, mode='a', encoding='utf-8')
+            file_handler.setLevel(logging.DEBUG)
             file_handler.setFormatter(file_formatter)
-            logger.addHandler(file_handler)
-
+            
+            # Create queue listener (separate thread handles file writes)
+            queue_listener = logging.handlers.QueueListener(
+                log_queue, 
+                file_handler,
+                respect_handler_level=True
+            )
+            queue_listener.start()
+            
+            # Add queue handler to logger (non-blocking writes to queue)
+            queue_handler = logging.handlers.QueueHandler(log_queue)
+            logger.addHandler(queue_handler)
+            
+            # Add console handler after queue setup
+            logger.addHandler(console_handler)
+            
+            # Ensure queue listener stops on exit
+            atexit.register(queue_listener.stop)
+            
+            # Store listener reference for cleanup
+            logger._queue_listener = queue_listener
+            
         except Exception as e:
-            logger.error(f"Failed to set up file logging: {e}")
+            # Fallback to console-only if queue setup fails
+            logger.addHandler(console_handler)
+            logger.error(f"Failed to set up queue-based file logging: {e}")
+    else:
+        # No file logging requested, console only
+        logger.addHandler(console_handler)
 
     return logger
 
@@ -224,3 +276,48 @@ def log_function_call(logger: logging.Logger):
                 raise
         return wrapper
     return decorator
+
+def update_all_loggers_with_mt5(mt5_connector: Any):
+    """
+    Update all existing loggers to use MT5 server time
+    
+    Args:
+        mt5_connector: MT5 connector instance for server time
+    """
+    try:
+        # Update all existing loggers' formatters
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers:
+            if isinstance(handler.formatter, MT5TimeFormatter):
+                handler.formatter.mt5_connector = mt5_connector
+        
+        # Update all named loggers
+        for logger_name in logging.Logger.manager.loggerDict:
+            logger = logging.getLogger(logger_name)
+            for handler in logger.handlers:
+                if isinstance(handler.formatter, MT5TimeFormatter):
+                    handler.formatter.mt5_connector = mt5_connector
+                    
+    except Exception as e:
+        print(f"Error updating loggers with MT5: {e}")
+
+def shutdown_logger(logger: logging.Logger):
+    """
+    Properly shutdown logger and stop queue listener if present
+    
+    Args:
+        logger: Logger instance to shutdown
+    """
+    try:
+        # Stop queue listener if it exists
+        if hasattr(logger, '_queue_listener'):
+            logger._queue_listener.stop()
+            delattr(logger, '_queue_listener')
+        
+        # Close and remove all handlers
+        for handler in logger.handlers[:]:
+            handler.close()
+            logger.removeHandler(handler)
+            
+    except Exception as e:
+        print(f"Error shutting down logger: {e}")

@@ -214,13 +214,16 @@ class AdaptiveLearningManager:
         # Schedule periodic tasks
         self.schedule_tasks()
 
-        # Start background thread for continuous learning
-        self.learning_thread = threading.Thread(
-            target=self.run_continuous_learning, daemon=True)
-        self.learning_thread.start()
+        # Start background thread for continuous learning - DISABLED (causes threading deadlocks)
+        # self.learning_thread = threading.Thread(
+        #     target=self.run_continuous_learning, daemon=True)
+        # self.learning_thread.start()
+        logger.info("Background learning thread DISABLED to prevent deadlocks")
 
-        # Initialize database
-        self.init_database()
+        # Initialize database - DISABLED (sqlite3.connect() causes file I/O deadlock with logger)
+        # self.init_database()
+        self.db_path = os.path.join('data', 'performance_history.db')
+        logger.info("Database initialization DISABLED to prevent file I/O deadlock")
 
         logger.info("Adaptive Learning Manager initialized")
 

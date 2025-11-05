@@ -179,10 +179,14 @@ class TradingEngine:
                 stops_level = getattr(symbol_info, 'trade_stops_level', 0)
 
                 # Calculate minimum stop distance in PIPS, not points
-                # Metals: 1 pip = 0.10, JPY: 1 pip = 0.01, others: 1 pip = 0.0001
-                if 'XAU' in symbol or 'XAG' in symbol or 'GOLD' in symbol:
-                    pip_size = 0.10  # Metals
-                    # Metals: minimum 50 pips due to wider spreads
+                # Gold: 1 pip = 0.10, Silver: 1 pip = 0.001, JPY: 1 pip = 0.01, others: 1 pip = 0.0001
+                if 'XAG' in symbol:
+                    pip_size = 0.001  # Silver
+                    # Silver: minimum 50 pips due to wider spreads
+                    min_stop_pips = max(stops_level / 10, 50)
+                elif 'XAU' in symbol or 'GOLD' in symbol:
+                    pip_size = 0.10  # Gold
+                    # Gold: minimum 50 pips due to wider spreads
                     min_stop_pips = max(stops_level / 100, 50)
                 elif "JPY" in symbol:
                     pip_size = 0.01  # JPY pairs
@@ -247,10 +251,14 @@ class TradingEngine:
                 stops_level = getattr(symbol_info, 'trade_stops_level', 0)
 
                 # Calculate minimum stop distance in PIPS, not points
-                # Metals: 1 pip = 0.10, JPY: 1 pip = 0.01, others: 1 pip = 0.0001
-                if 'XAU' in symbol or 'XAG' in symbol or 'GOLD' in symbol:
-                    pip_size = 0.10  # Metals
-                    # Metals: minimum 50 pips due to wider spreads
+                # Gold: 1 pip = 0.10, Silver: 1 pip = 0.001, JPY: 1 pip = 0.01, others: 1 pip = 0.0001
+                if 'XAG' in symbol:
+                    pip_size = 0.001  # Silver
+                    # Silver: minimum 50 pips due to wider spreads
+                    min_stop_pips = max(stops_level / 10, 50)
+                elif 'XAU' in symbol or 'GOLD' in symbol:
+                    pip_size = 0.10  # Gold
+                    # Gold: minimum 50 pips due to wider spreads
                     min_stop_pips = max(stops_level / 100, 50)
                 elif "JPY" in symbol:
                     pip_size = 0.01  # JPY pairs
@@ -844,8 +852,11 @@ class TradingEngine:
             if symbol_info:
                 point = symbol_info.point
                 digits = symbol_info.digits
-                if 'XAU' in position.symbol or 'XAG' in position.symbol or 'GOLD' in position.symbol:
-                    # Metals: 1 pip = 10 points (0.1 for 2-digit symbols)
+                if 'XAG' in position.symbol:
+                    # Silver: 1 pip = 1 point (0.001 for 3-digit symbols)
+                    pip_size = point
+                elif 'XAU' in position.symbol or 'GOLD' in position.symbol:
+                    # Gold: 1 pip = 10 points (0.1 for 2-digit symbols)
                     pip_size = point * 10
                 elif digits == 3 or digits == 5:
                     pip_size = point * 10
@@ -952,8 +963,11 @@ class TradingEngine:
             digits = symbol_info.digits
 
             # Determine pip size
-            if "XAU" in position.symbol or "XAG" in position.symbol or "GOLD" in position.symbol:
-                # Metals: 1 pip = 10 points (0.1 for 2-digit symbols)
+            if "XAG" in position.symbol:
+                # Silver: 1 pip = 1 point (0.001 for 3-digit symbols)
+                pip_size = point
+            elif "XAU" in position.symbol or "GOLD" in position.symbol:
+                # Gold: 1 pip = 10 points (0.1 for 2-digit symbols)
                 pip_size = point * 10
             elif digits == 3 or digits == 5:
                 pip_size = point * 10
@@ -1032,8 +1046,11 @@ class TradingEngine:
             digits = symbol_info.digits
 
             # Determine pip size
-            if "XAU" in position.symbol or "XAG" in position.symbol or "GOLD" in position.symbol:
-                # Metals: 1 pip = 10 points (0.1 for 2-digit symbols)
+            if "XAG" in position.symbol:
+                # Silver: 1 pip = 1 point (0.001 for 3-digit symbols)
+                pip_size = point
+            elif "XAU" in position.symbol or "GOLD" in position.symbol:
+                # Gold: 1 pip = 10 points (0.1 for 2-digit symbols)
                 pip_size = point * 10
             elif digits == 3 or digits == 5:
                 pip_size = point * 10

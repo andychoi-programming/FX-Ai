@@ -71,15 +71,34 @@ class MLPredictor:
             # Check if model exists for this timeframe
             model_key = f"{symbol}_{timeframe}"
             if model_key not in self.models:
-                self._load_or_train_model(symbol, data, timeframe)
+                # Try to load existing model without blocking
+                model_path = os.path.join(self.model_dir, f'{symbol}_{timeframe}_model.pkl')
+                if os.path.exists(model_path):
+                    try:
+                        self.logger.info(f"{symbol}: Loading model from {model_path}...")
+                        self.models[model_key] = joblib.load(model_path)
+                        scaler_path = os.path.join(self.model_dir, f'{symbol}_{timeframe}_scaler.pkl')
+                        if os.path.exists(scaler_path):
+                            self.scalers[model_key] = joblib.load(scaler_path)
+                        self.logger.info(f"{symbol}: Model loaded successfully")
+                    except Exception as e:
+                        self.logger.error(f"{symbol}: Failed to load model: {e}")
+                        return {'direction': 0, 'confidence': 0.5, 'signal_strength': 0, 'probability': 0.5}
+                else:
+                    # No model exists - return neutral
+                    self.logger.warning(f"No pre-trained model for {symbol} {timeframe}")
+                    return {'direction': 0, 'confidence': 0.5, 'signal_strength': 0, 'probability': 0.5}
 
             if model_key not in self.models:
-                return {'direction': 'neutral', 'confidence': 0, 'signal_strength': 0}
+                return {'direction': 0, 'confidence': 0.5, 'signal_strength': 0, 'probability': 0.5}
 
             # Prepare features
+            self.logger.info(f"{symbol}: Preparing features...")
             features = self._prepare_features(data, technical_signals)
+            self.logger.info(f"{symbol}: Features prepared successfully")
 
             if features is None:
+                self.logger.warning(f"{symbol}: Feature preparation returned None")
                 return {'direction': 'neutral', 'confidence': 0, 'signal_strength': 0}
 
             # Make prediction
@@ -237,9 +256,6 @@ class MLPredictor:
                 volume = volume.values
             elif not isinstance(volume, np.ndarray):
                 volume = np.array(volume)
-            
-            # print(f"DEBUG: Close prices length: {len(close_prices)}")
-            # print(f"DEBUG: Volume length: {len(volume)}")
 
             # Returns
             returns_1d = np.diff(close_prices[-2:])[0] / close_prices[-2] if len(close_prices) >= 2 else 0.0
@@ -250,7 +266,6 @@ class MLPredictor:
             returns_5d = float(returns_5d) if np.isscalar(returns_5d) else 0
 
             features.extend([returns_1d, returns_5d])
-            # print(f"DEBUG: After returns, features length: {len(features)}")
 
             # Volatility features
             volatility_5d = float(np.std(np.diff(close_prices[-6:]))) if len(close_prices) >= 6 else 0.0

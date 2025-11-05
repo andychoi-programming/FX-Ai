@@ -375,7 +375,6 @@ class RiskManager:
         from datetime import datetime
         
         logger.debug(f"Checking if can trade {symbol}: daily_loss={self.daily_loss}, max_daily_loss={self.max_daily_loss}")
-        logger.debug(f"Max positions: {self.max_positions}, current positions: {position_count if 'position_count' in locals() else 'not yet calculated'}")
         
         if self.daily_loss >= self.max_daily_loss:
             logger.warning(f"Daily loss limit reached: ${self.daily_loss:.2f}")
@@ -383,7 +382,9 @@ class RiskManager:
 
         try:
             positions = mt5.positions_get()
+            position_count = len(positions) if positions else 0
             logger.debug(f"Positions query result type: {type(positions)}, value: {positions}")
+            logger.debug(f"Max positions: {self.max_positions}, current positions: {position_count}")
             
             if positions is None:
                 logger.warning(f"MT5 positions_get() returned None for {symbol}, allowing trade but this indicates connection issues")
