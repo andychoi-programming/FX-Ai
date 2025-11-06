@@ -7,7 +7,7 @@ import logging
 import logging.handlers
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, Any
 from queue import Queue
 import atexit
@@ -30,7 +30,7 @@ class MT5TimeFormatter(logging.Formatter):
     def formatTime(self, record, datefmt=None):
         """
         Use MT5 server time via ClockSynchronizer for consistent timestamps.
-        Falls back to direct MT5 query if ClockSynchronizer unavailable, then local time.
+        Falls back to UTC time for consistency when MT5 is unavailable.
         
         UPDATED: Now uses ClockSynchronizer which already handles caching and time synchronization.
         """
@@ -44,9 +44,9 @@ class MT5TimeFormatter(logging.Formatter):
                 if server_time:
                     time_to_format = server_time
                 else:
-                    time_to_format = datetime.fromtimestamp(current_time)
+                    time_to_format = datetime.utcfromtimestamp(current_time)
             except Exception:
-                time_to_format = datetime.fromtimestamp(current_time)
+                time_to_format = datetime.utcfromtimestamp(current_time)
         
         # Fallback to direct MT5 connector with caching
         elif self.mt5_connector:
@@ -66,11 +66,11 @@ class MT5TimeFormatter(logging.Formatter):
                         self._last_local_time = current_time
                         time_to_format = server_time
                     else:
-                        # Fallback to local time if server time unavailable
-                        time_to_format = datetime.fromtimestamp(current_time)
+                        # Fallback to UTC time if server time unavailable
+                        time_to_format = datetime.utcfromtimestamp(current_time)
                 except Exception:
-                    # Fallback to local time on error
-                    time_to_format = datetime.fromtimestamp(current_time)
+                    # Fallback to UTC time on error
+                    time_to_format = datetime.utcfromtimestamp(current_time)
         else:
             # No MT5 connector or ClockSynchronizer - use local time
             time_to_format = datetime.fromtimestamp(current_time)
@@ -80,6 +80,169 @@ class MT5TimeFormatter(logging.Formatter):
             return time_to_format.strftime(datefmt)
         else:
             return time_to_format.strftime('%Y-%m-%d %H:%M:%S')
+
+class MT5TimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
+    """
+    Custom TimedRotatingFileHandler that uses MT5 server time for rotation timing and file naming
+    """
+
+    def __init__(self, filename, when='midnight', interval=1, backupCount=0,
+                 encoding=None, delay=False, utc=False, atTime=None,
+                 mt5_connector=None, clock_sync=None):
+        """
+        Initialize MT5TimedRotatingFileHandler
+
+        Args:
+            filename: Log file base name
+            when: Time unit for rotation ('S', 'M', 'H', 'D', 'midnight')
+            interval: Number of time units between rotations
+            backupCount: Number of backup files to keep
+            encoding: File encoding
+            delay: Delay file opening until first record
+            utc: Use UTC time (ignored, we use MT5 time)
+            atTime: Specific time for rotation (ignored, we use MT5 time)
+            mt5_connector: MT5 connector for server time
+            clock_sync: ClockSynchronizer for accurate server time
+        """
+        # Store MT5 connector and clock sync references
+        self.mt5_connector = mt5_connector
+        self.clock_sync = clock_sync
+
+        # Initialize with basic settings (we'll override timing methods)
+        super().__init__(filename, when=when, interval=interval, backupCount=backupCount,
+                        encoding=encoding, delay=delay, utc=False, atTime=atTime)
+
+        # Set custom suffix for MT5 server time based naming
+        self.suffix = "_%Y_%m_%d.log"
+
+    def _getMT5Time(self) -> datetime:
+        """
+        Get current MT5 server time, with fallbacks
+
+        Returns:
+            datetime: Current MT5 server time or fallback
+        """
+        try:
+            # Try ClockSynchronizer first (preferred method)
+            if self.clock_sync:
+                server_time = self.clock_sync.get_server_time()
+                if server_time:
+                    return server_time
+
+            # Fallback to direct MT5 connector
+            elif self.mt5_connector:
+                server_time = self.mt5_connector.get_server_time()
+                if server_time:
+                    return server_time
+
+        except Exception:
+            pass
+
+        # Final fallback to local time
+        return datetime.now()
+
+    def shouldRollover(self, record):
+        """
+        Determine if log file should be rolled over based on MT5 server time
+
+        Args:
+            record: LogRecord to check
+
+        Returns:
+            bool: True if rollover should occur
+        """
+        # Get current MT5 server time
+        current_time = self._getMT5Time()
+
+        # Check if we've crossed the rotation boundary
+        if self.when == 'midnight':
+            # Rotate at MT5 server midnight
+            rollover_datetime = datetime.fromtimestamp(self.rolloverAt)
+            should_rotate = (current_time.date() != rollover_datetime.date())
+        else:
+            # For other intervals, use standard logic but with MT5 time
+            should_rotate = super().shouldRollover(record)
+
+        return should_rotate
+
+    def doRollover(self):
+        """
+        Perform log file rollover using MT5 server time for naming
+        """
+        # Get current MT5 server time for filename
+        current_time = self._getMT5Time()
+
+        # Generate filename with MT5 server date
+        if self.when == 'midnight':
+            # Use yesterday's date for the rotated file (since rotation happens at midnight)
+            rollover_time = current_time.replace(hour=0, minute=0, second=0, microsecond=0)
+            if current_time.hour < 12:  # If it's early morning, use previous day
+                from datetime import timedelta
+                rollover_time = rollover_time - timedelta(days=1)
+        else:
+            rollover_time = current_time
+
+        # Format filename suffix with MT5 server date
+        suffix = rollover_time.strftime(self.suffix)
+
+        # Create the rotated filename
+        if self.backupCount > 0:
+            # Find the next available backup number
+            for i in range(self.backupCount - 1, 0, -1):
+                sfn = self.rotation_filename(f"{self.baseFilename}.{i}{suffix}")
+                dfn = self.rotation_filename(f"{self.baseFilename}.{i+1}{suffix}")
+                if os.path.exists(sfn):
+                    if os.path.exists(dfn):
+                        os.remove(dfn)
+                    os.rename(sfn, dfn)
+
+            # Rotate current file
+            dfn = self.rotation_filename(f"{self.baseFilename}.1{suffix}")
+            if os.path.exists(dfn):
+                os.remove(dfn)
+            self.rotate(self.baseFilename, dfn)
+
+        else:
+            # No backups, just rotate to dated file
+            dfn = self.rotation_filename(f"{self.baseFilename}{suffix}")
+            if os.path.exists(dfn):
+                os.remove(dfn)
+            self.rotate(self.baseFilename, dfn)
+
+        # Update rollover time for next rotation
+        self._updateRolloverTime()
+
+    def _updateRolloverTime(self):
+        """
+        Update the rollover time based on MT5 server time
+        """
+        current_time = self._getMT5Time()
+
+        if self.when == 'midnight':
+            # Next rollover at MT5 server midnight
+            next_midnight = current_time.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+            self.rolloverAt = int(next_midnight.timestamp())
+        else:
+            # For other intervals, calculate next rollover time
+            # This is a simplified implementation - could be enhanced for other intervals
+            next_rollover = current_time + timedelta(seconds=self.interval * self._getIntervalSeconds())
+            self.rolloverAt = int(next_rollover.timestamp())
+
+    def _getIntervalSeconds(self):
+        """
+        Get interval in seconds based on 'when' parameter
+
+        Returns:
+            int: Interval in seconds
+        """
+        intervals = {
+            'S': 1,      # Seconds
+            'M': 60,     # Minutes
+            'H': 3600,   # Hours
+            'D': 86400,  # Days
+            'midnight': 86400  # Days (handled specially)
+        }
+        return intervals.get(self.when, 86400)
 
 def setup_logger(name: str = 'FX-Ai', level: str = 'INFO',
                 log_file: Optional[str] = None, max_bytes: int = 10485760,
@@ -138,8 +301,21 @@ def setup_logger(name: str = 'FX-Ai', level: str = 'INFO',
             # Create a queue for log records
             log_queue = Queue(-1)  # Unlimited size
             
-            # Create file handler (runs in separate thread via QueueListener)
-            file_handler = logging.FileHandler(log_file, mode='a', encoding='utf-8')
+            # Create appropriate file handler based on rotation type
+            if rotation_type == 'time':
+                # MT5 server time-based rotating file handler
+                file_handler = MT5TimedRotatingFileHandler(
+                    log_file,
+                    when='midnight',
+                    interval=1,
+                    backupCount=backup_count,
+                    mt5_connector=mt5_connector,
+                    clock_sync=clock_sync
+                )
+            else:
+                # Basic file handler (size-based rotation handled separately if needed)
+                file_handler = logging.FileHandler(log_file, mode='a', encoding='utf-8')
+            
             file_handler.setLevel(logging.DEBUG)
             file_handler.setFormatter(file_formatter)
             
@@ -162,7 +338,7 @@ def setup_logger(name: str = 'FX-Ai', level: str = 'INFO',
             atexit.register(queue_listener.stop)
             
             # Store listener reference for cleanup
-            logger._queue_listener = queue_listener
+            logger._queue_listener = queue_listener  # type: ignore
             
         except Exception as e:
             # Fallback to console-only if queue setup fails
@@ -200,7 +376,8 @@ def set_log_level(logger: logging.Logger, level: str):
         handler.setLevel(getattr(logging, level.upper(), logging.INFO))
 
 def add_file_handler(logger: logging.Logger, log_file: str,
-                    max_bytes: int = 10485760, backup_count: int = 5, rotation_type: str = 'size'):
+                    max_bytes: int = 10485760, backup_count: int = 5, rotation_type: str = 'size',
+                    mt5_connector: Optional[Any] = None, clock_sync: Optional[Any] = None):
     """
     Add file handler to existing logger
 
@@ -210,11 +387,13 @@ def add_file_handler(logger: logging.Logger, log_file: str,
         max_bytes: Maximum log file size (for size-based rotation)
         backup_count: Number of backup files
         rotation_type: 'size' for RotatingFileHandler or 'time' for TimedRotatingFileHandler
+        mt5_connector: MT5 connector instance for server time logging
+        clock_sync: ClockSynchronizer instance for accurate server time (preferred)
     """
     try:
         # Check if file handler already exists
         for handler in logger.handlers:
-            if isinstance(handler, (logging.handlers.RotatingFileHandler, logging.handlers.TimedRotatingFileHandler)):
+            if isinstance(handler, (logging.handlers.RotatingFileHandler, logging.handlers.TimedRotatingFileHandler, MT5TimedRotatingFileHandler)):
                 if handler.baseFilename == os.path.abspath(log_file):
                     return  # Already exists
 
@@ -223,21 +402,23 @@ def add_file_handler(logger: logging.Logger, log_file: str,
         if log_dir and not os.path.exists(log_dir):
             os.makedirs(log_dir, exist_ok=True)
 
-        # Create file handler
-        file_formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
+        # Create file formatter with MT5 time support
+        file_formatter = MT5TimeFormatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s',
+            mt5_connector=mt5_connector,
+            clock_sync=clock_sync
         )
 
         if rotation_type == 'time':
-            # Timed rotating file handler (daily rotation with date in filename)
-            file_handler = logging.handlers.TimedRotatingFileHandler(
+            # MT5 server time-based rotating file handler (daily rotation with MT5 date in filename)
+            file_handler = MT5TimedRotatingFileHandler(
                 log_file,
                 when='midnight',
                 interval=1,
-                backupCount=backup_count
+                backupCount=backup_count,
+                mt5_connector=mt5_connector,
+                clock_sync=clock_sync
             )
-            # Set custom suffix to include underscore and .log extension
-            file_handler.suffix = "_%Y_%m_%d.log"
         else:
             # Rotating file handler (size-based rotation)
             file_handler = logging.handlers.RotatingFileHandler(
@@ -311,7 +492,7 @@ def shutdown_logger(logger: logging.Logger):
     try:
         # Stop queue listener if it exists
         if hasattr(logger, '_queue_listener'):
-            logger._queue_listener.stop()
+            logger._queue_listener.stop()  # type: ignore
             delattr(logger, '_queue_listener')
         
         # Close and remove all handlers
