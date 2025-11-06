@@ -105,8 +105,8 @@ class MLBacktester:
         df['EMA_26'] = df['close'].ewm(span=26).mean()
 
         delta = df['close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+        gain = (delta.where(delta > 0, 0)).rolling(14).mean()  # type: ignore
+        loss = (-delta.where(delta < 0, 0)).rolling(14).mean()  # type: ignore
         rs = gain / loss
         df['RSI'] = 100 - (100 / (1 + rs))
 
@@ -122,7 +122,7 @@ class MLBacktester:
         high_low = df['high'] - df['low']
         high_close = np.abs(df['high'] - df['close'].shift())
         low_close = np.abs(df['low'] - df['close'].shift())
-        ranges = pd.concat([high_low, high_close, low_close], axis=1)
+        ranges = pd.concat([high_low, high_close, low_close], axis=1)  # type: ignore
         true_range = np.max(ranges, axis=1)
         df['ATR'] = true_range.rolling(14).mean()
 
@@ -210,7 +210,7 @@ class MLBacktester:
         daily_trades = {}  # date -> trade count for this symbol
         last_trade_time = None
 
-        for idx, row in df.iterrows():
+        for i, (idx, row) in enumerate(df.iterrows()):
             current_time = row['time']
             current_hour = current_time.hour
             current_day = current_time.strftime('%A')  # Get day name
@@ -255,7 +255,7 @@ class MLBacktester:
                             continue
                     
                     # Get data up to current point for ML prediction
-                    current_window = df.iloc[:idx+1] if idx >= 49 else df.iloc[:idx+1]
+                    current_window = df.iloc[:i+1] if i >= 49 else df.iloc[:i+1]
                     prediction, confidence = self.get_ml_prediction(symbol, current_window, row, timeframe)
 
                     if confidence >= 0.6:  # Increased confidence threshold for better selectivity

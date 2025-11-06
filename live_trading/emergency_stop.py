@@ -15,13 +15,13 @@ def emergency_close_all():
     print()
     
     # Initialize MT5
-    if not mt5.initialize():
-        print(f"[ERROR] Failed to initialize MT5: {mt5.last_error()}")
+    if not mt5.initialize():  # type: ignore
+        print(f"[ERROR] Failed to initialize MT5: {mt5.last_error()}")  # type: ignore
         return False
     
     try:
         # Get account info
-        account_info = mt5.account_info()
+        account_info = mt5.account_info()  # type: ignore
         if account_info:
             print(f"Account: {account_info.login}")
             print(f"Balance: ${account_info.balance:.2f}")
@@ -29,7 +29,7 @@ def emergency_close_all():
             print()
         
         # Get all open positions
-        positions = mt5.positions_get()
+        positions = mt5.positions_get()  # type: ignore
         
         if positions is None or len(positions) == 0:
             print("[INFO] No open positions found")
@@ -53,10 +53,10 @@ def emergency_close_all():
             # Determine close type (opposite of position type)
             if position.type == mt5.ORDER_TYPE_BUY:
                 close_type = mt5.ORDER_TYPE_SELL
-                price = mt5.symbol_info_tick(symbol).bid
+                price = mt5.symbol_info_tick(symbol).bid  # type: ignore
             else:
                 close_type = mt5.ORDER_TYPE_BUY
-                price = mt5.symbol_info_tick(symbol).ask
+                price = mt5.symbol_info_tick(symbol).ask  # type: ignore
             
             # Try different filling modes (brokers have different requirements)
             filling_modes = [
@@ -83,7 +83,7 @@ def emergency_close_all():
                 }
                 
                 # Send close order
-                result = mt5.order_send(request)
+                result = mt5.order_send(request)  # type: ignore
                 
                 if result.retcode == mt5.TRADE_RETCODE_DONE:
                     print(f"  ✓ Successfully closed (P/L: ${position.profit:.2f})")
@@ -115,7 +115,7 @@ def emergency_close_all():
         return False
     
     finally:
-        mt5.shutdown()
+        mt5.shutdown()  # type: ignore
 
 if __name__ == "__main__":
     print()

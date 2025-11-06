@@ -52,28 +52,28 @@ class MT5Connector:
                 if self.path:
                     init_params['path'] = self.path
 
-                if not mt5.initialize(**init_params):
-                    self.logger.error(f"MT5 initialize failed: {mt5.last_error()}")
+                if not mt5.initialize(**init_params):  # type: ignore
+                    self.logger.error(f"MT5 initialize failed: {mt5.last_error()}")  # type: ignore
                     return False
 
                 # Login if credentials provided
                 if self.login and self.password and self.server:
-                    if not mt5.login(self.login, password=self.password, server=self.server):
-                        self.logger.error(f"MT5 login failed: {mt5.last_error()}")
-                        mt5.shutdown()
+                    if not mt5.login(self.login, password=self.password, server=self.server):  # type: ignore
+                        self.logger.error(f"MT5 login failed: {mt5.last_error()}")  # type: ignore
+                        mt5.shutdown()  # type: ignore
                         return False
 
                 # Verify connection
-                terminal_info = mt5.terminal_info()
+                terminal_info = mt5.terminal_info()  # type: ignore
                 if terminal_info is None:
                     self.logger.error("Failed to get terminal info")
-                    mt5.shutdown()
+                    mt5.shutdown()  # type: ignore
                     return False
 
-                account_info = mt5.account_info()
+                account_info = mt5.account_info()  # type: ignore
                 if account_info is None:
                     self.logger.error("Failed to get account info")
-                    mt5.shutdown()
+                    mt5.shutdown()  # type: ignore
                     return False
 
                 self.connected = True
@@ -93,13 +93,13 @@ class MT5Connector:
         """Disconnect from MT5"""
         with self._mt5_lock:  # Thread-safe MT5 access
             if self.connected:
-                mt5.shutdown()
+                mt5.shutdown()  # type: ignore
                 self.connected = False
                 self.logger.info("Disconnected from MT5")
 
     def _cache_symbol_info(self):
         """Cache symbol information for faster access (called inside lock)"""
-        symbols = mt5.symbols_get()
+        symbols = mt5.symbols_get()  # type: ignore
         if symbols:
             for symbol in symbols:
                 if symbol.visible:
@@ -124,25 +124,30 @@ class MT5Connector:
             return self.symbol_info_cache[symbol]
 
         with self._mt5_lock:
-            info = mt5.symbol_info(symbol)
+            info = mt5.symbol_info(symbol)  # type: ignore
             if info:
                 symbol_dict = info._asdict()
                 self.symbol_info_cache[symbol] = symbol_dict
                 return symbol_dict
         return None
 
-    def get_current_price(self, symbol: str) -> Optional[Dict[str, float]]:
+    def get_current_price(self, symbol: str) -> Optional[Dict[str, Any]]:
         """Get current bid/ask prices"""
         with self._mt5_lock:
-            tick = mt5.symbol_info_tick(symbol)
+            tick = mt5.symbol_info_tick(symbol)  # type: ignore
             if tick:
+                symbol_info = self.get_symbol_info(symbol)
+                spread = 0
+                if symbol_info and 'point' in symbol_info:
+                    spread = round((tick.ask - tick.bid) / symbol_info['point'], 1)
+                
                 return {
                     'bid': tick.bid,
                     'ask': tick.ask,
                     'last': tick.last,
                     'volume': tick.volume,
                     'time': datetime.fromtimestamp(tick.time),
-                    'spread': round((tick.ask - tick.bid) / self.get_symbol_info(symbol)['point'], 1)
+                    'spread': spread
                 }
         return None
 
@@ -158,7 +163,7 @@ class MT5Connector:
             start_pos: Starting position (0 = current)
         """
         with self._mt5_lock:
-            rates = mt5.copy_rates_from_pos(symbol, timeframe, start_pos, count)
+            rates = mt5.copy_rates_from_pos(symbol, timeframe, start_pos, count)  # type: ignore
 
         if rates is not None and len(rates) > 0:
             df = pd.DataFrame(rates)
@@ -177,7 +182,7 @@ class MT5Connector:
                        date_from: datetime, date_to: datetime) -> Optional[pd.DataFrame]:
         """Get rates for a specific date range"""
         with self._mt5_lock:  # Thread-safe MT5 access
-            rates = mt5.copy_rates_range(symbol, timeframe, date_from, date_to)
+            rates = mt5.copy_rates_range(symbol, timeframe, date_from, date_to)  # type: ignore
 
             if rates is not None and len(rates) > 0:
                 df = pd.DataFrame(rates)
@@ -189,7 +194,7 @@ class MT5Connector:
     def get_ticks(self, symbol: str, count: int = 1000) -> Optional[pd.DataFrame]:
         """Get tick data"""
         with self._mt5_lock:  # Thread-safe MT5 access
-            ticks = mt5.copy_ticks_from(symbol, datetime.now(), count, mt5.COPY_TICKS_ALL)
+            ticks = mt5.copy_ticks_from(symbol, datetime.now(), count, mt5.COPY_TICKS_ALL)  # type: ignore
 
             if ticks is not None and len(ticks) > 0:
                 df = pd.DataFrame(ticks)
@@ -200,7 +205,7 @@ class MT5Connector:
             return None
 
     def place_order(self, symbol: str, order_type: str, volume: float,
-                   price: float = None, sl: float = None, tp: float = None,
+                   price: Optional[float] = None, sl: Optional[float] = None, tp: Optional[float] = None,
                    deviation: int = 10, comment: str = "", magic: int = 0) -> Dict:
         """
         Place an order
@@ -218,13 +223,13 @@ class MT5Connector:
         """
         with self._mt5_lock:  # Thread-safe MT5 access
             # Get symbol info
-            symbol_info = mt5.symbol_info(symbol)
+            symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
                 return {'success': False, 'error': f'Symbol {symbol} not found'}
 
             # Check if symbol is available for trading
             if not symbol_info.visible:
-                if not mt5.symbol_select(symbol, True):
+                if not mt5.symbol_select(symbol, True):  # type: ignore
                     return {'success': False, 'error': f'Failed to select {symbol}'}
 
             # Prepare order request
@@ -253,7 +258,7 @@ class MT5Connector:
 
             # Set price for market orders
             if request['type'] in [mt5.ORDER_TYPE_BUY, mt5.ORDER_TYPE_SELL]:
-                tick = mt5.symbol_info_tick(symbol)
+                tick = mt5.symbol_info_tick(symbol)  # type: ignore
                 if tick is None:
                     return {'success': False, 'error': 'Failed to get current price'}
 
@@ -284,7 +289,7 @@ class MT5Connector:
             request['volume'] = round(volume, 2)
 
             # Send order
-            result = mt5.order_send(request)
+            result = mt5.order_send(request)  # type: ignore
 
             if result is None:
                 return {'success': False, 'error': 'Order send failed - no response'}
@@ -308,7 +313,7 @@ class MT5Connector:
     def close_position(self, ticket: int, deviation: int = 10) -> Dict:
         """Close an open position by ticket"""
         with self._mt5_lock:  # Thread-safe MT5 access
-            position = mt5.positions_get(ticket=ticket)
+            position = mt5.positions_get(ticket=ticket)  # type: ignore
 
             if not position:
                 return {'success': False, 'error': f'Position {ticket} not found'}
@@ -317,7 +322,7 @@ class MT5Connector:
             symbol = position.symbol
 
             # Get current price
-            tick = mt5.symbol_info_tick(symbol)
+            tick = mt5.symbol_info_tick(symbol)  # type: ignore
             if tick is None:
                 return {'success': False, 'error': 'Failed to get current price'}
 
@@ -341,7 +346,7 @@ class MT5Connector:
                 request['price'] = tick.ask
 
             # Send order
-            result = mt5.order_send(request)
+            result = mt5.order_send(request)  # type: ignore
 
             if result is None:
                 return {'success': False, 'error': 'Close order failed - no response'}
@@ -361,9 +366,9 @@ class MT5Connector:
             'price': result.price
         }
 
-    def modify_position(self, ticket: int, sl: float = None, tp: float = None) -> Dict:
+    def modify_position(self, ticket: int, sl: Optional[float] = None, tp: Optional[float] = None) -> Dict:
         """Modify stop loss and take profit of a position"""
-        position = mt5.positions_get(ticket=ticket)
+        position = mt5.positions_get(ticket=ticket)  # type: ignore
 
         if not position:
             return {'success': False, 'error': f'Position {ticket} not found'}
@@ -382,7 +387,7 @@ class MT5Connector:
         request['tp'] = tp if tp is not None else position.tp
 
         # Send modification
-        result = mt5.order_send(request)
+        result = mt5.order_send(request)  # type: ignore
 
         if result is None:
             return {'success': False, 'error': 'Modification failed - no response'}
@@ -400,26 +405,26 @@ class MT5Connector:
             'tp': request['tp']
         }
 
-    def get_positions(self, symbol: str = None) -> List[Dict]:
+    def get_positions(self, symbol: Optional[str] = None) -> List[Dict]:
         """Get open positions"""
         with self._mt5_lock:  # Thread-safe MT5 access
             if symbol:
-                positions = mt5.positions_get(symbol=symbol)
+                positions = mt5.positions_get(symbol=symbol)  # type: ignore
             else:
-                positions = mt5.positions_get()
+                positions = mt5.positions_get()  # type: ignore
 
             if positions is None:
                 return []
 
             return [position._asdict() for position in positions]
 
-    def get_orders(self, symbol: str = None) -> List[Dict]:
+    def get_orders(self, symbol: Optional[str] = None) -> List[Dict]:
         """Get pending orders"""
         with self._mt5_lock:  # Thread-safe MT5 access
             if symbol:
-                orders = mt5.orders_get(symbol=symbol)
+                orders = mt5.orders_get(symbol=symbol)  # type: ignore
             else:
-                orders = mt5.orders_get()
+                orders = mt5.orders_get()  # type: ignore
 
             if orders is None:
                 return []
@@ -429,7 +434,7 @@ class MT5Connector:
     def get_history_orders(self, date_from: datetime, date_to: datetime) -> List[Dict]:
         """Get historical orders"""
         with self._mt5_lock:  # Thread-safe MT5 access
-            orders = mt5.history_orders_get(date_from, date_to)
+            orders = mt5.history_orders_get(date_from, date_to)  # type: ignore
 
             if orders is None:
                 return []
@@ -439,7 +444,7 @@ class MT5Connector:
     def get_history_deals(self, date_from: datetime, date_to: datetime) -> List[Dict]:
         """Get historical deals"""
         with self._mt5_lock:  # Thread-safe MT5 access
-            deals = mt5.history_deals_get(date_from, date_to)
+            deals = mt5.history_deals_get(date_from, date_to)  # type: ignore
 
             if deals is None:
                 return []
@@ -449,7 +454,7 @@ class MT5Connector:
     def get_account_info(self) -> Optional[Dict]:
         """Get account information"""
         with self._mt5_lock:  # Thread-safe MT5 access
-            info = mt5.account_info()
+            info = mt5.account_info()  # type: ignore
             if info:
                 return info._asdict()
             return None
@@ -457,7 +462,7 @@ class MT5Connector:
     def get_terminal_info(self) -> Optional[Dict]:
         """Get terminal information"""
         with self._mt5_lock:  # Thread-safe MT5 access
-            info = mt5.terminal_info()
+            info = mt5.terminal_info()  # type: ignore
             if info:
                 return info._asdict()
             return None
@@ -477,12 +482,12 @@ class MT5Connector:
             try:
                 # Preferred: mt5.time_current() -> seconds since epoch (int)
                 if hasattr(mt5, 'time_current'):
-                    ts = mt5.time_current()
+                    ts = mt5.time_current()  # type: ignore
                     if ts:
                         return datetime.fromtimestamp(ts, tz=timezone.utc)
 
                 # Fallback: try terminal_info attributes
-                info = mt5.terminal_info()
+                info = mt5.terminal_info()  # type: ignore
                 if info is not None:
                     # Common attribute names vary by binding/version
                     for attr in ('server_time', 'time', 'time_local', 'time_server'):
@@ -495,7 +500,7 @@ class MT5Connector:
                                 continue
 
                 # Last resort: try account/position timestamp via account_info
-                acc = mt5.account_info()
+                acc = mt5.account_info()  # type: ignore
                 if acc is not None and hasattr(acc, 'timestamp'):
                     try:
                         ts = getattr(acc, 'timestamp')
@@ -506,7 +511,7 @@ class MT5Connector:
 
                 # Final fallback: use symbol tick time (server time)
                 try:
-                    tick = mt5.symbol_info_tick('EURUSD')
+                    tick = mt5.symbol_info_tick('EURUSD')  # type: ignore
                     if tick and hasattr(tick, 'time') and tick.time > 0:
                         return datetime.fromtimestamp(tick.time, tz=timezone.utc)
                 except Exception:
@@ -520,14 +525,14 @@ class MT5Connector:
     def symbol_select(self, symbol: str, enable: bool = True) -> bool:
         """Enable or disable a symbol for trading"""
         with self._mt5_lock:  # Thread-safe MT5 access
-            return mt5.symbol_select(symbol, enable)
+            return mt5.symbol_select(symbol, enable)  # type: ignore
 
     def market_book_add(self, symbol: str) -> bool:
         """Subscribe to market depth"""
         with self._mt5_lock:  # Thread-safe MT5 access
-            return mt5.market_book_add(symbol)
+            return mt5.market_book_add(symbol)  # type: ignore
 
     def market_book_release(self, symbol: str) -> bool:
         """Unsubscribe from market depth"""
         with self._mt5_lock:  # Thread-safe MT5 access
-            return mt5.market_book_release(symbol)
+            return mt5.market_book_release(symbol)  # type: ignore

@@ -34,7 +34,7 @@ import sys
 import os
 import logging
 import traceback
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -209,11 +209,11 @@ class FXAiApplication:
                 mt5_connector=self.mt5,
                 clock_sync=self.clock_sync
             )
-            
+
             # Update root logger handlers
             for handler in root_logger.handlers:
                 handler.setFormatter(mt5_formatter)
-            
+
             # Update ALL existing child loggers to ensure they use the new formatter
             for logger_name in list(logging.Logger.manager.loggerDict.keys()):
                 child_logger = logging.getLogger(logger_name)
@@ -310,7 +310,7 @@ class FXAiApplication:
                     try:
                         # Minimal delay to prevent MT5 API overload
                         time_module.sleep(0.05)  # Reduced from 0.5 to 0.05 seconds
-                        data = self.market_data.get_latest_data(symbol)
+                        data = self.market_data.get_latest_data(symbol)  # type: ignore
                         response_time = time_module.time() - start_time
 
                         if data is not None:
@@ -319,9 +319,9 @@ class FXAiApplication:
                             # Only fetch H1 and H4 (reduced from 5 timeframes to 2)
                             bars_m1 = None  # Disabled to reduce API load
                             bars_m5 = None  # Disabled to reduce API load
-                            bars_h1 = self.market_data.get_bars(
+                            bars_h1 = self.market_data.get_bars(  # type: ignore
                                 symbol, mt5.TIMEFRAME_H1, 100)  # Increased to 100 for ML training (needs 80+)
-                            bars_h4 = self.market_data.get_bars(
+                            bars_h4 = self.market_data.get_bars(  # type: ignore
                                 symbol, mt5.TIMEFRAME_H4, 50)  # Keep at 50, only used for trend confirmation
                             bars_d1 = None  # Disabled to reduce API load
 
@@ -344,7 +344,7 @@ class FXAiApplication:
                 # 2. Collect fundamental data (with caching)
                 start_time = time_module.time()
                 try:
-                    fundamental_data = self.fundamental_collector.collect()
+                    fundamental_data = self.fundamental_collector.collect()  # type: ignore
                     response_time = time_module.time() - start_time
                 except Exception as e:
                     response_time = time_module.time() - start_time
@@ -405,7 +405,7 @@ class FXAiApplication:
 
                     self.logger.debug(f"{symbol}: Starting technical analysis...")
                     tech_start = time_module.time()
-                    technical_signals = await self.technical_analyzer.analyze(
+                    technical_signals = await self.technical_analyzer.analyze(  # type: ignore
                         symbol,
                         bars
                     )
@@ -462,7 +462,7 @@ class FXAiApplication:
                     # Sentiment analysis
                     start_time = time_module.time()
                     try:
-                        sentiment_result = await self.sentiment_analyzer.analyze_sentiment(
+                        sentiment_result = await self.sentiment_analyzer.analyze_sentiment(  # type: ignore
                             symbol)
                         response_time = time_module.time() - start_time
                         sentiment_score = sentiment_result.get(
@@ -491,9 +491,9 @@ class FXAiApplication:
                         signal_weights.get(
                             'fundamental_score',
                             0.15) *
-                        fundamental_data.get(
+                        fundamental_data.get(  # type: ignore
                             symbol,
-                            {}).get(
+                            {}).get(  # type: ignore
                                 'score',
                                 0.5) +
                         signal_weights.get(
@@ -566,7 +566,7 @@ class FXAiApplication:
                         
                         # For metals, use optimized sl_pips directly from parameter manager
                         if 'XAU' in symbol or 'XAG' in symbol or 'GOLD' in symbol:
-                            optimal_params = self.param_manager.get_optimal_parameters(symbol, 'H1')
+                            optimal_params = self.param_manager.get_optimal_parameters(symbol, 'H1')  # type: ignore
                             
                             # Different defaults for Gold vs Silver
                             if 'XAG' in symbol:
@@ -616,8 +616,8 @@ class FXAiApplication:
                             self.logger.info(f"{symbol}: Strong negative sentiment ({sentiment_score:.2f}) - widening SL by 15%")
                         
                         # Fundamental-based SL adjustment
-                        fundamental_score = fundamental_data.get(symbol, {}).get('score', 0.5)
-                        high_impact_news = fundamental_data.get(symbol, {}).get('high_impact_news_soon', False)
+                        fundamental_score = fundamental_data.get(symbol, {}).get('score', 0.5)  # type: ignore
+                        high_impact_news = fundamental_data.get(symbol, {}).get('high_impact_news_soon', False)  # type: ignore
                         
                         if high_impact_news:
                             # High-impact news coming: Widen SL to avoid being stopped out by volatility
@@ -650,7 +650,7 @@ class FXAiApplication:
                             # Use optimized TP for metals, ATR-based for forex
                             if 'XAU' in symbol or 'XAG' in symbol or 'GOLD' in symbol:
                                 # Get optimized take profit for metals from parameter manager
-                                optimal_params = self.param_manager.get_optimal_parameters(symbol, 'H1')
+                                optimal_params = self.param_manager.get_optimal_parameters(symbol, 'H1')  # type: ignore
                                 
                                 # Different defaults and pip sizes for Gold vs Silver
                                 if 'XAG' in symbol:
@@ -671,53 +671,116 @@ class FXAiApplication:
                                 tp_atr_multiplier = base_tp_multiplier
                                 take_profit_distance = atr_value * tp_atr_multiplier
 
-                            # ===== SENTIMENT & FUNDAMENTAL ADJUSTMENTS FOR TP =====
-                            # Adjust take profit based on sentiment and fundamental analysis
-                            tp_adjustment_factor = 1.0  # Default: no adjustment
-                            
-                            # Sentiment-based TP adjustment
-                            if sentiment_score > 0.7:
-                                # Strong positive sentiment: Extend TP (ride the trend)
-                                tp_adjustment_factor *= 1.15  # Increase TP distance by 15%
-                                self.logger.info(f"{symbol}: Strong positive sentiment ({sentiment_score:.2f}) - extending TP by 15%")
-                            elif sentiment_score < 0.3:
-                                # Strong negative sentiment: Tighten TP (take profits quickly)
-                                tp_adjustment_factor *= 0.90  # Reduce TP distance by 10%
-                                self.logger.info(f"{symbol}: Strong negative sentiment ({sentiment_score:.2f}) - tightening TP by 10%")
-                            
-                            # Fundamental-based TP adjustment
-                            if fundamental_score > 0.7:
-                                # Strong fundamentals: Extend TP (trend likely to continue)
-                                tp_adjustment_factor *= 1.20  # Increase TP distance by 20%
-                                self.logger.info(f"{symbol}: Strong fundamentals ({fundamental_score:.2f}) - extending TP by 20%")
-                            elif fundamental_score < 0.3:
-                                # Weak fundamentals: Tighten TP (take profits early)
-                                tp_adjustment_factor *= 0.85  # Reduce TP distance by 15%
-                                self.logger.info(f"{symbol}: Weak fundamentals ({fundamental_score:.2f}) - tightening TP by 15%")
-                            elif high_impact_news:
-                                # High-impact news: Tighten TP (lock in gains before volatility)
-                                tp_adjustment_factor *= 0.90  # Reduce TP distance by 10%
-                                self.logger.info(f"{symbol}: High-impact news detected - tightening TP by 10%")
-                            
-                            # Apply adjustment
-                            take_profit_distance = take_profit_distance * tp_adjustment_factor
-                            
-                            if tp_adjustment_factor != 1.0:
-                                self.logger.info(f"{symbol}: Total TP adjustment factor: {tp_adjustment_factor:.2f}x (distance: {take_profit_distance:.5f})")
+                            # ===== DYNAMIC SL/TP ADJUSTMENTS BASED ON ANALYZER OUTPUT =====
+                        # Get base SL/TP values before analyzer adjustments
+                        base_sl_pips = 0
+                        base_tp_pips = 0
+
+                        if 'XAU' in symbol or 'XAG' in symbol or 'GOLD' in symbol:
+                            # For metals, get base values from optimized parameters
+                            optimal_params = self.param_manager.get_optimal_parameters(symbol, 'H1')  # type: ignore
+                            if 'XAG' in symbol:
+                                base_sl_pips = optimal_params.get('sl_pips', 300)
+                                base_tp_pips = optimal_params.get('tp_pips', 1200)
+                            else:  # XAU/GOLD
+                                base_sl_pips = optimal_params.get('sl_pips', 200)
+                                base_tp_pips = optimal_params.get('tp_pips', 3300)
+                        else:
+                            # For forex, calculate ATR-based base values
+                            if atr_value > 0:
+                                sl_atr_multiplier = adaptive_params.get('stop_loss_atr_multiplier', 3.0)
+                                tp_atr_multiplier = adaptive_params.get('take_profit_atr_multiplier', 6.0)
+                                base_sl_distance = atr_value * sl_atr_multiplier
+                                base_tp_distance = atr_value * tp_atr_multiplier
+
+                                # Convert distances back to pips for analyzer input
+                                pip_size = 0.0001 if symbol.endswith(('JPY', 'XAG')) else 0.0001
+                                base_sl_pips = base_sl_distance / pip_size
+                                base_tp_pips = base_tp_distance / pip_size
+
+                        # Get analyzer-based SL/TP adjustments
+                        analyzer_adjustments = {}
+
+                        # Technical analyzer adjustments (if available)
+                        if hasattr(self.technical_analyzer, 'get_sl_tp_adjustments'):
+                            try:
+                                tech_adjustments = self.technical_analyzer.get_sl_tp_adjustments(  # type: ignore
+                                    symbol, base_sl_pips, base_tp_pips, technical_signals)
+                                analyzer_adjustments['technical'] = tech_adjustments
+                            except Exception as e:
+                                self.logger.debug(f"Technical analyzer SL/TP adjustment failed: {e}")
+
+                        # Sentiment analyzer adjustments (if available)
+                        if hasattr(self.sentiment_analyzer, 'get_sl_tp_adjustments'):
+                            try:
+                                sentiment_adjustments = self.sentiment_analyzer.get_sl_tp_adjustments(  # type: ignore
+                                    symbol, base_sl_pips, base_tp_pips, sentiment_result)
+                                analyzer_adjustments['sentiment'] = sentiment_adjustments
+                            except Exception as e:
+                                self.logger.debug(f"Sentiment analyzer SL/TP adjustment failed: {e}")
+
+                        # Fundamental analyzer adjustments (NEW!)
+                        if hasattr(self.fundamental_collector, 'get_sl_tp_adjustments'):
+                            try:
+                                fundamental_adjustments = self.fundamental_collector.get_sl_tp_adjustments(  # type: ignore
+                                    symbol, base_sl_pips, base_tp_pips)
+                                analyzer_adjustments['fundamental'] = fundamental_adjustments
+                            except Exception as e:
+                                self.logger.debug(f"Fundamental analyzer SL/TP adjustment failed: {e}")
+
+                        # Apply analyzer adjustments (prioritize fundamental > sentiment > technical)
+                        final_sl_pips = base_sl_pips
+                        final_tp_pips = base_tp_pips
+                        adjustment_reasons = []
+
+                        for analyzer_name in ['fundamental', 'sentiment', 'technical']:
+                            if analyzer_name in analyzer_adjustments:
+                                adj = analyzer_adjustments[analyzer_name]
+                                if adj.get('sl_pips', base_sl_pips) != base_sl_pips:
+                                    final_sl_pips = adj['sl_pips']
+                                    adjustment_reasons.append(f"{analyzer_name}: SL {base_sl_pips:.0f} -> {final_sl_pips:.0f} ({adj.get('reason', 'unknown')})")
+                                if adj.get('tp_pips', base_tp_pips) != base_tp_pips:
+                                    final_tp_pips = adj['tp_pips']
+                                    adjustment_reasons.append(f"{analyzer_name}: TP {base_tp_pips:.0f} -> {final_tp_pips:.0f} ({adj.get('reason', 'unknown')})")
+
+                        # Log adjustments
+                        if adjustment_reasons:
+                            self.logger.info(f"{symbol}: Dynamic SL/TP adjustments applied:")
+                            for reason in adjustment_reasons:
+                                self.logger.info(f"  {reason}")
+
+                        # Convert final pips back to distance
+                        if 'XAU' in symbol or 'XAG' in symbol or 'GOLD' in symbol:
+                            # For metals, use the adjusted pips directly
+                            if 'XAG' in symbol:
+                                pip_size = 0.001
+                            else:  # XAU/GOLD
+                                pip_size = 0.10
+
+                            stop_loss_distance = final_sl_pips * pip_size
+                            take_profit_distance = final_tp_pips * pip_size
+                        else:
+                            # For forex, convert pips back to distance
+                            pip_size = 0.0001 if symbol.endswith(('JPY', 'XAG')) else 0.0001
+                            stop_loss_distance = final_sl_pips * pip_size
+                            take_profit_distance = final_tp_pips * pip_size
 
                             if ml_prediction.get('direction') == 1:  # BUY
                                 take_profit = entry_price + take_profit_distance
-                            else:  # SELL
-                                take_profit = entry_price - take_profit_distance
-                            self.logger.debug(
-                                f"{symbol} take profit: ATR={
-                                    atr_value:.5f}, multiplier={
-                                    tp_atr_multiplier:.1f}, " f"distance={
-                                    take_profit_distance:.5f}, level={
-                                    take_profit:.5f}")
-                        else:
-                            # Fallback take profit: 6% of entry price (3x the
-                            # 2% stop loss fallback)
+                        # Calculate take profit based on final adjusted distances
+                        if ml_prediction.get('direction') == 1:  # BUY
+                            take_profit = entry_price + take_profit_distance
+                        else:  # SELL
+                            take_profit = entry_price - take_profit_distance
+
+                        self.logger.debug(
+                            f"{symbol} final take profit: distance={take_profit_distance:.5f}, level={take_profit:.5f}")
+
+                        # ===== LEGACY FALLBACK (should not be reached with new logic) =====
+                        # Keep this for safety but it should not execute with the new analyzer-based logic above
+                        if take_profit is None:
+                            self.logger.warning(f"{symbol}: Take profit not set by analyzer logic, using fallback")
+                            # Fallback take profit: 6% of entry price (3x the 2% stop loss fallback)
                             take_profit_distance = entry_price * 0.06
 
                             if ml_prediction.get('direction') == 1:  # BUY
@@ -725,9 +788,7 @@ class FXAiApplication:
                             else:  # SELL
                                 take_profit = entry_price - take_profit_distance
                             self.logger.debug(
-                                f"{symbol} fallback take profit: 6% of entry = " f"{
-                                    take_profit_distance:.5f}, " f"level={
-                                    take_profit:.5f}")
+                                f"{symbol} fallback take profit: 6% of entry = {take_profit_distance:.5f}, level={take_profit:.5f}")
 
                         # Format take profit for logging
                         tp_display = f"{
@@ -813,6 +874,7 @@ class FXAiApplication:
                             'entry_price': entry_price,
                             'stop_loss': stop_loss,
                             'take_profit': take_profit,
+                            'technical_signals': technical_signals,
                         }
                         signal['ml_score'] = ml_prediction.get('probability', 0)
                         signal['technical_score'] = technical_score
@@ -885,7 +947,7 @@ class FXAiApplication:
                     # Note: New RiskManager doesn't have update_metrics method
 
                     # Check risk limits with adaptive multiplier
-                    risk_check = self.risk_manager.can_trade(signal['symbol'])
+                    risk_check = self.risk_manager.can_trade(signal['symbol'])  # type: ignore
                     self.logger.info(
                         f"Risk check for {
                             signal['symbol']} {
@@ -911,7 +973,7 @@ class FXAiApplication:
                                     sharpe = self.advanced_risk_metrics.calculate_sharpe_ratio(symbol_df['returns'].dropna())
                                     
                                     # Get account balance
-                                    account_info = mt5.account_info()
+                                    account_info = mt5.account_info()  # type: ignore
                                     account_balance = account_info.balance if account_info else 10000
                                     
                                     # Calculate position risk as percentage of account
@@ -939,7 +1001,7 @@ class FXAiApplication:
                                 print(f"Advanced risk assessment failed for {signal['symbol']}: {e}", flush=True)
 
                         # Check free margin percentage
-                        account_info = mt5.account_info()
+                        account_info = mt5.account_info()  # type: ignore
                         if account_info and account_info.margin_free < 0.20 * account_info.equity:
                             self.logger.warning(
                                 f"Free margin ${
@@ -957,7 +1019,7 @@ class FXAiApplication:
                             stop_loss_distance = stop_loss - entry_price
 
                         # Convert to pips using proper pip size for each symbol
-                        symbol_info = mt5.symbol_info(signal['symbol'])
+                        symbol_info = mt5.symbol_info(signal['symbol'])  # type: ignore
                         if symbol_info:
                             point = symbol_info.point
                             digits = symbol_info.digits
@@ -989,7 +1051,7 @@ class FXAiApplication:
                         metal_symbols = ['XAU', 'XAG', 'GOLD']
                         if any(metal in signal['symbol'] for metal in metal_symbols):
                             # Calculate risk with minimum lot size
-                            min_lot_risk = self.risk_manager.calculate_risk_for_lot_size(
+                            min_lot_risk = self.risk_manager.calculate_risk_for_lot_size(  # type: ignore
                                 signal['symbol'], min_lot_size, stop_loss_pips)
 
                             max_risk_limit = self.config.get(
@@ -1017,7 +1079,7 @@ class FXAiApplication:
                                 f"Forex detected: {
                                     signal['symbol']}, using $50 risk")
 
-                        position_size = self.risk_manager.calculate_position_size(
+                        position_size = self.risk_manager.calculate_position_size(  # type: ignore
                             signal['symbol'], stop_loss_pips, risk_amount)
 
                         # Debug logging
@@ -1030,7 +1092,7 @@ class FXAiApplication:
                         # Execute trade with stop loss
                         start_time = time_module.time()
                         try:
-                            trade_result = await self.trading_engine.place_order(
+                            trade_result = await self.trading_engine.place_order(  # type: ignore
                                 signal['symbol'],
                                 signal['action'].lower(),
                                 position_size,
@@ -1039,7 +1101,7 @@ class FXAiApplication:
                                 take_profit=signal.get('take_profit'),
                                 comment=f"FX-Ai {
                                     signal['action']} {
-                                    signal_strength:.3f}"
+                                    signal['strength']:.3f}"
                             )
                             response_time = time_module.time() - start_time
                             success = trade_result.get('success', False)
@@ -1052,7 +1114,7 @@ class FXAiApplication:
                             self.session_stats['total_trades'] += 1
                             
                             # Record trade for daily limit tracking (ONE TRADE PER SYMBOL PER DAY)
-                            self.risk_manager.record_trade(signal['symbol'])
+                            self.risk_manager.record_trade(signal['symbol'])  # type: ignore
                             self.logger.info(f"{signal['symbol']}: Trade executed and recorded - no more trades allowed today")
 
                             # ===== REINFORCEMENT LEARNING EXPERIENCE =====
@@ -1070,10 +1132,10 @@ class FXAiApplication:
                                     
                                     # Record initial state and action for RL learning
                                     initial_state = {
-                                        'rsi': technical_signals.get('rsi', {}).get('value', 50),
+                                        'rsi': signal['technical_signals'].get('rsi', {}).get('value', 50),
                                         'adx': regime_adx,
-                                        'volatility_ratio': technical_signals.get('atr', {}).get('value', 0) / signal['entry_price'] if signal['entry_price'] > 0 else 0,
-                                        'trend_strength': technical_signals.get('adx', {}).get('value', 25),
+                                        'volatility_ratio': signal['technical_signals'].get('atr', {}).get('value', 0) / signal['entry_price'] if signal['entry_price'] > 0 else 0,
+                                        'trend_strength': signal['technical_signals'].get('adx', {}).get('value', 25),
                                         'market_regime': regime_type,
                                         'signal_strength': signal['strength'],
                                         'position_status': 1 if signal['action'] == 'BUY' else -1  # Position opened
@@ -1124,7 +1186,7 @@ class FXAiApplication:
 
                 # 5. Monitor and update positions
                 for symbol in symbols:
-                    await self.trading_engine.manage_positions(symbol)
+                    await self.trading_engine.manage_positions(symbol)  # type: ignore
 
                 # 6. Check for model retraining trigger (every hour)
                 # Every hour (assuming 10s loop)
@@ -1204,11 +1266,11 @@ class FXAiApplication:
             while True:
                 time_module.sleep(30)  # Check every 30 seconds
 
-                position = self.trading_engine.get_position_by_ticket(ticket)
+                position = self.trading_engine.get_position_by_ticket(ticket)  # type: ignore
 
                 if position is None:  # Trade closed
                     # Get trade history
-                    history = self.trading_engine.get_trade_history(ticket)
+                    history = self.trading_engine.get_trade_history(ticket)  # type: ignore
 
                     if history:
                         # Calculate profit
@@ -1233,7 +1295,7 @@ class FXAiApplication:
 
                         # Record trade result for cooldown management
                         actual_profit = history.get('profit', 0)
-                        self.risk_manager.record_trade_result(
+                        self.risk_manager.record_trade_result(  # type: ignore
                             trade_data['symbol'], actual_profit)
 
                         # Record for learning
@@ -1301,15 +1363,19 @@ class FXAiApplication:
                             f"Closing {trade_data['symbol']} position due to "
                             f"max holding time ({max_holding_minutes} minutes)")
                         try:
-                            # Close position at market
-                            close_result = self.trading_engine.close_position(
-                                ticket, trade_data['symbol'])
-                            if close_result and close_result.get('success'):
-                                self.logger.info(
-                                    "Successfully closed position for max time exit")
+                            # Get position object first
+                            position = self.trading_engine.get_position_by_ticket(ticket)  # type: ignore
+                            if position:
+                                # Close position at market
+                                close_result = asyncio.run(self.trading_engine.close_position(position))  # type: ignore
+                                if close_result:
+                                    self.logger.info(
+                                        "Successfully closed position for max time exit")
+                                else:
+                                    self.logger.warning(
+                                        "Failed to close position for max time exit")
                             else:
-                                self.logger.warning(
-                                    "Failed to close position for max time exit")
+                                self.logger.warning(f"Position {ticket} not found for closing")
                         except Exception as e:
                             self.logger.error(
                                 f"Error closing position for max time: {e}")
@@ -1330,15 +1396,17 @@ class FXAiApplication:
                                     f"optimal time ({optimal_holding_minutes} min) "
                                     f"with {profit_pct:.2f}% profit")
                                 try:
-                                    close_result = self.trading_engine.close_position(
-                                        ticket, trade_data['symbol'])
-                                    if close_result and close_result.get(
-                                            'success'):
-                                        self.logger.info(
-                                            "Successfully closed position for optimal time exit")
+                                    position_obj = self.trading_engine.get_position_by_ticket(ticket)  # type: ignore
+                                    if position_obj:
+                                        close_result = asyncio.run(self.trading_engine.close_position(position_obj))  # type: ignore
+                                        if close_result:
+                                            self.logger.info(
+                                                "Successfully closed position for optimal time exit")
+                                        else:
+                                            self.logger.warning(
+                                                "Failed to close position for optimal time exit")
                                     else:
-                                        self.logger.warning(
-                                            "Failed to close position for optimal time exit")
+                                        self.logger.warning(f"Position {ticket} not found for closing")
                                 except Exception as e:
                                     self.logger.error(
                                         f"Error closing position for optimal time: {e}")
@@ -1352,15 +1420,17 @@ class FXAiApplication:
                                     f"optimal time ({optimal_holding_minutes} min) "
                                     f"with {profit_pct:.2f}% profit")
                                 try:
-                                    close_result = self.trading_engine.close_position(
-                                        ticket, trade_data['symbol'])
-                                    if close_result and close_result.get(
-                                            'success'):
-                                        self.logger.info(
-                                            "Successfully closed position for optimal time exit")
+                                    position_obj = self.trading_engine.get_position_by_ticket(ticket)  # type: ignore
+                                    if position_obj:
+                                        close_result = asyncio.run(self.trading_engine.close_position(position_obj))  # type: ignore
+                                        if close_result:
+                                            self.logger.info(
+                                                "Successfully closed position for optimal time exit")
+                                        else:
+                                            self.logger.warning(
+                                                "Failed to close position for optimal time exit")
                                     else:
-                                        self.logger.warning(
-                                            "Failed to close position for optimal time exit")
+                                        self.logger.warning(f"Position {ticket} not found for closing")
                                 except Exception as e:
                                     self.logger.error(
                                         f"Error closing position for optimal time: {e}")
@@ -1377,7 +1447,7 @@ class FXAiApplication:
                 return
 
             # Get MT5 server time instead of local computer time
-            server_time = self.mt5.get_server_time()
+            server_time = self.mt5.get_server_time()  # type: ignore
             if server_time:
                 current_time = server_time.time()
                 today = server_time.date()
@@ -1424,16 +1494,6 @@ class FXAiApplication:
         except Exception as e:
             self.logger.error(f"Error in day trading closure: {e}")
 
-    def get_default_weights(self) -> dict:
-        """Get default signal weights"""
-        return {
-            'technical_score': 0.40,  # Increased for testing
-            'ml_prediction': 0.20,    # Decreased for testing
-            'sentiment_score': 0.20,
-            'fundamental_score': 0.10,
-            'support_resistance': 0.10
-        }
-
     def get_default_parameters(self) -> dict:
         """Get default trading parameters"""
         return {
@@ -1461,15 +1521,17 @@ class FXAiApplication:
         # Close all positions if configured
         if self.config.get('trading', {}).get('close_on_shutdown', True):
             try:
-                if hasattr(self.trading_engine, 'close_all_positions'):
-                    close_method = self.trading_engine.close_all_positions
+                if hasattr(self.trading_engine, 'close_all_positions'):  # type: ignore
+                    close_method = self.trading_engine.close_all_positions  # type: ignore
                     loop = asyncio.get_event_loop()
                     if asyncio.iscoroutinefunction(close_method):
                         loop.create_task(close_method())
                     else:
-                        # Schedule synchronous close to run in executor
-                        loop.create_task(
-                            loop.run_in_executor(None, close_method))
+                        # Call synchronous close directly in shutdown context
+                        try:
+                            close_method()  # type: ignore
+                        except Exception as e:
+                            self.logger.error(f"Error in synchronous close_all_positions: {e}")
                 else:
                     self.logger.warning(
                         'No close_all_positions method on trading_engine')
@@ -1487,18 +1549,6 @@ class FXAiApplication:
             self.mt5.disconnect()
 
         self.logger.info("FX-Ai shutdown complete")
-
-    def get_health_report(self) -> Dict[str, Any]:
-        """Get comprehensive system health report"""
-        return {'status': 'not_initialized', 'message': 'System health monitor removed'}
-
-    def get_performance_stats(self) -> Dict[str, Any]:
-        """Get detailed performance statistics"""
-        return {'status': 'not_initialized', 'message': 'System health monitor removed'}
-
-    def export_health_data(self, filepath: str = None) -> str:
-        """Export health monitoring data to file"""
-        return "System health monitor removed"
 
     def print_session_summary(self):
         """Print trading session summary"""

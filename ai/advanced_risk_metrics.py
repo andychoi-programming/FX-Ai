@@ -62,24 +62,24 @@ class AdvancedRiskMetrics:
             if method == 'historical':
                 # Historical VaR
                 var = np.percentile(returns, (1 - confidence) * 100)
-                return var
+                return var  # type: ignore
 
             elif method == 'parametric':
                 # Parametric VaR (assuming normal distribution)
                 mean = returns.mean()
                 std = returns.std()
                 var = mean + std * stats.norm.ppf(1 - confidence)
-                return var
+                return var  # type: ignore
 
             elif method == 'monte_carlo':
                 # Monte Carlo VaR
                 n_simulations = 10000
                 simulated_returns = np.random.normal(returns.mean(), returns.std(), n_simulations)
                 var = np.percentile(simulated_returns, (1 - confidence) * 100)
-                return var
+                return var  # type: ignore
 
             else:
-                return np.percentile(returns, (1 - confidence) * 100)
+                return np.percentile(returns, (1 - confidence) * 100)  # type: ignore
 
         except Exception as e:
             self.logger.warning(f"Error calculating VaR: {e}")
@@ -105,9 +105,9 @@ class AdvancedRiskMetrics:
             tail_losses = returns[returns <= var]
             if len(tail_losses) > 0:
                 cvar = tail_losses.mean()
-                return cvar
+                return cvar  # type: ignore
             else:
-                return var
+                return var  # type: ignore
 
         except Exception as e:
             self.logger.warning(f"Error calculating CVaR: {e}")
@@ -149,7 +149,7 @@ class AdvancedRiskMetrics:
             self.logger.warning(f"Error calculating max drawdown: {e}")
             return 0.0, 0, 0
 
-    def calculate_sharpe_ratio(self, returns: pd.Series, risk_free_rate: float = None) -> float:
+    def calculate_sharpe_ratio(self, returns: pd.Series, risk_free_rate: Optional[float] = None) -> float:
         """
         Calculate Sharpe ratio
 
@@ -181,7 +181,7 @@ class AdvancedRiskMetrics:
             self.logger.warning(f"Error calculating Sharpe ratio: {e}")
             return 0.0
 
-    def calculate_sortino_ratio(self, returns: pd.Series, risk_free_rate: float = None) -> float:
+    def calculate_sortino_ratio(self, returns: pd.Series, risk_free_rate: Optional[float] = None) -> float:
         """
         Calculate Sortino ratio (downside deviation only)
 
@@ -219,7 +219,7 @@ class AdvancedRiskMetrics:
             self.logger.warning(f"Error calculating Sortino ratio: {e}")
             return 0.0
 
-    def calculate_calmar_ratio(self, returns: pd.Series, risk_free_rate: float = None) -> float:
+    def calculate_calmar_ratio(self, returns: pd.Series, risk_free_rate: Optional[float] = None) -> float:
         """
         Calculate Calmar ratio (return vs max drawdown)
 
@@ -301,8 +301,8 @@ class AdvancedRiskMetrics:
             if market_variance == 0:
                 return 1.0
 
-            beta = covariance / market_variance
-            return beta
+            beta = covariance / market_variance  # type: ignore
+            return beta  # type: ignore
 
         except Exception as e:
             self.logger.warning(f"Error calculating beta: {e}")
@@ -458,8 +458,8 @@ class AdvancedRiskMetrics:
             if len(weights) > 1:
                 portfolio_returns = returns_df.dot(weights)
                 risk_metrics['portfolio_var_95'] = self.calculate_portfolio_var(weights, returns_df, 0.95)
-                risk_metrics['portfolio_sharpe'] = self.calculate_sharpe_ratio(portfolio_returns)
-                risk_metrics['portfolio_max_dd'] = self.calculate_max_drawdown(portfolio_returns)[0]
+                risk_metrics['portfolio_sharpe'] = self.calculate_sharpe_ratio(portfolio_returns)  # type: ignore
+                risk_metrics['portfolio_max_dd'] = self.calculate_max_drawdown(portfolio_returns)[0]  # type: ignore
 
                 # Correlation matrix
                 corr_matrix = returns_df.corr()
@@ -469,7 +469,7 @@ class AdvancedRiskMetrics:
                 max_corr = 0
                 for i in range(len(corr_matrix)):
                     for j in range(i+1, len(corr_matrix)):
-                        max_corr = max(max_corr, abs(corr_matrix.iloc[i, j]))
+                        max_corr = max(max_corr, abs(corr_matrix.iloc[i, j]))  # type: ignore
                 risk_metrics['max_correlation'] = max_corr
 
             # Risk warnings

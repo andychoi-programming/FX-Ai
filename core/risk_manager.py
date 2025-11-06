@@ -4,9 +4,8 @@ Proper position size calculation for fixed dollar risk
 """
 
 import logging
-import MetaTrader5 as mt5
+import MetaTrader5 as mt5  # type: ignore
 from typing import Dict, Optional, Tuple
-import math
 
 # Set up logger
 logger = logging.getLogger('FX-Ai.RiskManager')
@@ -74,7 +73,7 @@ class RiskManager:
         """
         try:
             # Get symbol info
-            symbol_info = mt5.symbol_info(symbol)
+            symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
                 logger.error(f"Symbol {symbol} not found")
                 return 0.01
@@ -82,13 +81,13 @@ class RiskManager:
             # Use specialized calculation for metals
             if "XAU" in symbol or "XAG" in symbol:
                 return self.calculate_position_size_metals(symbol, stop_loss_pips, 
-                                                         risk_override if risk_override else self.risk_per_trade)
+                                                         int(risk_override if risk_override else self.risk_per_trade))
             
             # Use override risk or default
             risk_amount = risk_override if risk_override else self.risk_per_trade
             
             # Get current price for calculations
-            tick = mt5.symbol_info_tick(symbol)
+            tick = mt5.symbol_info_tick(symbol)  # type: ignore
             if tick is None:
                 logger.error(f"Cannot get tick for {symbol}")
                 return 0.01
@@ -115,7 +114,7 @@ class RiskManager:
                 # Get conversion rate
                 if quote_currency == "JPY":
                     # For XXX/JPY crosses
-                    usdjpy_tick = mt5.symbol_info_tick("USDJPY")
+                    usdjpy_tick = mt5.symbol_info_tick("USDJPY")  # type: ignore
                     if usdjpy_tick:
                         pip_value_per_lot = (0.01 * 100000) / usdjpy_tick.bid
                     else:
@@ -125,7 +124,7 @@ class RiskManager:
                     # For other crosses like EURGBP
                     # Need GBP/USD rate to convert GBP pips to USD
                     conversion_symbol = f"{quote_currency}USD"
-                    conversion_tick = mt5.symbol_info_tick(conversion_symbol)
+                    conversion_tick = mt5.symbol_info_tick(conversion_symbol)  # type: ignore
                     
                     if conversion_tick:
                         # EURGBP pip value = 10 GBP × GBPUSD rate
@@ -177,8 +176,8 @@ class RiskManager:
     def calculate_position_size_metals(self, symbol, stop_loss_pips, risk_amount=50):
         """Special calculation for Gold and Silver"""
         
-        symbol_info = mt5.symbol_info(symbol)
-        tick = mt5.symbol_info_tick(symbol)
+        symbol_info = mt5.symbol_info(symbol)  # type: ignore
+        tick = mt5.symbol_info_tick(symbol)  # type: ignore
         
         if "XAU" in symbol:  # Gold
             # For Gold: 1 pip = $0.10 movement = $10 per lot
@@ -226,7 +225,7 @@ class RiskManager:
                                  stop_loss_pips: float = 20) -> float:
         """Calculate stop loss price based on pips - Fixed for JPY pairs"""
         try:
-            symbol_info = mt5.symbol_info(symbol)
+            symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
                 return 0.0
             
@@ -258,7 +257,7 @@ class RiskManager:
                                    take_profit_pips: float = 40) -> float:
         """Calculate take profit price based on pips"""
         try:
-            symbol_info = mt5.symbol_info(symbol)
+            symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
                 return 0.0
             
@@ -302,13 +301,13 @@ class RiskManager:
                 return False, f"Daily loss limit reached: ${self.daily_loss:.2f}"
             
             # Check max positions
-            positions = mt5.positions_get()
+            positions = mt5.positions_get()  # type: ignore
             if positions and len(positions) >= self.max_positions:
                 return False, f"Max positions reached: {len(positions)}/{self.max_positions}"
             
             # Check spread
-            tick = mt5.symbol_info_tick(symbol)
-            symbol_info = mt5.symbol_info(symbol)
+            tick = mt5.symbol_info_tick(symbol)  # type: ignore
+            symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if tick and symbol_info:
                 spread_points = tick.ask - tick.bid
                 spread_pips = spread_points / symbol_info.point
@@ -334,11 +333,11 @@ class RiskManager:
     def estimate_trade_risk(self, symbol: str, lot_size: float, stop_loss_pips: float) -> float:
         """Estimate the risk amount for a trade"""
         try:
-            symbol_info = mt5.symbol_info(symbol)
+            symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
                 return self.risk_per_trade
 
-            tick = mt5.symbol_info_tick(symbol)
+            tick = mt5.symbol_info_tick(symbol)  # type: ignore
             if tick is None:
                 return self.risk_per_trade
 
@@ -397,7 +396,7 @@ class RiskManager:
         from datetime import datetime
         
         # Get MT5 server time
-        server_time = mt5.symbol_info_tick(symbol)
+        server_time = mt5.symbol_info_tick(symbol)  # type: ignore
         if server_time:
             current_date = datetime.fromtimestamp(server_time.time).strftime('%Y-%m-%d')
         else:
@@ -425,7 +424,7 @@ class RiskManager:
         from datetime import datetime
         
         # Get MT5 server time
-        server_time = mt5.symbol_info_tick(symbol)
+        server_time = mt5.symbol_info_tick(symbol)  # type: ignore
         if server_time:
             current_date = datetime.fromtimestamp(server_time.time).strftime('%Y-%m-%d')
         else:
@@ -455,7 +454,7 @@ class RiskManager:
             return False
 
         try:
-            positions = mt5.positions_get()
+            positions = mt5.positions_get()  # type: ignore
             position_count = len(positions) if positions else 0
             logger.debug(f"Positions query result type: {type(positions)}, value: {positions}")
             logger.debug(f"Max positions: {self.max_positions}, current positions: {position_count}")
@@ -510,7 +509,7 @@ class RiskManager:
         """Calculate the dollar risk for a given lot size and stop loss pips"""
         try:
             # Get symbol info
-            symbol_info = mt5.symbol_info(symbol)
+            symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
                 logger.error(f"Symbol {symbol} not found")
                 return 0.0
@@ -541,18 +540,18 @@ class RiskManager:
                 pip_value_per_lot = pip_size * contract_size  # For XAGUSD: similar calculation
             else:
                 # Get current price for cross pairs
-                tick = mt5.symbol_info_tick(symbol)
+                tick = mt5.symbol_info_tick(symbol)  # type: ignore
                 if tick:
                     pip_value_per_lot = (pip_size * contract_size) / tick.bid
                 else:
                     pip_value_per_lot = pip_size * contract_size
             
             # Convert to account currency if needed
-            account_info = mt5.account_info()
+            account_info = mt5.account_info()  # type: ignore
             if account_info:
                 account_currency = account_info.currency
                 if "JPY" in symbol and symbol.endswith("JPY") and account_currency == "USD":
-                    usdjpy_tick = mt5.symbol_info_tick("USDJPY")
+                    usdjpy_tick = mt5.symbol_info_tick("USDJPY")  # type: ignore
                     if usdjpy_tick:
                         pip_value_per_lot = pip_value_per_lot / usdjpy_tick.bid
             
@@ -580,7 +579,7 @@ class RiskManager:
     
     def get_risk_summary(self) -> Dict:
         """Get current risk status summary"""
-        positions = mt5.positions_get()
+        positions = mt5.positions_get()  # type: ignore
         current_positions = len(positions) if positions else 0
         
         total_exposure = 0.0
@@ -620,7 +619,7 @@ class RiskManager:
                 return {'approved': False, 'max_volume': 0.0}
             
             # Check max positions
-            positions = mt5.positions_get()
+            positions = mt5.positions_get()  # type: ignore
             if positions and len(positions) >= self.max_positions:
                 return {'approved': False, 'max_volume': 0.0}
             

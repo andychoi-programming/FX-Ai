@@ -7,10 +7,9 @@ import logging
 import re
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
+from datetime import datetime
+from typing import Dict, List, Optional
 from textblob import TextBlob
-import asyncio
 
 try:
     from textblob import TextBlob
@@ -47,8 +46,8 @@ class SentimentAnalyzer:
             'decline', 'recession', 'pessimism', 'fear', 'crash'
         ]
 
-    async def analyze_sentiment(self, symbol: str, news_data: List[Dict] = None,
-                               social_data: List[Dict] = None) -> Dict:
+    async def analyze_sentiment(self, symbol: str, news_data: Optional[List[Dict]] = None,
+                               social_data: Optional[List[Dict]] = None) -> Dict:
         """
         Perform comprehensive sentiment analysis
 
@@ -200,8 +199,8 @@ class SentimentAnalyzer:
             if TEXTBLOB_AVAILABLE:
                 # Use TextBlob for sentiment analysis
                 blob = TextBlob(text)
-                polarity = blob.sentiment.polarity
-                subjectivity = blob.sentiment.subjectivity
+                polarity = blob.sentiment.polarity  # type: ignore
+                subjectivity = blob.sentiment.subjectivity  # type: ignore
 
                 # Enhance with keyword analysis
                 keyword_score = self._keyword_sentiment_analysis(text)
@@ -391,7 +390,57 @@ class SentimentAnalyzer:
     def start(self):
         """Start the sentiment analyzer"""
         self.logger.info("SentimentAnalyzer started")
-    
+
+    def get_sl_tp_adjustments(self, symbol: str, base_sl_pips: float, base_tp_pips: float,
+                             sentiment_result: Dict) -> Dict:
+        """
+        Get SL/TP adjustments based on sentiment analysis
+
+        Args:
+            symbol: Trading symbol
+            base_sl_pips: Base stop loss in pips
+            base_tp_pips: Base take profit in pips
+            sentiment_result: Sentiment analysis results
+
+        Returns:
+            dict: Adjusted SL/TP values with reason
+        """
+        try:
+            adjustments = {
+                'sl_pips': base_sl_pips,
+                'tp_pips': base_tp_pips,
+                'reason': 'base_values'
+            }
+
+            # Get sentiment score
+            sentiment_score = sentiment_result.get('overall_score', 0.5)
+
+            # Strong bullish sentiment: extend TP, maintain SL
+            if sentiment_score > 0.7:
+                adjustments['tp_pips'] = base_tp_pips * 1.2  # Extend TP by 20%
+                adjustments['reason'] = 'strong_bullish_sentiment'
+
+            # Strong bearish sentiment: extend TP, maintain SL
+            elif sentiment_score < 0.3:
+                adjustments['tp_pips'] = base_tp_pips * 1.2  # Extend TP by 20%
+                adjustments['reason'] = 'strong_bearish_sentiment'
+
+            # Neutral sentiment: slightly tighten both
+            elif 0.4 <= sentiment_score <= 0.6:
+                adjustments['sl_pips'] = base_sl_pips * 0.95  # Tighten SL by 5%
+                adjustments['tp_pips'] = base_tp_pips * 0.95  # Tighten TP by 5%
+                adjustments['reason'] = 'neutral_sentiment'
+
+            return adjustments
+
+        except Exception as e:
+            self.logger.error(f"Error getting sentiment SL/TP adjustments for {symbol}: {e}")
+            return {
+                'sl_pips': base_sl_pips,
+                'tp_pips': base_tp_pips,
+                'reason': 'error_fallback'
+            }
+
     async def analyze(self):
         """Analyze sentiment for all symbols"""
         results = {}

@@ -54,7 +54,7 @@ class TradingEngine:
 
     def get_filling_mode(self, symbol):
         """Get the correct filling mode for a symbol"""
-        info = mt5.symbol_info(symbol)
+        info = mt5.symbol_info(symbol)  # type: ignore
         if info is None:
             logger.warning(
                 f"Failed to get symbol info for {symbol}, using FOK as fallback")
@@ -84,7 +84,7 @@ class TradingEngine:
         logger.debug(f"=== ORDER DEBUG for {symbol} ===")
         logger.debug(f"Stop Loss Pips Input: {stop_loss_pips}")
 
-        symbol_info = mt5.symbol_info(symbol)
+        symbol_info = mt5.symbol_info(symbol)  # type: ignore
         if symbol_info is None:
             logger.error("Symbol info not available")
             return
@@ -103,7 +103,7 @@ class TradingEngine:
         sl_distance = stop_loss_pips * pip_size
         logger.debug(f"SL Distance: {sl_distance}")
 
-        current_price = mt5.symbol_info_tick(symbol)
+        current_price = mt5.symbol_info_tick(symbol)  # type: ignore
         if current_price:
             current_price = current_price.ask if order_type.lower() == 'buy' else current_price.bid
             stop_loss_price = current_price - \
@@ -119,12 +119,12 @@ class TradingEngine:
         logger.debug("=" * 40)
 
     async def place_order(self, symbol: str, order_type: str, volume: float,
-                          stop_loss: float = None, take_profit: float = None,
-                          price: float = None, comment: str = "") -> Dict:
+                          stop_loss: Optional[float] = None, take_profit: Optional[float] = None,
+                          price: Optional[float] = None, comment: str = "") -> Dict:
         """Place order through MT5 - ASYNC"""
         try:
             # Check MT5 connection
-            terminal_info = mt5.terminal_info()
+            terminal_info = mt5.terminal_info()  # type: ignore
             if terminal_info is None:
                 logger.error("MT5 terminal not connected")
                 return {
@@ -132,21 +132,21 @@ class TradingEngine:
                     'error': 'MT5 terminal not connected'}
 
             # Select symbol for trading
-            if not mt5.symbol_select(symbol, True):
+            if not mt5.symbol_select(symbol, True):  # type: ignore
                 logger.error(f"Failed to select symbol {symbol}")
                 return {
                     'success': False,
                     'error': f'Failed to select symbol {symbol}'}
 
             # Get symbol info
-            symbol_info = mt5.symbol_info(symbol)
+            symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
                 logger.error(f"Symbol {symbol} not found")
                 return {'success': False, 'error': 'Symbol not found'}
 
             # Get current price if not provided
             if price is None:
-                tick = mt5.symbol_info_tick(symbol)
+                tick = mt5.symbol_info_tick(symbol)  # type: ignore
                 if tick is None:
                     logger.error(f"Failed to get tick data for {symbol}")
                     return {'success': False,
@@ -174,7 +174,7 @@ class TradingEngine:
                         'error': f'Unknown order type: {order_type}'}
 
             # Adjust stop loss to meet minimum requirements
-            if stop_loss is not None:
+            if stop_loss is not None and price is not None:
                 # Get minimum stop distance from symbol info, with fallback
                 stops_level = getattr(symbol_info, 'trade_stops_level', 0)
 
@@ -225,7 +225,7 @@ class TradingEngine:
                 logger.info(f"Final stop loss: {stop_loss}")
 
             # DEBUG: Trace EURJPY stop loss calculation
-            if stop_loss is not None and "EURJPY" in symbol:
+            if stop_loss is not None and price is not None and "EURJPY" in symbol:
                 logger.debug(f"=== ORDER DEBUG for {symbol} ===")
                 logger.debug(f"Order Type: {order_type}")
                 logger.debug(f"Entry Price: {price}")
@@ -246,7 +246,7 @@ class TradingEngine:
 
             # Adjust take profit to meet minimum requirements (only if too
             # close to entry)
-            if take_profit is not None:
+            if take_profit is not None and price is not None:
                 # Get minimum stop distance from symbol info, with fallback
                 stops_level = getattr(symbol_info, 'trade_stops_level', 0)
 
@@ -293,7 +293,7 @@ class TradingEngine:
                 logger.info(f"Final take profit: {take_profit}")
 
             # Final validation: ensure adequate risk-reward ratio
-            if stop_loss is not None and take_profit is not None:
+            if stop_loss is not None and take_profit is not None and price is not None:
                 risk_distance = abs(stop_loss - price)
                 reward_distance = abs(take_profit - price)
                 final_ratio = reward_distance / risk_distance if risk_distance > 0 else 0
@@ -309,14 +309,15 @@ class TradingEngine:
 
             # CRITICAL FIX: Round prices to symbol's decimal places for JPY
             # pairs
-            price = round(price, symbol_info.digits)
+            if price is not None:
+                price = round(price, symbol_info.digits)
             if stop_loss is not None:
                 stop_loss = round(stop_loss, symbol_info.digits)
             if take_profit is not None:
                 take_profit = round(take_profit, symbol_info.digits)
 
             # FIX 2: Check for broker minimum stop distance restrictions
-            if stop_loss is not None:
+            if stop_loss is not None and price is not None:
                 min_stop_points = getattr(symbol_info, 'trade_stops_level', 0)
                 min_stop_distance = max(
                     min_stop_points * symbol_info.point,
@@ -336,7 +337,7 @@ class TradingEngine:
                     stop_loss = round(stop_loss, symbol_info.digits)
                     logger.debug(f"Adjusted SL to: {stop_loss}")
 
-            if take_profit is not None:
+            if take_profit is not None and price is not None:
                 min_stop_points = getattr(symbol_info, 'trade_stops_level', 0)
                 min_stop_distance = max(
                     min_stop_points * symbol_info.point, 0.0001)
@@ -356,7 +357,7 @@ class TradingEngine:
                     logger.debug(f"Adjusted TP to: {take_profit}")
 
             # CRITICAL DEBUG: Enhanced diagnostic for EURJPY SL bug
-            if "EURJPY" in symbol and stop_loss is not None:
+            if "EURJPY" in symbol and stop_loss is not None and price is not None:
                 logger.debug(f"\n{'=' * 60}")
                 logger.debug("[CRITICAL] CRITICAL DEBUG: EURJPY ORDER PLACEMENT")
                 logger.debug(f"Symbol: {symbol}")
@@ -385,7 +386,7 @@ class TradingEngine:
             logger.debug(f"Entry: {price}")
             logger.debug(f"Stop Loss: {stop_loss}")
             logger.debug(f"Take Profit: {take_profit}")
-            if stop_loss is not None:
+            if stop_loss is not None and price is not None:
                 sl_distance = abs(price - stop_loss)
                 logger.debug(f"SL Distance: {sl_distance:.5f}")
             logger.debug("=" * 30)
@@ -420,7 +421,7 @@ class TradingEngine:
             logger.debug("=" * 50)
 
             # Send order
-            result = mt5.order_send(request)
+            result = mt5.order_send(request)  # type: ignore
 
             # Check if order_send returned None
             if result is None:
@@ -441,7 +442,7 @@ class TradingEngine:
 
                     # CRITICAL FIX: Get the actual position ticket, not order
                     # ticket
-                    positions = mt5.positions_get(symbol=symbol)
+                    positions = mt5.positions_get(symbol=symbol)  # type: ignore
                     if positions:
                         # Get the most recent position for this symbol
                         position = positions[-1]  # Last position
@@ -460,7 +461,7 @@ class TradingEngine:
 
                         logger.debug(
                             f"Modifying position {position_ticket} with SLTP: {modify_request}")
-                        modify_result = mt5.order_send(modify_request)
+                        modify_result = mt5.order_send(modify_request)  # type: ignore
 
                         if modify_result and modify_result.retcode != mt5.TRADE_RETCODE_DONE:
                             logger.debug(
@@ -478,7 +479,7 @@ class TradingEngine:
                 # CRITICAL FIX: Enhanced verification with detailed diagnostics
                 await asyncio.sleep(0.5)  # Wait for position to register
 
-                positions = mt5.positions_get(symbol=symbol)
+                positions = mt5.positions_get(symbol=symbol)  # type: ignore
                 if positions:
                     actual_position = positions[-1]
                     actual_sl = actual_position.sl
@@ -562,7 +563,7 @@ class TradingEngine:
     async def manage_positions(self, symbol: str):
         """Manage open positions for a symbol - ASYNC"""
         try:
-            positions = mt5.positions_get(symbol=symbol)
+            positions = mt5.positions_get(symbol=symbol)  # type: ignore
 
             if positions:
                 for position in positions:
@@ -632,14 +633,14 @@ class TradingEngine:
         """Check if position SL/TP should be adjusted based on adaptive learning"""
         try:
             if not hasattr(
-                    self, 'adaptive_learning') or not self.adaptive_learning:
+                    self, 'adaptive_learning') or not self.adaptive_learning:  # type: ignore
                 return
 
             # Convert position time to datetime
             trade_timestamp = datetime.fromtimestamp(position.time)
 
             # Check if there are updated SL/TP parameters for this symbol
-            adjustment_needed = self.adaptive_learning.should_adjust_existing_trade(
+            adjustment_needed = self.adaptive_learning.should_adjust_existing_trade(  # type: ignore
                 position.symbol, position.sl, position.tp, trade_timestamp)
 
             if not adjustment_needed.get('should_adjust', False):
@@ -651,14 +652,14 @@ class TradingEngine:
                 f"{position.ticket}")
 
             # Get current market data to calculate new SL/TP levels
-            tick = mt5.symbol_info_tick(position.symbol)
+            tick = mt5.symbol_info_tick(position.symbol)  # type: ignore
             if tick is None:
                 return
 
             current_price = tick.bid if position.type == mt5.ORDER_TYPE_BUY else tick.ask
 
             # Get ATR for calculating new levels
-            bars = mt5.copy_rates_from_pos(
+            bars = mt5.copy_rates_from_pos(  # type: ignore
                 position.symbol, mt5.TIMEFRAME_H1, 0, 20)
             if bars is None or len(bars) < 14:
                 return
@@ -690,7 +691,7 @@ class TradingEngine:
                 new_tp = position.price_open - (current_atr * tp_multiplier)
 
             # Validate new levels meet broker requirements
-            symbol_info = mt5.symbol_info(position.symbol)
+            symbol_info = mt5.symbol_info(position.symbol)  # type: ignore
             if symbol_info:
                 min_stop_distance = symbol_info.trade_stops_level * symbol_info.point
 
@@ -741,15 +742,16 @@ class TradingEngine:
                 return
 
             # Record the adjustment before making it
-            self.adaptive_learning.record_position_adjustment(
-                position.ticket,
-                position.symbol,
-                position.sl,
-                position.tp,
-                new_sl,
-                new_tp,
-                f"Adaptive learning update (confidence: {adjustment_needed['confidence']:.2f})"
-            )
+            if self.adaptive_learning_manager:
+                self.adaptive_learning_manager.record_position_adjustment(
+                    position.ticket,
+                    position.symbol,
+                    position.sl,
+                    position.tp,
+                    new_sl,
+                    new_tp,
+                    f"Adaptive learning update (confidence: {adjustment_needed['confidence']:.2f})"
+                )
 
             # Apply the adjustment
             request = {
@@ -761,7 +763,7 @@ class TradingEngine:
                 "magic": self.magic_number
             }
 
-            result = mt5.order_send(request)
+            result = mt5.order_send(request)  # type: ignore
             if result.retcode == mt5.TRADE_RETCODE_DONE:
                 logger.info(
                     f"Adaptive SL/TP adjustment applied for "
@@ -800,14 +802,14 @@ class TradingEngine:
                 base_trail_distance_pips = max(base_trail_distance_pips, 200)
 
             # Get current price and market data
-            tick = mt5.symbol_info_tick(position.symbol)
+            tick = mt5.symbol_info_tick(position.symbol)  # type: ignore
             if tick is None:
                 return
 
             current_price = tick.bid if position.type == mt5.ORDER_TYPE_BUY else tick.ask
 
             # Get recent bars for volatility analysis
-            bars = mt5.copy_rates_from_pos(
+            bars = mt5.copy_rates_from_pos(  # type: ignore
                 position.symbol, mt5.TIMEFRAME_H1, 0, 50)
             if bars is None or len(bars) < 20:
                 # Fallback to basic trailing stop without volatility adjustment
@@ -848,7 +850,7 @@ class TradingEngine:
                 trail_distance_pips = base_trail_distance_pips
 
             # Get correct pip size for the symbol
-            symbol_info = mt5.symbol_info(position.symbol)
+            symbol_info = mt5.symbol_info(position.symbol)  # type: ignore
             if symbol_info:
                 point = symbol_info.point
                 digits = symbol_info.digits
@@ -919,7 +921,7 @@ class TradingEngine:
                         "magic": self.magic_number
                     }
 
-                    result = mt5.order_send(request)
+                    result = mt5.order_send(request)  # type: ignore
                     if result.retcode == mt5.TRADE_RETCODE_DONE:
                         logger.info(
                             f"Adaptive trailing stop updated for "
@@ -948,14 +950,14 @@ class TradingEngine:
             activation_pips = breakeven_config.get('activation_pips', 15)
 
             # Get current price
-            tick = mt5.symbol_info_tick(position.symbol)
+            tick = mt5.symbol_info_tick(position.symbol)  # type: ignore
             if tick is None:
                 return
 
             current_price = tick.bid if position.type == mt5.ORDER_TYPE_BUY else tick.ask
 
             # Get symbol info for pip calculation
-            symbol_info = mt5.symbol_info(position.symbol)
+            symbol_info = mt5.symbol_info(position.symbol)  # type: ignore
             if not symbol_info:
                 return
 
@@ -1016,7 +1018,7 @@ class TradingEngine:
                         "magic": self.magic_number
                     }
 
-                    result = mt5.order_send(request)
+                    result = mt5.order_send(request)  # type: ignore
                     if result.retcode == mt5.TRADE_RETCODE_DONE:
                         logger.info(
                             f"Breakeven applied for {position.symbol} "
@@ -1038,7 +1040,7 @@ class TradingEngine:
             trail_distance_pips: float) -> None:
         """Basic trailing stop fallback when volatility data unavailable"""
         try:
-            symbol_info = mt5.symbol_info(position.symbol)
+            symbol_info = mt5.symbol_info(position.symbol)  # type: ignore
             if not symbol_info:
                 return
 
@@ -1100,7 +1102,7 @@ class TradingEngine:
                         "tp": position.tp
                     }
 
-                    result = mt5.order_send(request)
+                    result = mt5.order_send(request)  # type: ignore
                     if result.retcode == mt5.TRADE_RETCODE_DONE:
                         logger.info(
                             f"Basic trailing stop updated for {
@@ -1125,17 +1127,17 @@ class TradingEngine:
         """
         try:
             # Get current market data for analysis
-            tick = mt5.symbol_info_tick(position.symbol)
+            tick = mt5.symbol_info_tick(position.symbol)  # type: ignore
             if tick is None:
-                return
+                return False
 
             current_price = tick.bid if position.type == mt5.ORDER_TYPE_BUY else tick.ask
 
             # Get recent bars for technical analysis
-            bars = mt5.copy_rates_from_pos(
+            bars = mt5.copy_rates_from_pos(  # type: ignore
                 position.symbol, mt5.TIMEFRAME_H1, 0, 50)
             if bars is None or len(bars) < 20:
-                return
+                return False
 
             # Calculate current ATR for dynamic TP adjustment
             atr_period = 14
@@ -1149,7 +1151,7 @@ class TradingEngine:
                 atr_values.append(tr)
 
             if not atr_values:
-                return
+                return False
 
             current_atr = sum(atr_values[-10:]) / \
                 len(atr_values[-10:])  # Recent ATR
@@ -1157,10 +1159,10 @@ class TradingEngine:
             # Calculate current profit in pips
             if position.type == mt5.ORDER_TYPE_BUY:
                 profit_pips = (current_price - position.price_open) / \
-                    mt5.symbol_info(position.symbol).point
+                    mt5.symbol_info(position.symbol).point  # type: ignore
             else:  # SELL
                 profit_pips = (position.price_open - current_price) / \
-                    mt5.symbol_info(position.symbol).point
+                    mt5.symbol_info(position.symbol).point  # type: ignore
 
             # Convert to pips (handle JPY pairs)
             if 'JPY' in position.symbol:
@@ -1171,10 +1173,10 @@ class TradingEngine:
             if original_sl > 0:
                 if position.type == mt5.ORDER_TYPE_BUY:
                     risk_pips = abs(original_sl - position.price_open) / \
-                        mt5.symbol_info(position.symbol).point
+                        mt5.symbol_info(position.symbol).point  # type: ignore
                 else:  # SELL
                     risk_pips = abs(position.price_open - original_sl) / \
-                        mt5.symbol_info(position.symbol).point
+                        mt5.symbol_info(position.symbol).point  # type: ignore
 
                 if 'JPY' in position.symbol:
                     risk_pips = risk_pips / 100
@@ -1234,7 +1236,7 @@ class TradingEngine:
                         (current_atr * base_tp_multiplier)
 
                 # Ensure new TP meets broker minimum stop requirements
-                symbol_info = mt5.symbol_info(position.symbol)
+                symbol_info = mt5.symbol_info(position.symbol)  # type: ignore
                 if symbol_info:
                     min_stop_distance = symbol_info.trade_stops_level * symbol_info.point
                     if position.type == mt5.ORDER_TYPE_BUY:
@@ -1272,7 +1274,7 @@ class TradingEngine:
                         "magic": self.magic_number
                     }
 
-                    result = mt5.order_send(request)
+                    result = mt5.order_send(request)  # type: ignore
                     if result.retcode == mt5.TRADE_RETCODE_DONE:
                         logger.info(
                             f"Take profit adjusted for {
@@ -1295,6 +1297,9 @@ class TradingEngine:
                         f"difference={abs(new_tp - current_tp):.5f}")
                     return False
 
+            # If position is at loss, don't adjust TP
+            return False
+
         except Exception as e:
             logger.error(f"Error updating take profit: {e}")
             return False
@@ -1303,7 +1308,7 @@ class TradingEngine:
             self, position, current_price: float, risk_pips: float) -> None:
         """Apply breakeven and trailing stop logic after reaching 1:3 profit"""
         try:
-            symbol_info = mt5.symbol_info(position.symbol)
+            symbol_info = mt5.symbol_info(position.symbol)  # type: ignore
             if not symbol_info:
                 return
 
@@ -1416,7 +1421,7 @@ class TradingEngine:
                     "magic": self.magic_number
                 }
 
-                result = mt5.order_send(request)
+                result = mt5.order_send(request)  # type: ignore
                 if result.retcode == mt5.TRADE_RETCODE_DONE:
                     logger.info(
                         f"Stop loss updated for {
@@ -1435,7 +1440,7 @@ class TradingEngine:
     async def close_all_positions(self) -> None:
         """Close all open positions - PROPERLY ASYNC"""
         try:
-            positions = mt5.positions_get()
+            positions = mt5.positions_get()  # type: ignore
 
             if positions is None or len(positions) == 0:
                 logger.info("No positions to close")
@@ -1454,7 +1459,7 @@ class TradingEngine:
         """Close a single position - ASYNC"""
         try:
             # Select symbol for trading
-            if not mt5.symbol_select(position.symbol, True):
+            if not mt5.symbol_select(position.symbol, True):  # type: ignore
                 logger.error(
                     f"Failed to select symbol {position.symbol} for closing")
                 return False
@@ -1462,10 +1467,10 @@ class TradingEngine:
             # Determine order type for closing
             if position.type == mt5.ORDER_TYPE_BUY:
                 order_type = mt5.ORDER_TYPE_SELL
-                price = mt5.symbol_info_tick(position.symbol).bid
+                price = mt5.symbol_info_tick(position.symbol).bid  # type: ignore
             else:
                 order_type = mt5.ORDER_TYPE_BUY
-                price = mt5.symbol_info_tick(position.symbol).ask
+                price = mt5.symbol_info_tick(position.symbol).ask  # type: ignore
 
             # Create close request
             request = {
@@ -1484,7 +1489,7 @@ class TradingEngine:
             }
 
             # Send close order
-            result = mt5.order_send(request)
+            result = mt5.order_send(request)  # type: ignore
 
             if result.retcode == mt5.TRADE_RETCODE_DONE:
                 logger.info(
@@ -1507,7 +1512,7 @@ class TradingEngine:
 
     def get_position_by_ticket(self, ticket: int):
         """Get position by ticket number"""
-        positions = mt5.positions_get(ticket=ticket)
+        positions = mt5.positions_get(ticket=ticket)  # type: ignore
         if positions and len(positions) > 0:
             return positions[0]
         return None
@@ -1516,7 +1521,7 @@ class TradingEngine:
         """Get trade history for a ticket"""
         try:
             # Get deals for this position
-            deals = mt5.history_deals_get(position=ticket)
+            deals = mt5.history_deals_get(position=ticket)  # type: ignore
 
             if deals and len(deals) >= 2:  # Need open and close deals
                 open_deal = deals[0]

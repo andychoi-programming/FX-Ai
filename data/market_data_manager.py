@@ -20,7 +20,7 @@ class MarketDataManager:
     def initialize(self):
         """"Initialize the market data manager"""
         try:
-            if not mt5.initialize():
+            if not mt5.initialize():  # type: ignore
                 self.logger.warning('MT5 initialization failed')
                 self.mt5_connected = False
             else:
@@ -38,21 +38,21 @@ class MarketDataManager:
                 self.initialize()
 
             # Get symbol info with timeout protection
-            symbol_info = mt5.symbol_info(symbol)
+            symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
                 self.logger.warning(f'Symbol {symbol} not found')
                 result_container.append(None)
                 return
 
             # Get latest tick with timeout protection
-            tick = mt5.symbol_info_tick(symbol)
+            tick = mt5.symbol_info_tick(symbol)  # type: ignore
             if tick is None:
                 self.logger.warning(f'No tick data for {symbol}')
                 result_container.append(None)
                 return
 
             # Get recent bars for additional data with timeout protection
-            rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 0, 10)
+            rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 0, 10)  # type: ignore
             if rates is None or len(rates) == 0:
                 self.logger.warning(f'No rate data for {symbol}')
                 result_container.append(None)
@@ -87,18 +87,18 @@ class MarketDataManager:
                 self.initialize()
 
             # MT5 API is NOT thread-safe - must call from main thread only
-            symbol_info = mt5.symbol_info(symbol)
+            symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
                 self.logger.warning(f'Symbol {symbol} not found')
                 return None
 
-            tick = mt5.symbol_info_tick(symbol)
+            tick = mt5.symbol_info_tick(symbol)  # type: ignore
             if tick is None:
                 self.logger.warning(f'No tick data for {symbol}')
                 return None
 
             # Reduced from 10 to 5 bars to minimize API load
-            rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 0, 5)
+            rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 0, 5)  # type: ignore
             if rates is None or len(rates) == 0:
                 self.logger.warning(f'No rate data for {symbol}')
                 return None
@@ -133,19 +133,19 @@ class MarketDataManager:
                 self.initialize()
 
             # Get symbol info
-            symbol_info = mt5.symbol_info(symbol)
+            symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
                 self.logger.warning(f'Symbol {symbol} not found')
                 return None
 
             # Get latest tick
-            tick = mt5.symbol_info_tick(symbol)
+            tick = mt5.symbol_info_tick(symbol)  # type: ignore
             if tick is None:
                 self.logger.warning(f'No tick data for {symbol}')
                 return None
 
             # Get recent bars for additional data
-            rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 0, 10)
+            rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 0, 10)  # type: ignore
             if rates is None or len(rates) == 0:
                 self.logger.warning(f'No rate data for {symbol}')
                 return None
@@ -181,7 +181,7 @@ class MarketDataManager:
             if not self.mt5_connected:
                 self.initialize()
 
-            rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, count)
+            rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, count)  # type: ignore
             if rates is None:
                 self.logger.warning(f'No historical data for {symbol}')
                 result_container.append(None)
@@ -209,7 +209,7 @@ class MarketDataManager:
                 self.initialize()
 
             # MT5 API is NOT thread-safe - must call from main thread only
-            rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, count)
+            rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, count)  # type: ignore
             if rates is None or len(rates) == 0:
                 self.logger.warning(f'No historical data for {symbol}')
                 return None
@@ -235,7 +235,7 @@ class MarketDataManager:
             if not self.mt5_connected:
                 self.initialize()
 
-            rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, count)
+            rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, count)  # type: ignore
             if rates is None:
                 self.logger.warning(f'No historical data for {symbol}')
                 return None
@@ -261,7 +261,7 @@ class MarketDataManager:
             if not self.mt5_connected:
                 self.initialize()
 
-            symbols = mt5.symbols_get()
+            symbols = mt5.symbols_get()  # type: ignore
             if symbols is None:
                 return []
             return [s.name for s in symbols]
@@ -277,7 +277,7 @@ class MarketDataManager:
     def disconnect(self):
         """"Disconnect from MT5"""
         try:
-            mt5.shutdown()
+            mt5.shutdown()  # type: ignore
             self.mt5_connected = False
             self.logger.info('MarketDataManager disconnected')
         except Exception as e:

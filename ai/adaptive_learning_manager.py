@@ -10,14 +10,31 @@ import threading
 import time
 from datetime import datetime, timedelta
 
-# Lightweight schedule shim: use real 'schedule' package if installed,
-# otherwise provide minimal compatibility.
+# Import schedule library
 try:
-    import schedule as _real_schedule  # type: ignore
-    schedule = _real_schedule
-except Exception:
-    schedule_jobs = []
-    schedule_lock = threading.Lock()
+    import schedule  # type: ignore
+except ImportError:
+    # Fallback if schedule is not available
+    class ScheduleFallback:
+        @staticmethod
+        def every(interval):
+            return Every(interval)
+        @staticmethod
+        def run_pending():
+            now = time.time()
+            with schedule_lock:
+                for job in list(schedule_jobs):
+                    if now >= job['next_run']:
+                        try:
+                            threading.Thread(
+                                target=job['func'], daemon=True).start()
+                        except Exception:
+                            pass
+                        if job['type'] == 'interval':
+                            job['next_run'] = now + job['interval']
+                        elif job['type'] == 'daily':
+                            job['next_run'] = job['next_run'] + 24 * 3600
+    schedule = ScheduleFallback()
 
     class Every:
         def __init__(self, interval=None):
@@ -94,18 +111,18 @@ except Exception:
                     elif job['type'] == 'daily':
                         job['next_run'] = job['next_run'] + 24 * 3600
 
-    # expose a minimal module-like object compatible with usage in this file
-    schedule = type(
-        'ScheduleModule', (), {
-            'every': every, 'run_pending': run_pending})
 from typing import Optional
 import pandas as pd
 import numpy as np
 from collections import deque
 import sqlite3
-import MetaTrader5 as mt5
+import MetaTrader5 as mt5  # type: ignore
 
 logger = logging.getLogger(__name__)
+
+# Global variables for schedule fallback
+schedule_lock = threading.Lock()
+schedule_jobs = []
 
 
 class AdaptiveLearningManager:
@@ -213,17 +230,6 @@ class AdaptiveLearningManager:
 
         # Schedule periodic tasks
         self.schedule_tasks()
-
-        # Start background thread for continuous learning - DISABLED (causes threading deadlocks)
-        # self.learning_thread = threading.Thread(
-        #     target=self.run_continuous_learning, daemon=True)
-        # self.learning_thread.start()
-        logger.info("Background learning thread DISABLED to prevent deadlocks")
-
-        # Initialize database - DISABLED (sqlite3.connect() causes file I/O deadlock with logger)
-        # self.init_database()
-        self.db_path = os.path.join('data', 'performance_history.db')
-        logger.info("Database initialization DISABLED to prevent file I/O deadlock")
 
         logger.info("Adaptive Learning Manager initialized")
 
@@ -573,7 +579,7 @@ class AdaptiveLearningManager:
         schedule.every(24).hours.do(self.analyze_adjustment_performance)
 
         # Clean old data
-        schedule.every().day.at("00:00").do(self.clean_old_data)
+        schedule.every(1).day.at("00:00").do(self.clean_old_data)
 
     def run_continuous_learning(self):
         """Background thread for continuous learning"""
@@ -659,6 +665,10 @@ class AdaptiveLearningManager:
                     self.backup_model(symbol, old_version)
 
                     # Train new model
+                    if self.ml_predictor is None:
+                        logger.error("ML predictor not available for retraining")
+                        return
+                    
                     metrics = self.ml_predictor.update_models(
                         [symbol], {symbol: training_data})
 
@@ -702,7 +712,7 @@ class AdaptiveLearningManager:
             if len(df) > 0:
                 # Convert timestamp and calculate recency weights
                 df['timestamp'] = pd.to_datetime(df['timestamp'])
-                df['days_old'] = (pd.Timestamp.now() - df['timestamp']).dt.days
+                df['days_old'] = (pd.Timestamp.now() - df['timestamp']).dt.days  # type: ignore
 
                 # Exponential decay weighting: more weight on recent trades
                 # (half-life ~30 days)
@@ -1238,6 +1248,10 @@ class AdaptiveLearningManager:
             start_date = end_date - timedelta(days=days)
 
             # Fetch historical data from MT5
+            if self.mt5 is None:
+                logger.error("MT5 connector not available")
+                return None
+            
             rates = self.mt5.get_historical_data(
                 symbol=symbol,
                 timeframe=mt5.TIMEFRAME_M1,  # 1-minute data
@@ -1408,8 +1422,8 @@ class AdaptiveLearningManager:
         """Calculate RSI indicator"""
         try:
             delta = prices.diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+            gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()  # type: ignore
+            loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()  # type: ignore
             rs = gain / loss
             rsi = 100 - (100 / (1 + rs))
             return rsi
@@ -2072,7 +2086,7 @@ class AdaptiveLearningManager:
                     score = self.simulate_sl_tp_performance(
                         trades_df, sl_mult, tp_mult)
 
-                    if score > best_score:
+                    if score['score'] > best_score:
                         best_score = score
                         rr_ratio = tp_mult / sl_mult
                         best_params = {
@@ -3339,7 +3353,7 @@ class AdaptiveLearningManager:
     def get_updated_sl_tp_params(
             self,
             symbol: str,
-            trade_timestamp: datetime) -> dict:
+            trade_timestamp: datetime) -> Optional[dict]:
         """Get updated SL/TP parameters if they've changed since trade
         was opened"""
         try:

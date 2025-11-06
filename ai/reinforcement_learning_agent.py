@@ -6,6 +6,7 @@ Implements Q-learning for optimal trade execution timing
 import logging
 import numpy as np
 import pandas as pd
+import random
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Tuple, Union
 from collections import defaultdict
@@ -219,11 +220,11 @@ class RLAgent:
 
         if training and np.random.random() < self.epsilon:
             # Explore: random action
-            return np.random.choice(list(Action))
+            return random.choice(list(Action))
         else:
             # Exploit: best action
             q_values = {action: self.q_table[state_key][action.value] for action in Action}
-            best_action_value = max(q_values, key=q_values.get)
+            best_action_value = max(q_values, key=lambda x: q_values[x])
             return Action(best_action_value)
 
     def choose_action_from_dict(self, state_dict: Dict, training: bool = True) -> str:
@@ -242,7 +243,7 @@ class RLAgent:
 
         if training and np.random.random() < self.epsilon:
             # Explore: random action
-            action = np.random.choice(['hold', 'buy', 'sell', 'close_position'])
+            action = random.choice(['hold', 'buy', 'sell', 'close_position'])
         else:
             # Exploit: best action based on Q-values
             q_values = {}
@@ -250,7 +251,7 @@ class RLAgent:
                 action_idx = self.action_to_index(action)
                 q_values[action] = self.q_table[state_key][action_idx]
             
-            action = max(q_values, key=q_values.get)
+            action = max(q_values, key=lambda x: q_values[x])
 
         return action
 

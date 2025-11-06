@@ -104,7 +104,7 @@ class BacktestEngine:
 
                 # Get historical data
                 data = self.market_data.get_bars(symbol, timeframe,
-                    count=self.config.max_historical_bars if hasattr(self.config, 'max_historical_bars') else 10000)
+                    count=self.config.max_historical_bars if hasattr(self.config, 'max_historical_bars') else 10000)  # type: ignore
 
                 if data is not None and len(data) > 0:
                     df = pd.DataFrame(data)
@@ -204,7 +204,7 @@ class BacktestEngine:
             current_bar = symbol_data.loc[timestamp]
 
             # Generate signals
-            self._generate_signals(symbol, current_bar, timestamp)
+            self._generate_signals(symbol, current_bar, timestamp)  # type: ignore
 
     def _generate_signals(self, symbol: str, current_bar: pd.Series, timestamp: datetime):
         """Generate trading signals for a symbol"""
@@ -215,7 +215,7 @@ class BacktestEngine:
                 return
 
             # Get technical signals
-            technical_signals = self.technical_analyzer.analyze_symbol(symbol, recent_data)
+            technical_signals = self.technical_analyzer.analyze_symbol(symbol, recent_data)  # type: ignore
 
             # Get ML prediction
             ml_signal = self.ml_predictor.predict_signal(symbol, recent_data, technical_signals, self.timeframe_string)
@@ -285,7 +285,7 @@ class BacktestEngine:
             if timestamp not in symbol_data.index:
                 continue
 
-            current_price = symbol_data.loc[timestamp, 'close']
+            current_price = symbol_data.loc[timestamp, 'close']  # type: ignore
             trade.bars_held += 1
 
             # Check stop loss and take profit
@@ -333,7 +333,7 @@ class BacktestEngine:
         """Close all remaining open trades at market price"""
         for trade in self.open_trades[:]:  # Copy list to avoid modification during iteration
             if trade.symbol in self.historical_data and timestamp in self.historical_data[trade.symbol].index:
-                close_price = self.historical_data[trade.symbol].loc[timestamp, 'close']
+                close_price = self.historical_data[trade.symbol].loc[timestamp, 'close']  # type: ignore
                 self._close_trade(trade, close_price, timestamp, 'end_of_test')
             else:
                 # Close at open price if no data available

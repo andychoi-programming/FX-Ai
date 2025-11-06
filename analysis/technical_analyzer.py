@@ -7,7 +7,7 @@ import logging
 import pandas as pd
 import numpy as np
 from datetime import datetime
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional
 
 try:
     import talib
@@ -148,17 +148,17 @@ class TechnicalAnalyzer:
         try:
             # Calculate EMAs manually if TA-Lib not available
             if TALIB_AVAILABLE:
-                ema_fast = talib.EMA(data['close'], timeperiod=self.ema_fast)
-                ema_slow = talib.EMA(data['close'], timeperiod=self.ema_slow)
+                ema_fast = talib.EMA(data['close'], timeperiod=self.ema_fast)  # type: ignore
+                ema_slow = talib.EMA(data['close'], timeperiod=self.ema_slow)  # type: ignore
             else:
                 ema_fast = self._calculate_ema(data['close'], self.ema_fast)
                 ema_slow = self._calculate_ema(data['close'], self.ema_slow)
 
             # Get current values
-            fast_current = ema_fast.iloc[-1]
-            slow_current = ema_slow.iloc[-1]
-            fast_prev = ema_fast.iloc[-2]
-            slow_prev = ema_slow.iloc[-2]
+            fast_current = ema_fast[-1] if isinstance(ema_fast, np.ndarray) else ema_fast.iloc[-1]
+            slow_current = ema_slow[-1] if isinstance(ema_slow, np.ndarray) else ema_slow.iloc[-1]
+            fast_prev = ema_fast[-2] if isinstance(ema_fast, np.ndarray) else ema_fast.iloc[-2]
+            slow_prev = ema_slow[-2] if isinstance(ema_slow, np.ndarray) else ema_slow.iloc[-2]
 
             # Determine trend
             if fast_current > slow_current and fast_prev <= slow_prev:
@@ -193,11 +193,11 @@ class TechnicalAnalyzer:
         """
         try:
             if TALIB_AVAILABLE:
-                rsi = talib.RSI(data['close'], timeperiod=self.rsi_period)
+                rsi = talib.RSI(data['close'], timeperiod=self.rsi_period)  # type: ignore
             else:
                 rsi = self._calculate_rsi(data['close'], self.rsi_period)
 
-            current_rsi = rsi.iloc[-1]
+            current_rsi = rsi[-1] if isinstance(rsi, np.ndarray) else rsi.iloc[-1]
 
             # Determine RSI signal
             if current_rsi < 30:
@@ -245,11 +245,11 @@ class TechnicalAnalyzer:
                     if len(df) >= 20:  # Minimum bars for ATR calculation
                         # Calculate ATR for this timeframe
                         if TALIB_AVAILABLE:
-                            atr = talib.ATR(df['high'], df['low'], df['close'], timeperiod=self.atr_period)
+                            atr = talib.ATR(df['high'], df['low'], df['close'], timeperiod=self.atr_period)  # type: ignore
                         else:
                             atr = self._calculate_atr_manual(df, self.atr_period)
 
-                        current_atr = atr.iloc[-1]
+                        current_atr = atr[-1] if isinstance(atr, np.ndarray) else atr.iloc[-1]
                         if not pd.isna(current_atr) and current_atr > 0:
                             atr_values.append(current_atr * weight)
                             valid_timeframes += 1
@@ -349,11 +349,11 @@ class TechnicalAnalyzer:
 
             # Volume trend
             if TALIB_AVAILABLE:
-                volume_ma = talib.SMA(recent_volume, timeperiod=10)
+                volume_ma = talib.SMA(recent_volume, timeperiod=10)  # type: ignore
             else:
                 volume_ma = recent_volume.rolling(10).mean()
 
-            volume_trend = 'increasing' if volume_ma.iloc[-1] > volume_ma.iloc[-2] else 'decreasing'
+            volume_trend = 'increasing' if (volume_ma[-1] if isinstance(volume_ma, np.ndarray) else volume_ma.iloc[-1]) > (volume_ma[-2] if isinstance(volume_ma, np.ndarray) else volume_ma.iloc[-2]) else 'decreasing'
 
             return {
                 'current_volume': current_volume,
@@ -366,7 +366,7 @@ class TechnicalAnalyzer:
             self.logger.error(f"Error analyzing volume: {e}")
             return {}
 
-    def _check_rsi_divergence(self, data: pd.DataFrame, rsi: pd.Series) -> str:
+    def _check_rsi_divergence(self, data: pd.DataFrame, rsi) -> str:
         """
         Check for RSI divergence
 
@@ -380,7 +380,10 @@ class TechnicalAnalyzer:
         try:
             # Simple divergence check - compare last 5 bars
             price_recent = data['close'].tail(5)
-            rsi_recent = rsi.tail(5)
+            if isinstance(rsi, np.ndarray):
+                rsi_recent = pd.Series(rsi[-5:])
+            else:
+                rsi_recent = rsi.tail(5)
 
             price_trend = 'up' if price_recent.iloc[-1] > price_recent.iloc[0] else 'down'
             rsi_trend = 'up' if rsi_recent.iloc[-1] > rsi_recent.iloc[0] else 'down'
@@ -421,8 +424,8 @@ class TechnicalAnalyzer:
             pd.Series: RSI values
         """
         delta = data.diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()  # type: ignore
+        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()  # type: ignore
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs))
         return rsi
@@ -533,3 +536,73 @@ class TechnicalAnalyzer:
         except Exception as e:
             self.logger.error(f"Error calculating overall score: {e}")
             return 0.5
+
+    def get_sl_tp_adjustments(self, symbol: str, base_sl_pips: float, base_tp_pips: float,
+                             technical_signals: Dict) -> Dict:
+        """
+        Get SL/TP adjustments based on technical analysis
+
+        Args:
+            symbol: Trading symbol
+            base_sl_pips: Base stop loss in pips
+            base_tp_pips: Base take profit in pips
+            technical_signals: Technical analysis results
+
+        Returns:
+            dict: Adjusted SL/TP values with reason
+        """
+        try:
+            adjustments = {
+                'sl_pips': base_sl_pips,
+                'tp_pips': base_tp_pips,
+                'reason': 'base_values'
+            }
+
+            # Check ATR for volatility-based adjustments
+            atr_data = technical_signals.get('atr', {})
+            atr_percentage = atr_data.get('percentage', 0)
+
+            if atr_percentage > 2.0:  # High volatility
+                adjustments['sl_pips'] = base_sl_pips * 1.3  # Increase SL by 30%
+                adjustments['reason'] = 'high_volatility_atr'
+            elif atr_percentage < 0.5:  # Low volatility
+                adjustments['sl_pips'] = base_sl_pips * 0.9  # Tighten SL by 10%
+                adjustments['tp_pips'] = base_tp_pips * 1.1  # Extend TP by 10%
+                adjustments['reason'] = 'low_volatility_atr'
+
+            # Check RSI for overbought/oversold conditions
+            rsi_data = technical_signals.get('rsi', {})
+            rsi_value = rsi_data.get('value', 50)
+            rsi_signal = rsi_data.get('signal', 'neutral')
+
+            if rsi_signal == 'overbought' and rsi_value > 75:
+                # Very overbought - tighten SL, extend TP
+                adjustments['sl_pips'] = base_sl_pips * 0.8
+                adjustments['tp_pips'] = base_tp_pips * 1.2
+                adjustments['reason'] = 'rsi_overbought'
+            elif rsi_signal == 'oversold' and rsi_value < 25:
+                # Very oversold - tighten SL, extend TP
+                adjustments['sl_pips'] = base_sl_pips * 0.8
+                adjustments['tp_pips'] = base_tp_pips * 1.2
+                adjustments['reason'] = 'rsi_oversold'
+
+            # Check support/resistance proximity
+            sr_data = technical_signals.get('support_resistance', {})
+            if sr_data.get('near_resistance'):
+                # Near resistance - tighten TP
+                adjustments['tp_pips'] = base_tp_pips * 0.9
+                adjustments['reason'] = 'near_resistance'
+            elif sr_data.get('near_support'):
+                # Near support - tighten SL
+                adjustments['sl_pips'] = base_sl_pips * 0.9
+                adjustments['reason'] = 'near_support'
+
+            return adjustments
+
+        except Exception as e:
+            self.logger.error(f"Error getting technical SL/TP adjustments for {symbol}: {e}")
+            return {
+                'sl_pips': base_sl_pips,
+                'tp_pips': base_tp_pips,
+                'reason': 'error_fallback'
+            }

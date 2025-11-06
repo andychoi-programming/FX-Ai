@@ -13,7 +13,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 import joblib
 import os
-from .advanced_feature_engineer import AdvancedFeatureEngineer
+from .market_regime_detector import MarketRegimeDetector
+from .reinforcement_learning_agent import RLAgent
 
 class MLPredictor:
     """Machine learning predictor for trading signals"""
@@ -45,9 +46,6 @@ class MLPredictor:
         self.technical_indicators = [
             'rsi', 'macd', 'bb_upper', 'bb_lower', 'ema_9', 'ema_21', 'vwap'
         ]
-
-        # Advanced feature engineering
-        self.feature_engineer = AdvancedFeatureEngineer(config.get('advanced_feature_engineering', {}))
 
         # Model paths
         self.model_dir = config.get('model_dir', 'models')
@@ -158,11 +156,11 @@ class MLPredictor:
         # Handle both DataFrame and dict formats
         if isinstance(data, dict):
             # Extract data for the specified timeframe
-            data = data.get(timeframe)
+            data = data.get(timeframe)  # type: ignore
             if data is None:
                 return {'direction': 'neutral', 'confidence': 0, 'signal_strength': 0, 'probability': 0}
         
-        return self.predict_signal(symbol, data, technical_signals, timeframe)
+        return self.predict_signal(symbol, data, technical_signals, timeframe)  # type: ignore
 
     def prepare_features(self, symbol: str, data: Union[pd.DataFrame, Dict], technical_signals: Dict) -> Optional[pd.DataFrame]:
         """
@@ -180,37 +178,32 @@ class MLPredictor:
             # Handle both DataFrame and dict formats
             if isinstance(data, dict):
                 # Extract H1 data from timeframe dictionary
-                data = data.get('H1')
+                data = data.get('H1')  # type: ignore
                 if data is None:
                     return None
 
-            # Use advanced feature engineering
-            features_df = self.feature_engineer.create_features(symbol, data, technical_signals)
+            # Use basic feature preparation (advanced feature engineering removed)
+            features_array = self._prepare_features(data, technical_signals)  # type: ignore
+            if features_array is None:
+                return None
 
-            if features_df is None or features_df.empty:
-                self.logger.warning(f"Advanced feature engineering failed for {symbol}, falling back to basic features")
-                # Fallback to basic feature preparation
-                features_array = self._prepare_features(data, technical_signals)
-                if features_array is None:
-                    return None
+            # Convert to DataFrame for compatibility
+            feature_names = [
+                'returns_1d', 'returns_5d', 'volatility_5d', 'volatility_20d', 'volume_ratio',
+                'rsi_norm', 'vwap_position', 'bb_position', 'macd_signal', 'trend_strength',
+                'momentum', 'support_resistance', 'regime_score'
+            ]
 
-                # Convert to DataFrame for compatibility
-                feature_names = [
-                    'returns_1d', 'returns_5d', 'volatility_5d', 'volatility_20d', 'volume_ratio',
-                    'rsi_norm', 'vwap_position', 'bb_position', 'macd_signal', 'trend_strength',
-                    'momentum', 'support_resistance', 'regime_score'
-                ]
+            # Ensure we have the right number of features
+            if len(features_array) != len(feature_names):
+                self.logger.warning(f"Feature count mismatch: got {len(features_array)}, expected {len(feature_names)}")
+                # Pad or truncate to match expected length
+                if len(features_array) < len(feature_names):
+                    features_array = np.pad(features_array, (0, len(feature_names) - len(features_array)), 'constant')
+                else:
+                    features_array = features_array[:len(feature_names)]
 
-                # Ensure we have the right number of features
-                if len(features_array) != len(feature_names):
-                    self.logger.warning(f"Feature count mismatch: got {len(features_array)}, expected {len(feature_names)}")
-                    # Pad or truncate to match expected length
-                    if len(features_array) < len(feature_names):
-                        features_array = np.pad(features_array, (0, len(feature_names) - len(features_array)), 'constant')
-                    else:
-                        features_array = features_array[:len(feature_names)]
-
-                features_df = pd.DataFrame([features_array], columns=feature_names)
+            features_df = pd.DataFrame([features_array], columns=feature_names)
 
             return features_df
 
@@ -253,23 +246,23 @@ class MLPredictor:
             
             # Convert to numpy array if it's a pandas Series
             if hasattr(volume, 'values'):
-                volume = volume.values
+                volume = volume.values  # type: ignore
             elif not isinstance(volume, np.ndarray):
                 volume = np.array(volume)
 
             # Returns
-            returns_1d = np.diff(close_prices[-2:])[0] / close_prices[-2] if len(close_prices) >= 2 else 0.0
+            returns_1d = np.diff(close_prices[-2:])[0] / close_prices[-2] if len(close_prices) >= 2 else 0.0  # type: ignore
             returns_5d = (close_prices[-1] - close_prices[-6]) / close_prices[-6] if len(close_prices) >= 6 else 0.0
             
             # Ensure returns are scalars
-            returns_1d = float(returns_1d) if np.isscalar(returns_1d) or returns_1d.size == 1 else 0
-            returns_5d = float(returns_5d) if np.isscalar(returns_5d) else 0
+            returns_1d = float(returns_1d) if np.isscalar(returns_1d) or returns_1d.size == 1 else 0  # type: ignore
+            returns_5d = float(returns_5d) if np.isscalar(returns_5d) else 0  # type: ignore
 
             features.extend([returns_1d, returns_5d])
 
             # Volatility features
-            volatility_5d = float(np.std(np.diff(close_prices[-6:]))) if len(close_prices) >= 6 else 0.0
-            volatility_20d = float(np.std(np.diff(close_prices[-21:]))) if len(close_prices) >= 21 else 0.0
+            volatility_5d = float(np.std(np.diff(close_prices[-6:]))) if len(close_prices) >= 6 else 0.0  # type: ignore
+            volatility_20d = float(np.std(np.diff(close_prices[-21:]))) if len(close_prices) >= 21 else 0.0  # type: ignore
             
             # Ensure volatilities are scalars
             volatility_5d = float(volatility_5d)
@@ -278,7 +271,7 @@ class MLPredictor:
             features.extend([volatility_5d, volatility_20d])
 
             # Volume features
-            avg_volume = float(np.mean(volume))
+            avg_volume = float(np.mean(volume))  # type: ignore
             volume_ratio = float(volume[-1] / avg_volume) if avg_volume > 0 else 1.0
             
             # Ensure volume features are scalars
@@ -337,7 +330,7 @@ class MLPredictor:
             self.logger.error(f"Error preparing features: {e}")
             return None
 
-    def prepare_features(self, symbol: str, data: Union[pd.DataFrame, Dict], technical_signals: Dict) -> Optional[pd.DataFrame]:
+    def prepare_ensemble_features(self, symbol: str, data: Union[pd.DataFrame, Dict], technical_signals: Dict) -> Optional[pd.DataFrame]:
         """
         Prepare features for ensemble ML models
 
@@ -443,7 +436,7 @@ class MLPredictor:
 
             # Create target variable (future returns)
             close_prices = data['close'].values
-            future_returns = np.diff(close_prices[20:]) / close_prices[20:-1]  # 20-period future returns
+            future_returns = np.diff(close_prices[20:]) / close_prices[20:-1]  # 20-period future returns  # type: ignore
 
             # Create binary target (1 for positive return, 0 for negative)
             target = (future_returns > 0).astype(int)

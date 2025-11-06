@@ -24,7 +24,7 @@ class PositionMonitor:
         alerts = []
 
         try:
-            positions = mt5.positions_get()
+            positions = mt5.positions_get()  # type: ignore
             if not positions:
                 return alerts
 
@@ -92,7 +92,7 @@ class PositionMonitor:
 
         # Check for suspicious SL changes (very tight stops)
         if current['sl'] > 0:
-            symbol_info = mt5.symbol_info(current['symbol'])
+            symbol_info = mt5.symbol_info(current['symbol'])  # type: ignore
             if symbol_info:
                 point = symbol_info.point
                 pip_size = point * 10  # 1 pip = 10 points for all pairs

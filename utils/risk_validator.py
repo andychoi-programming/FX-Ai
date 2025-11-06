@@ -19,7 +19,7 @@ class RiskValidator:
             if not position.sl or position.sl <= 0:
                 return False, "No stop loss set", 0
 
-            symbol_info = mt5.symbol_info(symbol)
+            symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if not symbol_info:
                 return False, "Symbol info unavailable", 0
 
@@ -89,7 +89,7 @@ class RiskValidator:
         Check if SL/TP meet broker minimum requirements
         """
         try:
-            symbol_info = mt5.symbol_info(symbol)
+            symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if not symbol_info:
                 return False, "Symbol info unavailable"
 
@@ -100,7 +100,7 @@ class RiskValidator:
             min_stop_distance = min_stop_points * symbol_info.point
 
             # Check SL distance from current price
-            tick = mt5.symbol_info_tick(symbol)
+            tick = mt5.symbol_info_tick(symbol)  # type: ignore
             if tick:
                 current_price = tick.bid if position.type == mt5.ORDER_TYPE_BUY else tick.ask
                 sl_distance = abs(current_price - position.sl)
