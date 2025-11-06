@@ -7,7 +7,7 @@ import logging
 import MetaTrader5 as mt5  # type: ignore
 import sqlite3
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Optional, Tuple
 
 # Set up logger
@@ -459,55 +459,128 @@ class RiskManager:
         self.daily_trades_per_symbol.clear()  # Reset daily trade counter
         logger.info("Daily stats reset (including per-symbol trade counters)")
     
+    def _get_mt5_server_date_reliable(self) -> tuple:
+        """
+        Get MT5 server date with NO FALLBACKS to local time
+        CRITICAL FIX: This ensures consistent time source for daily trade tracking
+        
+        Returns:
+            tuple: (date_string, timestamp, success)
+                   If success=False, DO NOT allow trading
+        """
+        try:
+            # Method 1: Direct mt5.time_current() - MOST RELIABLE
+            if hasattr(mt5, 'time_current'):
+                server_timestamp = mt5.time_current()
+                if server_timestamp and server_timestamp > 0:
+                    server_time_utc = datetime.fromtimestamp(server_timestamp, tz=timezone.utc)
+                    date_str = server_time_utc.strftime('%Y-%m-%d')
+                    logger.debug(f"MT5 time source: mt5.time_current() = {date_str} (timestamp: {server_timestamp})")
+                    return (date_str, server_timestamp, True)
+            
+            # Method 2: Get tick time from EURUSD (reliable major pair)
+            tick = mt5.symbol_info_tick('EURUSD')
+            if tick and hasattr(tick, 'time') and tick.time > 0:
+                server_time_utc = datetime.fromtimestamp(tick.time, tz=timezone.utc)
+                date_str = server_time_utc.strftime('%Y-%m-%d')
+                logger.warning(f"MT5 time source: EURUSD tick time = {date_str} (timestamp: {tick.time})")
+                return (date_str, tick.time, True)
+            
+            # CRITICAL: If we can't get MT5 time, DO NOT ALLOW TRADING
+            logger.error("CRITICAL: Cannot get MT5 server time - BLOCKING all trades for safety")
+            return (None, None, False)
+            
+        except Exception as e:
+            logger.error(f"Exception getting MT5 server time: {e} - BLOCKING trades")
+            return (None, None, False)
+    
     def has_traded_today(self, symbol: str) -> bool:
-        """Check if symbol has already been traded today (MT5 server time)"""
-        from datetime import datetime
+        """
+        Check if symbol has already been traded today (MT5 server time)
+        FIXED: Now uses consistent MT5 time source with NO fallbacks to local time
+        """
+        current_date, current_timestamp, success = self._get_mt5_server_date_reliable()
         
-        # Get MT5 server time
-        server_time = mt5.symbol_info_tick(symbol)  # type: ignore
-        if server_time:
-            current_date = datetime.fromtimestamp(server_time.time).strftime('%Y-%m-%d')
-        else:
-            # Fallback to local time if MT5 not available
-            current_date = datetime.now().strftime('%Y-%m-%d')
+        if not success:
+            # FAIL-SAFE: If we can't get MT5 time, block trading
+            logger.error(f"{symbol}: Cannot verify MT5 server date - BLOCKING trade for safety")
+            return True  # Block trading
         
-        # Check if symbol has trade record for today
-        if symbol in self.daily_trades_per_symbol:
-            trade_info = self.daily_trades_per_symbol[symbol]
-            
-            # If it's a new day, reset the counter
-            if trade_info['date'] != current_date:
-                self.daily_trades_per_symbol[symbol] = {'date': current_date, 'count': 0}
-                return False
-            
-            # Check if already traded today
-            if trade_info['count'] >= self.max_trades_per_symbol_per_day:
-                logger.info(f"{symbol}: Already traded today ({current_date}), skipping")
-                return True
+        logger.debug(f"{symbol}: Checking daily trades - MT5 date: {current_date}, timestamp: {current_timestamp}")
+        
+        # Check if we have a record for this symbol
+        if symbol not in self.daily_trades_per_symbol:
+            logger.info(f"{symbol}: No trades recorded yet today ({current_date})")
+            return False
+        
+        trade_info = self.daily_trades_per_symbol[symbol]
+        recorded_date = trade_info['date']
+        recorded_timestamp = trade_info.get('timestamp', 0)
+        trade_count = trade_info['count']
+        
+        # If it's a new day, reset counter
+        if recorded_date != current_date:
+            logger.info(
+                f"{symbol}: New day detected - resetting counter\n"
+                f"  Previous: {recorded_date} (timestamp: {recorded_timestamp})\n"
+                f"  Current:  {current_date} (timestamp: {current_timestamp})\n"
+                f"  Time difference: {current_timestamp - recorded_timestamp:.0f} seconds"
+            )
+            self.daily_trades_per_symbol[symbol] = {
+                'date': current_date, 
+                'count': 0, 
+                'timestamp': current_timestamp
+            }
+            return False
+        
+        # Same day - check count
+        if trade_count >= self.max_trades_per_symbol_per_day:
+            logger.warning(
+                f"{symbol}: Already traded today - BLOCKING\n"
+                f"  Date: {current_date}\n"
+                f"  Trades today: {trade_count}/{self.max_trades_per_symbol_per_day}\n"
+                f"  First trade timestamp: {recorded_timestamp}\n"
+                f"  Current timestamp: {current_timestamp}\n"
+                f"  Time since first trade: {current_timestamp - recorded_timestamp:.0f} seconds"
+            )
+            return True
         
         return False
-    
+
     def record_trade(self, symbol: str):
-        """Record that a trade was executed for this symbol today"""
-        from datetime import datetime
+        """
+        Record that a trade was executed for this symbol today
+        FIXED: Now uses consistent MT5 time source with NO fallbacks
+        """
+        current_date, current_timestamp, success = self._get_mt5_server_date_reliable()
         
-        # Get MT5 server time
-        server_time = mt5.symbol_info_tick(symbol)  # type: ignore
-        if server_time:
-            current_date = datetime.fromtimestamp(server_time.time).strftime('%Y-%m-%d')
-        else:
-            current_date = datetime.now().strftime('%Y-%m-%d')
+        if not success:
+            logger.error(f"{symbol}: Cannot record trade - MT5 time unavailable")
+            return
         
-        # Update trade counter
+        # Update trade record with both date and timestamp
         if symbol not in self.daily_trades_per_symbol:
-            self.daily_trades_per_symbol[symbol] = {'date': current_date, 'count': 0}
+            self.daily_trades_per_symbol[symbol] = {
+                'date': current_date, 
+                'count': 0, 
+                'timestamp': current_timestamp
+            }
         
+        # Increment counter
         self.daily_trades_per_symbol[symbol]['count'] += 1
-        logger.info(f"{symbol}: Trade recorded for {current_date} (count: {self.daily_trades_per_symbol[symbol]['count']})")
+        self.daily_trades_per_symbol[symbol]['timestamp'] = current_timestamp
         
-        # Save to database for persistence across restarts
+        logger.warning(
+            f"{symbol}: ★★★ TRADE RECORDED ★★★\n"
+            f"  MT5 Date: {current_date}\n"
+            f"  MT5 Timestamp: {current_timestamp} ({datetime.fromtimestamp(current_timestamp, tz=timezone.utc)})\n"
+            f"  Trades Today: {self.daily_trades_per_symbol[symbol]['count']}/{self.max_trades_per_symbol_per_day}\n"
+            f"  ⚠️  NO MORE TRADES ALLOWED TODAY FOR {symbol}"
+        )
+        
+        # Save to database for persistence
         self._save_daily_trade_count(symbol, current_date, self.daily_trades_per_symbol[symbol]['count'])
-    
+
     def can_trade(self, symbol: str) -> bool:
         """Quick check if trading is allowed"""
         from datetime import datetime
