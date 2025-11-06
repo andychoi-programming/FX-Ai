@@ -1,336 +1,668 @@
-# FX-Ai Trading System - Complete Overview
+# FX-Ai Trading System v3.0# FX-Ai Trading System - Complete Overview
 
-## 🎯 System Architecture
 
-FX-Ai is a comprehensive machine learning-based forex trading system that combines trained ML models with advanced risk management for automated trading across multiple currency pairs and timeframes.
 
-### Core Capabilities
+## 🎯 Advanced ML-Powered Forex Trading System## 🎯 System Architecture
 
-- **ML Model Integration**: Uses trained models for 30+ currency pairs across multiple timeframes
+
+
+FX-Ai is a comprehensive machine learning-based forex trading system that combines trained ML models with advanced risk management for automated trading across multiple currency pairs and timeframes.FX-Ai is a comprehensive machine learning-based forex trading system that combines trained ML models with advanced risk management for automated trading across multiple currency pairs and timeframes.
+
+
+
+**Version:** 3.0### Core Capabilities
+
+**Date:** November 6, 2025
+
+**Status:** ✅ OPERATIONAL - System running normally- **ML Model Integration**: Uses trained models for 30+ currency pairs across multiple timeframes
+
 - **Adaptive Learning**: Continuous model improvement through reinforcement learning
-- **Real-time Trading**: Automated position management with advanced risk controls
-- **Multi-Timeframe Support**: Optimized parameters for M1, M5, M15, and H1 timeframes
-- **Risk Management**: Dynamic position sizing, daily loss limits, and trade frequency controls
-- **Performance Monitoring**: Real-time dashboard with system health and P&L tracking
-- **Market Analysis**: Technical, fundamental, and sentiment analysis integration
 
----
+---- **Real-time Trading**: Automated position management with advanced risk controls
+
+- **Multi-Timeframe Support**: Optimized parameters for M1, M5, M15, and H1 timeframes
+
+## 🚀 Quick Start- **Risk Management**: Dynamic position sizing, daily loss limits, and trade frequency controls
+
+- **Performance Monitoring**: Real-time dashboard with system health and P&L tracking
+
+### 1. Launch Main Application- **Market Analysis**: Technical, fundamental, and sentiment analysis integration
+
+```bash
+
+python main.py---
+
+```
 
 ## 🤖 ML-Powered Trading System
 
-### Overview
+### 2. Launch Performance Dashboard (Real-time Monitoring)
 
-A comprehensive machine learning-based forex trading system that combines trained ML models with optimized trading parameters for automated trading across multiple currency pairs and timeframes.
+```bash### Overview
 
-### Key Features
+# One-time view
 
-- **ML Model Integration**: Uses trained RandomForest/GradientBoosting models for each currency pair
+python performance_dashboard.pyA comprehensive machine learning-based forex trading system that combines trained ML models with optimized trading parameters for automated trading across multiple currency pairs and timeframes.
+
+
+
+# Continuous monitoring (updates every 60 seconds)### Key Features
+
+python performance_dashboard.py --continuous
+
+```- **ML Model Integration**: Uses trained RandomForest/GradientBoosting models for each currency pair
+
 - **Dynamic Parameter Optimization**: Automatically applies optimized SL/TP levels, entry/exit times, and risk management parameters
-- **Multi-Timeframe Support**: Optimized parameters for H1, D1, W1, and MN1 timeframes
-- **Real-time Trading**: Automated position management with breakeven and trailing stops
-- **Risk Management**: Dynamic position sizing, daily loss limits, and trade frequency controls
-- **Backtesting**: Comprehensive backtesting with ML predictions and optimized parameters
+
+### 3. Emergency Stop (if needed)- **Multi-Timeframe Support**: Optimized parameters for H1, D1, W1, and MN1 timeframes
+
+```bash- **Real-time Trading**: Automated position management with breakeven and trailing stops
+
+# Using batch file (Windows)- **Risk Management**: Dynamic position sizing, daily loss limits, and trade frequency controls
+
+.\live_trading\emergency_stop.bat- **Backtesting**: Comprehensive backtesting with ML predictions and optimized parameters
+
 - **Monitoring Dashboard**: Real-time system status and performance monitoring
 
-### Quick Start - ML System
+# Or run directly
+
+python live_trading/emergency_stop.py### Quick Start - ML System
+
+```
 
 1. **Launch Main Application**:
 
-   ```bash
-   python main.py
-   ```
-
-2. **Launch Performance Dashboard** (real-time monitoring):
+---
 
    ```bash
-   python performance_dashboard.py
+
+## 📊 System Architecture   python main.py
+
    ```
 
-   For continuous monitoring:
+### Core Capabilities
 
-   ```bash
-   python performance_dashboard.py --continuous
-   ```
+- **🤖 ML Model Integration**: Trained models for 30+ currency pairs across multiple timeframes2. **Launch Performance Dashboard** (real-time monitoring):
+
+- **🧠 Adaptive Learning**: Continuous model improvement through reinforcement learning
+
+- **⚡ Real-time Trading**: Automated position management with advanced risk controls   ```bash
+
+- **📈 Multi-Timeframe Support**: Optimized parameters for M1, M5, M15, H1, D1, W1, MN1   python performance_dashboard.py
+
+- **🛡️ Risk Management**: Dynamic position sizing, daily loss limits, trade frequency controls   ```
+
+- **📊 Performance Monitoring**: Real-time dashboard with system health and P&L tracking
+
+- **🔍 Market Analysis**: Technical, fundamental, and sentiment analysis integration   For continuous monitoring:
+
+
+
+### Supported Symbols (30 Pairs)   ```bash
+
+**Major FX Pairs:** EURUSD, GBPUSD, USDJPY, USDCHF, USDCAD, AUDUSD, NZDUSD   python performance_dashboard.py --continuous
+
+**Cross Pairs:** EURGBP, EURJPY, GBPJPY, AUDJPY, EURCAD, GBPAUD, EURNZD, GBPNZD, etc.   ```
+
+**Metals:** XAUUSD (Gold), XAGUSD (Silver)
 
 3. **Start Trading System**:
 
+---
+
    ```bash
-   # Using batch file (Windows)
+
+## ⚙️ Configuration   # Using batch file (Windows)
+
    .\live_trading\FX-Ai_Start.bat
 
-   # Or run directly
-   python main.py
-   ```
+### Risk Management Settings
 
-### Performance Dashboard
+- **Max Positions:** 30 concurrent trades   # Or run directly
 
-The `performance_dashboard.py` provides real-time monitoring of your trading system:
+- **Risk per Trade:** $50 (fixed dollar amount)   python main.py
 
-#### Features
+- **Default SL/TP:** 20/40 pips   ```
+
+- **Max Spread:** 3.0 pips
+
+- **Lot Size Range:** 0.01 - 1.0 lots### Performance Dashboard
+
+
+
+### Trading HoursThe `performance_dashboard.py` provides real-time monitoring of your trading system:
+
+- **Market Open:** Monday 00:00 GMT (Sunday close)
+
+- **Market Close:** Friday 23:59 GMT#### Features
+
+- **No Trading:** Weekend hours (Saturday 00:00 - Monday 00:00 GMT)
 
 - **System Health**: MT5 connection status, TimeManager status
-- **Trading Status**: Current trading permissions, time until close
+
+---- **Trading Status**: Current trading permissions, time until close
+
 - **Account Info**: Balance, equity, margin utilization
-- **Open Positions**: Position count, unrealized P&L by symbol
+
+## 📈 Performance Dashboard- **Open Positions**: Position count, unrealized P&L by symbol
+
 - **Recent Performance**: 24-hour trade statistics and win rates
-- **Risk Metrics**: Drawdown percentage, margin utilization, risk level assessment
 
-#### Usage
+The `performance_dashboard.py` provides real-time monitoring:- **Risk Metrics**: Drawdown percentage, margin utilization, risk level assessment
 
-```bash
-# One-time dashboard view
-python performance_dashboard.py
 
-# Continuous monitoring (updates every 60 seconds)
+
+### Features#### Usage
+
+- **🔧 System Health**: MT5 connection status, TimeManager status
+
+- **🕐 Trading Status**: Current trading permissions, time until close```bash
+
+- **💰 Account Info**: Balance, equity, margin utilization# One-time dashboard view
+
+- **📈 Open Positions**: Position count, unrealized P&L by symbolpython performance_dashboard.py
+
+- **📊 Recent Performance**: 24-hour trade statistics and win rates
+
+- **⚠️ Risk Metrics**: Drawdown percentage, margin utilization, risk level assessment# Continuous monitoring (updates every 60 seconds)
+
 python performance_dashboard.py --continuous
+
+### Sample Output```
+
 ```
 
-#### Sample Output
+📊 FX-AI PERFORMANCE DASHBOARD#### Sample Output
 
-```text
-📊 FX-AI PERFORMANCE DASHBOARD
 🔧 SYSTEM STATUS: HEALTHY
-🕐 TRADING STATUS: Trading Allowed
-💰 ACCOUNT INFO: Balance $10,000 | Equity $10,250
-📈 OPEN POSITIONS: 11 positions | Unrealized P&L +$250
+
+🕐 TRADING STATUS: Trading Allowed```text
+
+💰 ACCOUNT INFO: Balance $10,000 | Equity $10,250📊 FX-AI PERFORMANCE DASHBOARD
+
+📈 OPEN POSITIONS: 3 positions | Unrealized P&L +$250🔧 SYSTEM STATUS: HEALTHY
+
+📊 RECENT PERFORMANCE: 180 trades | Win Rate 65.2%🕐 TRADING STATUS: Trading Allowed
+
+⚠️  RISK METRICS: Drawdown 0.5% | Risk Level: LOW💰 ACCOUNT INFO: Balance $10,000 | Equity $10,250
+
+```📈 OPEN POSITIONS: 11 positions | Unrealized P&L +$250
+
 📊 RECENT PERFORMANCE: 180 trades | Win Rate 65.2%
-⚠️  RISK METRICS: Drawdown 0.5% | Risk Level: LOW
+
+---⚠️  RISK METRICS: Drawdown 0.5% | Risk Level: LOW
+
 ```
+
+## 🏗️ Project Structure
 
    ```bash
-   python live_trading/trading_orchestrator.py
-   ```
 
-### ML System Architecture
+```   python live_trading/trading_orchestrator.py
 
-```text
-├── main.py                        # Main application entry point
-├── performance_dashboard.py       # Real-time performance monitoring
-├── live_trading/
-│   ├── dynamic_parameter_manager.py  # Parameter optimization manager
-│   ├── FX-Ai_Start.bat           # Start trading system
-│   └── emergency_stop.py         # Emergency shutdown
-├── ai/                           # Machine learning modules
-│   ├── ml_predictor.py           # ML prediction engine
-│   ├── adaptive_learning_manager.py # Adaptive learning system
-│   ├── market_regime_detector.py # Market regime detection
-│   ├── reinforcement_learning_agent.py # RL agent
-│   └── advanced_risk_metrics.py  # Advanced risk calculations
-├── core/                         # Core trading components
-│   ├── mt5_connector.py          # MT5 connection management
-│   ├── trading_engine.py         # Trading execution engine
-│   ├── risk_manager.py           # Risk management system
-│   └── clock_sync.py             # Time synchronization
-├── analysis/                     # Market analysis modules
-│   ├── technical_analyzer.py     # Technical analysis
-│   ├── fundamental_analyzer.py   # Fundamental analysis
-│   └── sentiment_analyzer.py     # Sentiment analysis
-├── data/                         # Data management
-│   ├── market_data_manager.py    # Market data handling
+FX-Ai/   ```
+
+├── main.py                          # Main application entry point
+
+├── performance_dashboard.py         # Real-time monitoring dashboard### ML System Architecture
+
+├── requirements.txt                 # Python dependencies
+
+├── config/```text
+
+│   └── config.json                  # System configuration├── main.py                        # Main application entry point
+
+├── ai/                             # Machine Learning components├── performance_dashboard.py       # Real-time performance monitoring
+
+│   ├── ml_predictor.py             # ML model predictions├── live_trading/
+
+│   ├── adaptive_learning_manager.py # Model adaptation system│   ├── dynamic_parameter_manager.py  # Parameter optimization manager
+
+│   └── reinforcement_learning_agent.py # RL optimization│   ├── FX-Ai_Start.bat           # Start trading system
+
+├── core/                           # Core trading components│   └── emergency_stop.py         # Emergency shutdown
+
+│   ├── trading_engine.py           # Main trading logic├── ai/                           # Machine learning modules
+
+│   ├── risk_manager.py             # Risk management system│   ├── ml_predictor.py           # ML prediction engine
+
+│   └── mt5_connector.py            # MT5 integration│   ├── adaptive_learning_manager.py # Adaptive learning system
+
+├── live_trading/                   # Live trading components│   ├── market_regime_detector.py # Market regime detection
+
+│   ├── dynamic_parameter_manager.py # Parameter optimization│   ├── reinforcement_learning_agent.py # RL agent
+
+│   ├── FX-Ai_Start.bat            # Windows startup script│   └── advanced_risk_metrics.py  # Advanced risk calculations
+
+│   └── emergency_stop.py           # Emergency shutdown├── core/                         # Core trading components
+
+├── utils/                          # Utility modules│   ├── mt5_connector.py          # MT5 connection management
+
+│   ├── logger.py                   # Logging system│   ├── trading_engine.py         # Trading execution engine
+
+│   ├── time_manager.py             # Time management│   ├── risk_manager.py           # Risk management system
+
+│   └── config_loader.py            # Configuration loading│   └── clock_sync.py             # Time synchronization
+
+├── analysis/                       # Market analysis├── analysis/                     # Market analysis modules
+
+├── data/                           # Data management│   ├── technical_analyzer.py     # Technical analysis
+
+├── models/                         # Trained ML models│   ├── fundamental_analyzer.py   # Fundamental analysis
+
+├── logs/                           # Application logs│   └── sentiment_analyzer.py     # Sentiment analysis
+
+└── .env                            # Environment variables (credentials)├── data/                         # Data management
+
+```│   ├── market_data_manager.py    # Market data handling
+
 │   └── performance_history.db    # Performance database
-├── utils/                        # Utility modules
-├── config/                       # Configuration files
-├── models/                       # Trained ML models and scalers
-└── logs/                         # System logs
-```
 
-### ML System Configuration
+---├── utils/                        # Utility modules
+
+├── config/                       # Configuration files
+
+## 🔧 Setup & Installation├── models/                       # Trained ML models and scalers
+
+└── logs/                         # System logs
+
+### Prerequisites```
+
+- Python 3.8+
+
+- MetaTrader 5 terminal### ML System Configuration
+
+- Valid MT5 trading account
 
 Edit `config/trading_config.json`:
 
+### Installation Steps
+
 ```json
-{
-  "trading": {
-    "symbols": ["EURUSD", "GBPUSD", "AUDUSD", "USDJPY", "EURJPY", ...],
-    "timeframes": ["H1", "D1"],
-    "risk_per_trade": 50,
+
+1. **Clone Repository**{
+
+   ```bash  "trading": {
+
+   git clone https://github.com/andychoi-programming/FX-Ai.git    "symbols": ["EURUSD", "GBPUSD", "AUDUSD", "USDJPY", "EURJPY", ...],
+
+   cd FX-Ai    "timeframes": ["H1", "D1"],
+
+   ```    "risk_per_trade": 50,
+
     "max_positions": 3,
-    "trading_hours": {"start": "08:00", "end": "20:00"}
-  },
-  "system": {
-    "cycle_interval_minutes": 15,
-    "max_daily_trades": 10,
-    "daily_loss_limit": 200
+
+2. **Create Virtual Environment**    "trading_hours": {"start": "08:00", "end": "20:00"}
+
+   ```bash  },
+
+   python -m venv venv  "system": {
+
+   venv\Scripts\activate  # Windows    "cycle_interval_minutes": 15,
+
+   # source venv/bin/activate  # Linux/Mac    "max_daily_trades": 10,
+
+   ```    "daily_loss_limit": 200
+
   }
-}
-```
 
-### ML Performance Summary
+3. **Install Dependencies**}
 
-- **Models Available**: 30+ currency pairs trained across M1, M5, M15, H1 timeframes
-- **ML Algorithms**: RandomForest/GradientBoosting classifiers with feature engineering
-- **Risk Management**: Advanced position sizing and loss protection
-- **Adaptive Learning**: Continuous model improvement through reinforcement learning
+   ```bash```
+
+   pip install -r requirements.txt
+
+   ```### ML Performance Summary
+
+
+
+4. **Configure Environment**- **Models Available**: 30+ currency pairs trained across M1, M5, M15, H1 timeframes
+
+   ```bash- **ML Algorithms**: RandomForest/GradientBoosting classifiers with feature engineering
+
+   # Copy environment template- **Risk Management**: Advanced position sizing and loss protection
+
+   copy .env.example .env- **Adaptive Learning**: Continuous model improvement through reinforcement learning
+
 - **Real-time Monitoring**: Performance dashboard with live system health tracking
 
----
+   # Edit .env with your MT5 credentials
 
-## 📁 Detailed Folder Structure
+   # MT5_LOGIN=your_login---
+
+   # MT5_PASSWORD=your_password
+
+   # MT5_SERVER=your_server## 📁 Detailed Folder Structure
+
+   ```
 
 ### **1. LIVE TRADING SYSTEM** (`live_trading/`)
 
-**Purpose**: Production trading with real-time execution and ML-based learning
+5. **Configure System**
 
-**Files**:
+   ```bash**Purpose**: Production trading with real-time execution and ML-based learning
+
+   # Edit config/config.json for your preferences
+
+   # Adjust risk settings, symbols, etc.**Files**:
+
+   ```
 
 - `dynamic_parameter_manager.py` - Optimized parameter management for live trading
-- `FX-Ai_Start.bat` - Windows batch file to start the trading system
-- `emergency_stop.py` - Emergency shutdown functionality
 
-### **2. AI & MACHINE LEARNING** (`ai/`)
+6. **Test Connection**- `FX-Ai_Start.bat` - Windows batch file to start the trading system
 
-**Purpose**: Machine learning models, predictions, and adaptive learning
+   ```bash- `emergency_stop.py` - Emergency shutdown functionality
 
-**Files**:
+   python main.py --test-connection
 
-- `ml_predictor.py` - Core ML prediction engine for trading signals
-- `adaptive_learning_manager.py` - Adaptive learning system for model improvement
+   ```### **2. AI & MACHINE LEARNING** (`ai/`)
+
+
+
+---**Purpose**: Machine learning models, predictions, and adaptive learning
+
+
+
+## 🤖 ML Model Training**Files**:
+
+
+
+### Automated Training- `ml_predictor.py` - Core ML prediction engine for trading signals
+
+The system includes automated model training for new symbols:- `adaptive_learning_manager.py` - Adaptive learning system for model improvement
+
 - `market_regime_detector.py` - Market regime classification and detection
-- `reinforcement_learning_agent.py` - Reinforcement learning for strategy optimization
-- `advanced_risk_metrics.py` - Advanced risk calculations and metrics
 
-### **3. CORE TRADING COMPONENTS** (`core/`)
+```python- `reinforcement_learning_agent.py` - Reinforcement learning for strategy optimization
+
+from ai.ml_predictor import MLPredictor- `advanced_risk_metrics.py` - Advanced risk calculations and metrics
+
+
+
+# Initialize predictor### **3. CORE TRADING COMPONENTS** (`core/`)
+
+predictor = MLPredictor(config)
 
 **Purpose**: Essential trading infrastructure and connectivity
 
-**Files**:
+# Train model for specific symbol and timeframe
+
+predictor.train_symbol_model('EURUSD', 'H1', X_train, y_train)**Files**:
+
+```
 
 - `mt5_connector.py` - MetaTrader 5 connection and API management
-- `trading_engine.py` - Main trading execution engine
-- `risk_manager.py` - Risk management and position sizing
-- `clock_sync.py` - Time synchronization utilities
 
-### **4. MARKET ANALYSIS** (`analysis/`)
+### Model Features- `trading_engine.py` - Main trading execution engine
 
-**Purpose**: Multi-dimensional market analysis
+- **RandomForest/GradientBoosting** classifiers- `risk_manager.py` - Risk management and position sizing
 
-**Files**:
+- **30+ Technical Indicators** (SMA, EMA, RSI, MACD, Bollinger Bands, ATR, etc.)- `clock_sync.py` - Time synchronization utilities
 
-- `technical_analyzer.py` - Technical indicators and chart analysis
-- `fundamental_analyzer.py` - Fundamental data collection and analysis
-- `sentiment_analyzer.py` - Market sentiment analysis
+- **Multi-timeframe Analysis** (M1, M5, M15, H1, D1, W1, MN1)
 
-### **5. DATA MANAGEMENT** (`data/`)
+- **Adaptive Learning** with reinforcement learning optimization### **4. MARKET ANALYSIS** (`analysis/`)
+
+
+
+---**Purpose**: Multi-dimensional market analysis
+
+
+
+## 🛡️ Risk Management**Files**:
+
+
+
+### Safety Features- `technical_analyzer.py` - Technical indicators and chart analysis
+
+- **Daily Loss Limits**: Automatic shutdown if daily loss exceeded- `fundamental_analyzer.py` - Fundamental data collection and analysis
+
+- **Max Position Limits**: Prevents over-leveraging- `sentiment_analyzer.py` - Market sentiment analysis
+
+- **Spread Filters**: Only trade when spreads are reasonable
+
+- **Time Filters**: Respect market hours and trading sessions### **5. DATA MANAGEMENT** (`data/`)
+
+- **Symbol-specific Limits**: Max 1 position per symbol at a time
 
 **Purpose**: Market data handling and storage
 
-**Files**:
+### Emergency Controls
 
-- `market_data_manager.py` - Market data acquisition and processing
+- **Emergency Stop**: Immediate shutdown of all trading**Files**:
+
+- **Circuit Breakers**: Automatic pause during high volatility
+
+- **Manual Override**: Administrative controls for intervention- `market_data_manager.py` - Market data acquisition and processing
+
 - `performance_history.db` - SQLite database for performance tracking
+
+---
 
 ### **6. UTILITIES** (`utils/`)
 
+## 📊 Monitoring & Logging
+
 **Purpose**: Shared utility functions and helpers
 
-### **7. CONFIGURATION** (`config/`)
+### Log Files
 
-**Purpose**: System configuration files
+- **Main Log**: `logs/FX-Ai_YYYY_MM_DD.log`### **7. CONFIGURATION** (`config/`)
 
-### **8. MODELS** (`models/`)
+- **Error Log**: `logs/error_YYYY_MM_DD.log`
 
-**Purpose**: Trained machine learning models and scalers
+- **Performance Log**: `logs/performance_YYYY_MM_DD.log`**Purpose**: System configuration files
+
+
+
+### Real-time Monitoring### **8. MODELS** (`models/`)
+
+- **Performance Dashboard**: Live system status
+
+- **Health Checks**: Automatic system diagnostics**Purpose**: Trained machine learning models and scalers
+
+- **Alert System**: Email/SMS notifications for critical events
 
 **Contents**: Pre-trained models for 30+ currency pairs across multiple timeframes (M1, M5, M15, H1)
 
+---
+
 ### **9. LOGS** (`logs/`)
+
+## 🔄 Adaptive Learning System
 
 **Purpose**: System logs and debugging information
 
-### **System Workflow**
+### Features
 
-```text
-1. BACKTEST → Find optimal parameters
-   Command: python backtest/optimize_fast_3year.py
+- **Model Performance Tracking**: Continuous evaluation of model accuracy### **System Workflow**
+
+- **Automatic Retraining**: Models retrained when performance degrades
+
+- **Parameter Optimization**: Dynamic SL/TP and entry/exit optimization```text
+
+- **Market Regime Detection**: Adapts to different market conditions1. BACKTEST → Find optimal parameters
+
+- **Reinforcement Learning**: Optimizes trading strategies over time   Command: python backtest/optimize_fast_3year.py
+
    Output: models/parameter_optimization/optimal_parameters.json
 
-2. TRAIN MODELS → Build ML prediction models
-   Command: python backtest/train_all_models.py
-   Output: models/*_model.pkl, *_scaler.pkl
+### Learning Metrics
+
+- **Win Rate Tracking**: Per symbol, per timeframe2. TRAIN MODELS → Build ML prediction models
+
+- **Profit Factor**: Gross profit / gross loss ratio   Command: python backtest/train_all_models.py
+
+- **Sharpe Ratio**: Risk-adjusted returns   Output: models/*_model.pkl, *_scaler.pkl
+
+- **Maximum Drawdown**: Peak-to-valley decline tracking
 
 3. LIVE TRADE → Execute with optimized params + ML predictions
-   Command: python live_trading/trading_orchestrator.py
+
+---   Command: python live_trading/trading_orchestrator.py
+
    Reads: optimal_parameters.json + ML models
 
+## 🚨 Troubleshooting
+
 4. RETRAIN → Update models with new data
-   Command: python backtest/retrain_metal_models.py
+
+### Common Issues   Command: python backtest/retrain_metal_models.py
+
    Updates: models/*_model.pkl
 
-5. RE-OPTIMIZE → Adjust parameters as markets change
-   Command: python backtest/optimize_fast_3year.py
-   Updates: optimal_parameters.json
+**MT5 Connection Failed**
+
+```bash5. RE-OPTIMIZE → Adjust parameters as markets change
+
+# Check MT5 terminal is running   Command: python backtest/optimize_fast_3year.py
+
+# Verify credentials in .env file   Updates: optimal_parameters.json
+
+# Check firewall/antivirus blocking```
+
 ```
 
 ### **Key Principles**
 
-✅ **Separation**: Backtesting does NOT affect live trading until you explicitly apply results
+**No Trading Signals**
 
-✅ **Independence**: Live trading does NOT trigger backtests automatically
+```bash✅ **Separation**: Backtesting does NOT affect live trading until you explicitly apply results
 
-✅ **Learning vs Risk**: Model retraining (learning) is separate from parameter optimization (risk management)
+# Verify ML models are trained
 
-✅ **Shared Resources**: Both systems use the same ML models and core modules for consistency
+# Check market hours (weekdays only)✅ **Independence**: Live trading does NOT trigger backtests automatically
 
-✅ **Safety**: Run backtests anytime without affecting live trades - results await your approval
+# Review risk management settings
 
----
+```✅ **Learning vs Risk**: Model retraining (learning) is separate from parameter optimization (risk management)
+
+
+
+**Performance Issues**✅ **Shared Resources**: Both systems use the same ML models and core modules for consistency
+
+```bash
+
+# Check system resources (RAM, CPU)✅ **Safety**: Run backtests anytime without affecting live trades - results await your approval
+
+# Review log files for errors
+
+# Consider reducing max_positions setting---
+
+```
 
 ## 🎉 Original System Successfully Created
 
-### 📁 Files Created
+### Emergency Procedures
 
-I've created the complete FX-Ai trading system with the following components:
+1. Run `emergency_stop.py` to halt all trading### 📁 Files Created
+
+2. Check logs for error details
+
+3. Restart system after resolving issuesI've created the complete FX-Ai trading system with the following components:
+
+4. Contact support if needed
 
 1. **FX-Ai_Connector.mq5** - MetaTrader 5 Expert Advisor (in `mt5_ea/` folder) **OPTIONAL ENHANCEMENT**
-2. **mt5_diagnostic.py** - MT5 connection diagnostic tool
+
+---2. **mt5_diagnostic.py** - MT5 connection diagnostic tool
+
 3. **FX-Ai_Start.bat** - Windows startup script
-4. **install_ea.bat** - Automated MT5 EA installation script
+
+## 📈 Performance Expectations4. **install_ea.bat** - Automated MT5 EA installation script
+
 5. **fix_ea_files.bat** - EA file organization utility
-6. **risk_display.py** - Risk management parameters display script
-7. **risk_config.py** - Interactive risk management configuration script
-8. **Risk_Display.bat** - Windows batch file for risk display
-9. **Risk_Config.bat** - Windows batch file for risk configuration
-10. **requirements.txt** - Python dependencies
+
+### Realistic Goals6. **risk_display.py** - Risk management parameters display script
+
+- **Monthly Return**: 5-15% (depending on account size and market conditions)7. **risk_config.py** - Interactive risk management configuration script
+
+- **Win Rate**: 55-70% (with proper risk management)8. **Risk_Display.bat** - Windows batch file for risk display
+
+- **Max Drawdown**: <10% (with circuit breakers)9. **Risk_Config.bat** - Windows batch file for risk configuration
+
+- **Trades per Month**: 100-500 (depending on settings)10. **requirements.txt** - Python dependencies
+
 11. **Complete Python codebase** - Analysis, trading, and communication modules
 
-## 📋 Table of Contents
+### Risk Warnings
 
-- [Recent Updates](#recent-updates)
-- [System Status](#system-status)
+- **Past Performance ≠ Future Results**## 📋 Table of Contents
+
+- **Forex Trading Involves Risk of Loss**
+
+- **Never Risk More Than You Can Afford**- [Recent Updates](#recent-updates)
+
+- **Always Test on Demo Account First**- [System Status](#system-status)
+
 - [Adaptive Learning System](#adaptive-learning-system---complete-implementation-guide)
-- [Setup Instructions](#setup-instructions)
+
+---- [Setup Instructions](#setup-instructions)
+
 - [Features Implemented](#features-implemented)
-- [How It Works](#how-it-works)
+
+## 🤝 Contributing- [How It Works](#how-it-works)
+
 - [Troubleshooting Setup Issues](#troubleshooting-setup-issues)
-- [Quick Test](#quick-test)
-- [File Locations Summary](#file-locations-summary)
-- [System Features](#system-features)
-- [Risk Management](#risk-management)
-- [Clock Synchronization](#clock-synchronization)
+
+### Development Setup- [Quick Test](#quick-test)
+
+1. Fork the repository- [File Locations Summary](#file-locations-summary)
+
+2. Create feature branch: `git checkout -b feature/new-feature`- [System Features](#system-features)
+
+3. Make changes and test thoroughly- [Risk Management](#risk-management)
+
+4. Submit pull request with detailed description- [Clock Synchronization](#clock-synchronization)
+
 - [Trading Pairs](#trading-pairs)
-- [System Workflow](#system-workflow)
-- [Expected Performance](#expected-performance)
-- [Maintenance](#maintenance)
-- [Troubleshooting](#troubleshooting)
-- [Quick Troubleshooting](#quick-troubleshooting)
+
+### Code Standards- [System Workflow](#system-workflow)
+
+- **Type Hints**: All functions must have type annotations- [Expected Performance](#expected-performance)
+
+- **Documentation**: Comprehensive docstrings required- [Maintenance](#maintenance)
+
+- **Testing**: Unit tests for critical functions- [Troubleshooting](#troubleshooting)
+
+- **Logging**: Proper error handling and logging- [Quick Troubleshooting](#quick-troubleshooting)
+
 - [Support Resources](#support-resources)
-- [System Ready Checklist](#system-ready-checklist)
+
+---- [System Ready Checklist](#system-ready-checklist)
+
 - [Congratulations](#congratulations)
+
+## 📄 License
 
 ## Recent Updates
 
+This project is proprietary software. All rights reserved.
+
 ### v1.5.0 - System Improvements & Security Enhancements (November 2, 2025)
 
+---
+
 - **🔒 SECURITY**: MT5 credentials moved to `.env` file (no longer in config.json)
-- **⚡ PERFORMANCE**: Fixed blocking `time.sleep()` calls in async code (trading_engine.py)
+
+## 📞 Support- **⚡ PERFORMANCE**: Fixed blocking `time.sleep()` calls in async code (trading_engine.py)
+
 - **🛡️ RELIABILITY**: Added configuration validation at startup (checks optimal_parameters.json, MT5 settings)
-- **🔄 RESILIENCE**: ML model fallback to technical analysis if predictions fail
-- **🎯 ERROR HANDLING**: Created 20+ custom exception classes for specific error types
-- **📊 MONITORING**: New performance tracker for real-time statistics
-- **📝 LOGGING**: Reduced debug logging (changed from DEBUG to INFO level)
 
-**Key Improvements:**
+For technical support or questions:- **🔄 RESILIENCE**: ML model fallback to technical analysis if predictions fail
 
+- Check the troubleshooting section above- **🎯 ERROR HANDLING**: Created 20+ custom exception classes for specific error types
+
+- Review log files for error details- **📊 MONITORING**: New performance tracker for real-time statistics
+
+- Test on demo account before live trading- **📝 LOGGING**: Reduced debug logging (changed from DEBUG to INFO level)
+
+
+
+**⚠️ Disclaimer:** This software is for educational and research purposes. Use at your own risk. Always test thoroughly before deploying with real money.</content>**Key Improvements:**
+
+<parameter name="filePath">c:\Users\andyc\python\FX-Ai\README.md
 - **Environment Variables**: Credentials loaded from `.env` (MT5_LOGIN, MT5_PASSWORD, MT5_SERVER)
 - **Async Fix**: Replaced `time.sleep()` with `await asyncio.sleep()` in critical paths
 - **Config Validation**: Validates optimal_parameters.json, MT5 credentials, risk settings at startup

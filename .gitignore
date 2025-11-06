@@ -154,3 +154,26 @@ models/
 backtest/results/
 reports/
 web_scraping/data/
+
+# Additional trading exclusions
+*.pkl
+*.joblib
+*.model
+market_data/
+historical_data/
+training_data/
+*.csv
+*.xlsx
+*.json.backup
+config_backup/
+model_backup/
+*.log.gz
+*.log.zip
+performance_reports/
+trade_history/
+market_analysis/
+sentiment_data/
+fundamental_data/
+*.db-journal
+*.db-wal
+*.db-shm
