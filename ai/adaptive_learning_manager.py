@@ -531,8 +531,69 @@ class AdaptiveLearningManager:
             )
         ''')
 
+        # Daily trade counts for persistent risk management
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS daily_trade_counts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT NOT NULL,
+                trade_date TEXT NOT NULL,
+                trade_count INTEGER NOT NULL DEFAULT 0,
+                last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(symbol, trade_date)
+            )
+        ''')
+
         conn.commit()
         conn.close()
+
+    def load_daily_trade_counts(self) -> dict:
+        """Load daily trade counts from database for risk management persistence"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Get today's date in YYYY-MM-DD format
+            today = datetime.now().strftime('%Y-%m-%d')
+
+            # Load all daily trade counts, but only keep today's data
+            cursor.execute('''
+                SELECT symbol, trade_date, trade_count
+                FROM daily_trade_counts
+                WHERE trade_date = ?
+            ''', (today,))
+
+            daily_counts = {}
+            for row in cursor.fetchall():
+                symbol, trade_date, count = row
+                daily_counts[symbol] = {'date': trade_date, 'count': count}
+
+            conn.close()
+            logger.info(f"Loaded {len(daily_counts)} daily trade counts from database")
+            return daily_counts
+
+        except Exception as e:
+            logger.error(f"Error loading daily trade counts: {e}")
+            return {}
+
+    def save_daily_trade_count(self, symbol: str, trade_date: str, count: int):
+        """Save daily trade count to database"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Insert or replace the daily trade count
+            cursor.execute('''
+                INSERT OR REPLACE INTO daily_trade_counts
+                (symbol, trade_date, trade_count, last_updated)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            ''', (symbol, trade_date, count))
+
+            conn.commit()
+            conn.close()
+            logger.debug(f"Saved daily trade count for {symbol}: {count} on {trade_date}")
+
+        except Exception as e:
+            logger.error(f"Error saving daily trade count for {symbol}: {e}")
 
     def schedule_tasks(self):
         """Schedule periodic learning tasks"""

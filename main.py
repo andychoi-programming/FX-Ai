@@ -227,7 +227,8 @@ class FXAiApplication:
 
             # Risk Manager
             self.logger.info("Initializing risk manager...")
-            self.risk_manager = RiskManager(self.config)
+            db_path = os.path.join('data', 'performance_history.db')
+            self.risk_manager = RiskManager(self.config, db_path=db_path)
 
             # Market Data Manager
             self.logger.info("Initializing market data manager...")

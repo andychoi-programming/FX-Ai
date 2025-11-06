@@ -5,6 +5,9 @@ Proper position size calculation for fixed dollar risk
 
 import logging
 import MetaTrader5 as mt5  # type: ignore
+import sqlite3
+import os
+from datetime import datetime
 from typing import Dict, Optional, Tuple
 
 # Set up logger
@@ -15,9 +18,10 @@ logger = logging.getLogger(__name__)
 class RiskManager:
     """Risk management with proper position sizing for fixed dollar risk"""
     
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, db_path: Optional[str] = None):
         """Initialize risk manager"""
         self.config = config
+        self.db_path = db_path
         
         # Try to read from new trading_rules section, fallback to old locations
         trading_rules = config.get('trading_rules', {})
@@ -52,10 +56,74 @@ class RiskManager:
         # Daily trade tracking per symbol (ONE TRADE PER SYMBOL PER DAY)
         self.daily_trades_per_symbol = {}  # symbol -> {'date': 'YYYY-MM-DD', 'count': N}
         
+        # Load persistent daily trade counts if database path provided
+        if self.db_path:
+            self._load_daily_trade_counts()
+        
         logger.info(f"Risk Manager initialized with ${self.risk_per_trade} risk per trade, max_positions={self.max_positions}")
         logger.info(f"Daily trade limit: {self.max_trades_per_symbol_per_day} trade per symbol per day")
         logger.info(f"Max spread: {self.max_spread} pips, Cooldown: {self.cooldown_minutes} minutes")
     
+    def _load_daily_trade_counts(self):
+        """Load daily trade counts from database for persistence across restarts"""
+        if not self.db_path:
+            logger.info("No database path provided, using in-memory daily trade counts only")
+            return
+            
+        try:
+            if not os.path.exists(self.db_path):
+                logger.info("Database not found, starting with empty daily trade counts")
+                return
+            
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Get today's date in YYYY-MM-DD format (using local time as fallback)
+            today = datetime.now().strftime('%Y-%m-%d')
+            
+            # Load today's daily trade counts
+            cursor.execute('''
+                SELECT symbol, trade_date, trade_count
+                FROM daily_trade_counts
+                WHERE trade_date = ?
+            ''', (today,))
+            
+            loaded_count = 0
+            for row in cursor.fetchall():
+                symbol, trade_date, count = row
+                self.daily_trades_per_symbol[symbol] = {'date': trade_date, 'count': count}
+                loaded_count += 1
+            
+            conn.close()
+            logger.info(f"Loaded {loaded_count} persistent daily trade counts from database")
+            
+        except Exception as e:
+            logger.error(f"Error loading daily trade counts from database: {e}")
+            # Continue with empty counts if database load fails
+    
+    def _save_daily_trade_count(self, symbol: str, trade_date: str, count: int):
+        """Save daily trade count to database"""
+        if not self.db_path:
+            return
+            
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Insert or replace the daily trade count
+            cursor.execute('''
+                INSERT OR REPLACE INTO daily_trade_counts
+                (symbol, trade_date, trade_count, last_updated)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            ''', (symbol, trade_date, count))
+            
+            conn.commit()
+            conn.close()
+            logger.debug(f"Saved daily trade count for {symbol}: {count} on {trade_date}")
+            
+        except Exception as e:
+            logger.error(f"Error saving daily trade count for {symbol}: {e}")
+
     def calculate_position_size(self, 
                                symbol: str, 
                                stop_loss_pips: float = 20,
@@ -436,6 +504,9 @@ class RiskManager:
         
         self.daily_trades_per_symbol[symbol]['count'] += 1
         logger.info(f"{symbol}: Trade recorded for {current_date} (count: {self.daily_trades_per_symbol[symbol]['count']})")
+        
+        # Save to database for persistence across restarts
+        self._save_daily_trade_count(symbol, current_date, self.daily_trades_per_symbol[symbol]['count'])
     
     def can_trade(self, symbol: str) -> bool:
         """Quick check if trading is allowed"""
