@@ -9,8 +9,7 @@ import sys
 import json
 import time
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
-import pandas as pd
+from typing import Dict
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -23,6 +22,7 @@ except ImportError as e:
     print(f"❌ Import error: {e}")
     print("This dashboard requires MT5 connection and project dependencies.")
     sys.exit(1)
+
 
 class PerformanceDashboard:
     """Real-time performance monitoring dashboard"""
@@ -100,17 +100,17 @@ class PerformanceDashboard:
             return {'error': 'MT5 not connected'}
 
         try:
-            account_info = self.mt5.get_account_info()
+            account_info = self.mt5.get_account_info()  # type: ignore
             if account_info:
                 return {
-                    'balance': account_info.balance,
-                    'equity': account_info.equity,
-                    'margin': account_info.margin,
-                    'margin_free': account_info.margin_free,
-                    'margin_level': account_info.margin_level,
-                    'profit': account_info.profit,
-                    'leverage': account_info.leverage,
-                    'currency': account_info.currency
+                    'balance': account_info.balance,  # type: ignore
+                    'equity': account_info.equity,  # type: ignore
+                    'margin': account_info.margin,  # type: ignore
+                    'margin_free': account_info.margin_free,  # type: ignore
+                    'margin_level': account_info.margin_level,  # type: ignore
+                    'profit': account_info.profit,  # type: ignore
+                    'leverage': account_info.leverage,  # type: ignore
+                    'currency': account_info.currency  # type: ignore
                 }
             else:
                 return {'error': 'Could not retrieve account info'}
@@ -123,7 +123,7 @@ class PerformanceDashboard:
             return {'error': 'MT5 not connected'}
 
         try:
-            positions = self.mt5.get_positions()
+            positions = self.mt5.get_positions()  # type: ignore
             if positions is None:
                 positions = []
 
@@ -132,8 +132,8 @@ class PerformanceDashboard:
             positions_by_symbol = {}
 
             for pos in positions:
-                symbol = pos.symbol
-                pnl = pos.profit + pos.swap + pos.commission
+                symbol = pos.symbol  # type: ignore
+                pnl = pos.profit + pos.swap + pos.commission  # type: ignore
 
                 total_unrealized_pnl += pnl
 
@@ -146,16 +146,16 @@ class PerformanceDashboard:
                     }
 
                 positions_by_symbol[symbol]['count'] += 1
-                positions_by_symbol[symbol]['total_volume'] += pos.volume
+                positions_by_symbol[symbol]['total_volume'] += pos.volume  # type: ignore
                 positions_by_symbol[symbol]['total_pnl'] += pnl
                 positions_by_symbol[symbol]['positions'].append({
-                    'ticket': pos.ticket,
-                    'type': 'BUY' if pos.type == mt5.ORDER_TYPE_BUY else 'SELL',
-                    'volume': pos.volume,
-                    'price_open': pos.price_open,
-                    'price_current': pos.price_current,
-                    'sl': pos.sl,
-                    'tp': pos.tp,
+                    'ticket': pos.ticket,  # type: ignore
+                    'type': 'BUY' if pos.type == mt5.ORDER_TYPE_BUY else 'SELL',  # type: ignore
+                    'volume': pos.volume,  # type: ignore
+                    'price_open': pos.price_open,  # type: ignore
+                    'price_current': pos.price_current,  # type: ignore
+                    'sl': pos.sl,  # type: ignore
+                    'tp': pos.tp,  # type: ignore
                     'pnl': pnl
                 })
 
@@ -163,7 +163,7 @@ class PerformanceDashboard:
                 'total_positions': total_positions,
                 'total_unrealized_pnl': total_unrealized_pnl,
                 'positions_by_symbol': positions_by_symbol,
-                'positions_list': [pos.symbol for pos in positions]
+                'positions_list': [pos.symbol for pos in positions]  # type: ignore
             }
         except Exception as e:
             return {'error': f'Positions info error: {e}'}
@@ -178,7 +178,7 @@ class PerformanceDashboard:
             from_time = datetime.now() - timedelta(hours=hours)
             to_time = datetime.now()
 
-            deals = mt5.history_deals_get(from_time, to_time)
+            deals = mt5.history_deals_get(from_time, to_time)  # type: ignore
             if deals is None:
                 deals = []
 
@@ -190,9 +190,9 @@ class PerformanceDashboard:
             total_profit = 0
 
             for deal in deals:
-                if deal.profit != 0:  # Only closed trades
-                    symbol = deal.symbol
-                    profit = deal.profit
+                if deal.profit != 0:  # Only closed trades  # type: ignore
+                    symbol = deal.symbol  # type: ignore
+                    profit = deal.profit  # type: ignore
 
                     total_profit += profit
                     if profit > 0:
@@ -219,9 +219,9 @@ class PerformanceDashboard:
                     # Keep only last 5 trades per symbol
                     if len(trades_by_symbol[symbol]['recent_trades']) < 5:
                         trades_by_symbol[symbol]['recent_trades'].append({
-                            'time': deal.time.isoformat() if hasattr(deal.time, 'isoformat') else str(deal.time),
+                            'time': deal.time.isoformat() if hasattr(deal.time, 'isoformat') else str(deal.time),  # type: ignore
                             'profit': profit,
-                            'volume': deal.volume
+                            'volume': deal.volume  # type: ignore
                         })
 
             win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0
@@ -313,9 +313,9 @@ class PerformanceDashboard:
 
     def display_dashboard(self):
         """Display the complete dashboard"""
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("📊 FX-AI PERFORMANCE DASHBOARD")
-        print("="*80)
+        print("=" * 80)
         print(f"⏰ Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
         # System Status
@@ -327,7 +327,7 @@ class PerformanceDashboard:
         # Trading Status
         trading_status = self.get_trading_status()
         if 'error' not in trading_status:
-            print(f"\n🕐 TRADING STATUS")
+            print("\n🕐 TRADING STATUS")
             print(f"   Trading Allowed: {trading_status['trading_allowed']}")
             print(f"   Reason: {trading_status['trading_reason']}")
             print(f"   Should Close: {trading_status['should_close_positions']}")
@@ -337,18 +337,18 @@ class PerformanceDashboard:
         # Account Info
         account_info = self.get_account_info()
         if 'error' not in account_info:
-            print(f"\n💰 ACCOUNT INFO")
-            print(",.2f")
-            print(",.2f")
-            print(",.2f")
-            print(".1f")
+            print("\n💰 ACCOUNT INFO")
+            print(f"   Balance: ${account_info.get('balance', 0):,.2f}")
+            print(f"   Equity: ${account_info.get('equity', 0):,.2f}")
+            print(f"   Margin Used: ${account_info.get('margin', 0):,.2f}")
+            print(f"   Margin Level: {account_info.get('margin_level', 0):.1f}%")
 
         # Positions Info
         positions_info = self.get_positions_info()
         if 'error' not in positions_info:
-            print(f"\n📈 OPEN POSITIONS")
+            print("\n📈 OPEN POSITIONS")
             print(f"   Total Positions: {positions_info['total_positions']}")
-            print(",.2f")
+            print(f"   Unrealized P&L: ${positions_info.get('total_unrealized_pnl', 0):,.2f}")
 
             if positions_info['positions_by_symbol']:
                 print("   By Symbol:")
@@ -359,20 +359,20 @@ class PerformanceDashboard:
         # Recent Performance
         recent_trades = self.get_recent_trades(hours=24)
         if 'error' not in recent_trades:
-            print(f"\n📊 RECENT PERFORMANCE (24h)")
+            print("\n📊 RECENT PERFORMANCE (24h)")
             print(f"   Total Trades: {recent_trades['total_trades']}")
             print(".1f")
-            print(",.2f")
+            print(f"   Total Profit: ${recent_trades.get('total_profit', 0):,.2f}")
 
         # Risk Metrics
         risk_metrics = self.get_risk_metrics()
         if 'error' not in risk_metrics:
-            print(f"\n⚠️  RISK METRICS")
-            print(".2f")
-            print(".1f")
+            print("\n⚠️  RISK METRICS")
+            print(f"   Current Drawdown: {risk_metrics.get('current_drawdown_pct', 0):.2f}%")
+            print(f"   Margin Utilization: {risk_metrics.get('margin_utilization_pct', 0):.1f}%")
             print(f"   Risk Level: {risk_metrics['risk_status']}")
 
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
 
     def run_continuous_dashboard(self, interval_seconds: int = 60):
         """Run dashboard continuously"""
@@ -386,6 +386,7 @@ class PerformanceDashboard:
         except KeyboardInterrupt:
             print("\nDashboard stopped by user")
 
+
 def main():
     """Main dashboard function"""
     dashboard = PerformanceDashboard()
@@ -394,6 +395,7 @@ def main():
         dashboard.run_continuous_dashboard()
     else:
         dashboard.display_dashboard()
+
 
 if __name__ == "__main__":
     main()

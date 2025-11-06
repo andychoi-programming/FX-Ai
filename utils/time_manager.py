@@ -10,6 +10,7 @@ import pytz
 
 logger = logging.getLogger(__name__)
 
+
 class TimeManager:
     """
     Centralized time management for FX-Ai trading system.
@@ -339,8 +340,10 @@ class TimeManager:
         self._last_closure_date = None
         logger.info("Daily closure flag reset")
 
+
 # Global instance for easy access
 _time_manager_instance = None
+
 
 def get_time_manager(mt5_connector=None) -> TimeManager:
     """
@@ -357,6 +360,5 @@ def get_time_manager(mt5_connector=None) -> TimeManager:
         _time_manager_instance = TimeManager(mt5_connector)
     elif mt5_connector and _time_manager_instance.mt5 != mt5_connector:
         _time_manager_instance.mt5 = mt5_connector
-
 
     return _time_manager_instance

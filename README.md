@@ -77,7 +77,7 @@ python performance_dashboard.py --continuous
 
 #### Sample Output
 
-```
+```text
 📊 FX-AI PERFORMANCE DASHBOARD
 🔧 SYSTEM STATUS: HEALTHY
 🕐 TRADING STATUS: Trading Allowed
@@ -1474,6 +1474,7 @@ The system uses a centralized `TimeManager` class (`utils/time_manager.py`) for 
 - **Daily Closure**: Positions closed once per day at 22:30 MT5 time
 
 **Key Behaviors:**
+
 - ✅ **Consistent Time Source**: All time checks use MT5 server time
 - ✅ **No Double Closure**: Positions only closed once per day
 - ✅ **Graceful Fallback**: Uses local time if MT5 time unavailable
@@ -1519,7 +1520,7 @@ The FX-Ai system maintains accurate time synchronization between:
 - **NTP Network Time** - Synchronized with internet time servers
 - **MT5 Server Time** - Broker platform time
 
-### Features
+### Time Synchronization Features
 
 - **Automatic NTP Sync**: Connects to reliable NTP servers (pool.ntp.org, time.google.com, etc.)
 - **MT5 Time Validation**: Cross-checks with MT5 server time for accuracy
@@ -2425,6 +2426,7 @@ Section: "trading_rules"
 - ✅ Maximum 50 pips stop loss
 
 **SL Adjustments:**
+
 | Condition | Adjustment | Reason |
 |-----------|-----------|---------|
 | Strong positive sentiment (>0.7) | 0.90× (tighter) | Protect gains |
@@ -2453,6 +2455,7 @@ Section: "trading_rules"
 - ✅ Adjusted by fundamentals (0.85x-1.2x)
 
 **TP Adjustments:**
+
 | Condition | Adjustment | Reason |
 |-----------|-----------|---------|
 | Strong positive sentiment (>0.7) | 1.15× (extend) | Ride the trend |
@@ -2529,7 +2532,7 @@ Section: "trading_rules"
 
 #### Key Trading Rules Summary
 
-**Critical Rules (Always Enforced)**
+##### Critical Rules Summary
 
 1. **22:30 Close Time** - All positions closed at 22:30 MT5 server time
 2. **One Trade Per Symbol Per Day** - Maximum 1 trade per symbol per day
@@ -2537,7 +2540,7 @@ Section: "trading_rules"
 4. **2:1 Risk/Reward** - Minimum 2:1 TP:SL ratio required
 5. **Max 3 Pips Spread** - No trade if spread > 3 pips
 
-**Adaptive Rules (Market-Dependent)**
+##### Adaptive Rules (Market-Dependent)
 
 1. **ATR-Based SL/TP** - Dynamic based on current volatility
 2. **Sentiment Adjustments** - Tighter/wider SL & TP based on sentiment
@@ -2547,7 +2550,7 @@ Section: "trading_rules"
 
 #### Rule Enforcement
 
-**RiskManager (core/risk_manager.py)**
+##### RiskManager (core/risk_manager.py)
 
 - ✅ Enforces position limits
 - ✅ Tracks daily trades per symbol
@@ -2555,14 +2558,14 @@ Section: "trading_rules"
 - ✅ Manages cooldowns
 - ✅ Validates spreads
 
-**TradingEngine (core/trading_engine.py)**
+##### TradingEngine (core/trading_engine.py)
 
 - ✅ Places orders
 - ✅ Sets SL/TP levels
 - ✅ Manages trailing stops
 - ✅ Closes positions at 22:30
 
-**Main Trading Loop (main.py)**
+##### Main Trading Loop (main.py)
 
 - ✅ Checks time restrictions
 - ✅ Validates signal strength
@@ -2580,9 +2583,9 @@ Run to verify daily trade limit:
 python test_daily_limit.py
 ```
 
-**Expected Output:**
+##### Expected Output
 
-```
+```text
 Testing EURUSD:
   Has traded today? False
   Can trade? True
@@ -2635,7 +2638,7 @@ Located in `config/config.json`:
 
 #### Implementation Details
 
-**RiskManager (core/risk_manager.py)**
+##### RiskManager Implementation
 
 ```python
 def has_traded_today(self, symbol: str) -> bool:
@@ -2660,7 +2663,7 @@ def can_trade(self, symbol: str) -> bool:
     return True
 ```
 
-**Main Trading Loop (main.py)**
+##### Main Trading Loop Code Example
 
 ```python
 # Check daily trade limit before trading
@@ -2675,9 +2678,9 @@ if trade_executed:
 
 #### Behavior Scenarios
 
-**Scenario 1: Normal Trading Day**
+##### Scenario 1: Normal Trading Day
 
-```
+```text
 EURUSD: No previous trades today
 → can_trade() returns True
 → Trade executed
@@ -2686,17 +2689,17 @@ EURUSD: No previous trades today
 → Next EURUSD signal: can_trade() returns False
 ```
 
-**Scenario 2: Multiple Symbols**
+##### Scenario 2: Multiple Symbols
 
-```
+```text
 EURUSD: Traded today → cannot trade again
 GBPUSD: No trades today → can trade
 USDJPY: No trades today → can trade
 ```
 
-**Scenario 3: Day Boundary**
+##### Scenario 3: Day Boundary
 
-```
+```text
 Time: 23:59 (Day 1)
 EURUSD: Traded today → cannot trade
 
@@ -2704,9 +2707,9 @@ Time: 00:01 (Day 2)
 EURUSD: Trade count resets → can trade again
 ```
 
-**Scenario 4: System Restart**
+##### Scenario 4: System Restart
 
-```
+```text
 System restarted midday
 → Daily trades loaded from database
 → Previous trades still count toward daily limit
@@ -2739,7 +2742,7 @@ print(f"  Can trade again? {risk_manager.can_trade('EURUSD')}")
 
 **Expected Output:**
 
-```
+```text
 Testing EURUSD:
   Has traded today? False
   Can trade? True

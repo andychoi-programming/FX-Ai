@@ -5,6 +5,7 @@ Version 3.0
 """
 
 # Add project root to path
+from utils.logger import setup_logger
 from utils.time_manager import get_time_manager
 from utils.config_loader import ConfigLoader
 from ai.adaptive_learning_manager import AdaptiveLearningManager
@@ -22,7 +23,6 @@ from core.clock_sync import ClockSynchronizer
 from core.risk_manager import RiskManager
 from core.trading_engine import TradingEngine
 from core.mt5_connector import MT5Connector
-from utils.time_manager import get_time_manager
 import MetaTrader5 as mt5
 import time as time_module
 import threading
@@ -35,7 +35,6 @@ import sys
 import os
 import logging
 import traceback
-from typing import Dict, Any, Optional
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -109,9 +108,9 @@ class FXAiApplication:
         from utils.exceptions import ConfigurationError, MissingParametersError
         import os
         import json
-        
+
         self.logger.info("Validating system configuration...")
-        
+
         # 1. Check optimal_parameters.json exists
         params_path = "models/parameter_optimization/optimal_parameters.json"
         if not os.path.exists(params_path):
@@ -119,14 +118,14 @@ class FXAiApplication:
                 f"Optimized parameters file not found: {params_path}\n"
                 "Please run optimization first: python backtest/optimize_fast_3year.py"
             )
-        
+
         # 2. Verify all trading symbols have optimized parameters
         with open(params_path, 'r') as f:
             optimized_params = json.load(f)
-        
+
         trading_symbols = self.config.get('trading', {}).get('symbols', [])
         missing_symbols = [s for s in trading_symbols if s not in optimized_params]
-        
+
         if missing_symbols:
             self.logger.warning(
                 f"No optimized parameters for: {', '.join(missing_symbols)}\n"
@@ -134,7 +133,7 @@ class FXAiApplication:
             )
         else:
             self.logger.info(f"[OK] All {len(trading_symbols)} symbols have optimized parameters")
-        
+
         # 3. Validate MT5 connection settings
         mt5_config = self.config.get('mt5', {})
         if not mt5_config.get('login') or not mt5_config.get('password'):
@@ -143,30 +142,30 @@ class FXAiApplication:
                 "1. .env file exists with MT5_LOGIN and MT5_PASSWORD\n"
                 "2. config/config.json has MT5 settings"
             )
-        
+
         # 4. Validate risk settings
         risk_per_trade = self.config.get('trading', {}).get('risk_per_trade', 0)
         if risk_per_trade <= 0:
             raise ConfigurationError(f"Invalid risk_per_trade: {risk_per_trade}. Must be > 0")
-        
+
         max_positions = self.config.get('trading', {}).get('max_positions', 0)
         if max_positions <= 0 or max_positions > 100:
             raise ConfigurationError(f"Invalid max_positions: {max_positions}. Must be 1-100")
-        
+
         # 5. Validate model directory exists
         model_dir = "models"
         if not os.path.exists(model_dir):
             self.logger.warning(f"Model directory not found: {model_dir}")
             os.makedirs(model_dir, exist_ok=True)
             self.logger.info(f"Created model directory: {model_dir}")
-        
+
         self.logger.info("[OK] Configuration validation passed")
 
     async def initialize_components(self):
         """Initialize all trading components"""
         try:
             self.logger.info("Initializing components...")
-            
+
             # Validate configuration first
             await self.validate_configuration()
 
@@ -358,13 +357,13 @@ class FXAiApplication:
 
                 # 3. Generate trading signals with adaptive weights
                 signals = []
-                
+
                 # Log status - show what we're doing
                 active_symbols = len(market_data_dict)
-                
+
                 self.logger.info(f"Loop {loop_count}: Checking {active_symbols} active symbols (0 halted)")
                 self.logger.info(f"DEBUG: market_data_dict has {len(market_data_dict)} symbols, bars_dict has {len(bars_dict)} symbols")
-                
+
                 # Show every 5 loops for more visibility
                 if loop_count % 5 == 0:
                     self.logger.info(f"System status: Monitoring {len(symbols)} pairs, {active_symbols} tradeable")
@@ -431,15 +430,15 @@ class FXAiApplication:
                             self.logger.info(f"{symbol}: ML prediction returned successfully in {response_time:.2f}s")
                         except Exception as e:
                             response_time = time_module.time() - start_time
-                            
+
                             # GRACEFUL DEGRADATION: Fall back to technical analysis only
                             self.logger.warning(
                                 f"{symbol}: ML prediction failed, falling back to technical analysis only: {e}")
-                            
+
                             # Calculate fallback from technical score
                             technical_signal_strength = (technical_score - 0.5) * 2  # Convert 0-1 to -1 to 1
                             fallback_confidence = min(abs(technical_signal_strength), 0.75)  # Cap at 0.75 to indicate fallback
-                            
+
                             ml_prediction = {
                                 'direction': 'BUY' if technical_signal_strength > 0 else 'SELL',
                                 'probability': technical_score,  # Use original 0-1 scale
@@ -447,7 +446,7 @@ class FXAiApplication:
                                 'source': 'technical_fallback',  # Mark as fallback
                                 'signal_strength': technical_signal_strength
                             }
-                            
+
                             self.logger.info(
                                 f"{symbol}: Fallback prediction - {ml_prediction['direction']} "
                                 f"(confidence: {fallback_confidence:.2f}, signal: {technical_signal_strength:.2f})")
@@ -481,30 +480,30 @@ class FXAiApplication:
                     signal_strength = (
                         signal_weights.get(
                             'technical_score',
-                            0.25) *
-                        technical_score +
-                        signal_weights.get(
+                            0.25)
+                        * technical_score
+                        + signal_weights.get(
                             'ml_prediction',
-                            0.30) *
-                        ml_prediction.get(
+                            0.30)
+                        * ml_prediction.get(
                             'probability',
-                            0) +
-                        signal_weights.get(
+                            0)
+                        + signal_weights.get(
                             'sentiment_score',
-                            0.20) *
-                        sentiment_score +
-                        signal_weights.get(
+                            0.20)
+                        * sentiment_score
+                        + signal_weights.get(
                             'fundamental_score',
-                            0.15) *
-                        fundamental_data.get(  # type: ignore
+                            0.15)
+                        * fundamental_data.get(  # type: ignore
                             symbol,
                             {}).get(  # type: ignore
                                 'score',
-                                0.5) +
-                        signal_weights.get(
+                                0.5)
+                        + signal_weights.get(
                             'sr_score',
-                            0.10) *
-                        market_data.get(
+                            0.10)
+                        * market_data.get(
                             'sr_score',
                             0.5))
 
@@ -568,11 +567,11 @@ class FXAiApplication:
                         # than fixed percentage)
                         atr_value = technical_signals.get(
                             'atr', {}).get('value', 0)
-                        
+
                         # For metals, use optimized sl_pips directly from parameter manager
                         if 'XAU' in symbol or 'XAG' in symbol or 'GOLD' in symbol:
                             optimal_params = self.param_manager.get_optimal_parameters(symbol, 'H1')  # type: ignore
-                            
+
                             # Different defaults for Gold vs Silver
                             if 'XAG' in symbol:
                                 sl_pips = optimal_params.get('sl_pips', 300)  # Default 300 pips for XAGUSD
@@ -580,7 +579,7 @@ class FXAiApplication:
                             else:  # XAU/GOLD
                                 sl_pips = optimal_params.get('sl_pips', 200)  # Default 200 pips for XAUUSD
                                 pip_size = 0.10  # Gold: 1 pip = 0.10 (10 points)
-                            
+
                             stop_loss_distance = sl_pips * pip_size
                             sl_atr_multiplier = stop_loss_distance / atr_value if atr_value > 0 else 0  # For logging only
                             self.logger.info(
@@ -609,7 +608,7 @@ class FXAiApplication:
                         # ===== SENTIMENT & FUNDAMENTAL ADJUSTMENTS FOR SL =====
                         # Adjust stop loss based on sentiment and fundamental analysis
                         sl_adjustment_factor = 1.0  # Default: no adjustment
-                        
+
                         # Sentiment-based SL adjustment
                         if sentiment_score > 0.7:
                             # Strong positive sentiment: Tighten SL (ride winners, protect gains)
@@ -619,11 +618,11 @@ class FXAiApplication:
                             # Strong negative sentiment: Widen SL (give room, avoid premature stops)
                             sl_adjustment_factor *= 1.15  # Increase SL distance by 15%
                             self.logger.info(f"{symbol}: Strong negative sentiment ({sentiment_score:.2f}) - widening SL by 15%")
-                        
+
                         # Fundamental-based SL adjustment
                         fundamental_score = fundamental_data.get(symbol, {}).get('score', 0.5)  # type: ignore
                         high_impact_news = fundamental_data.get(symbol, {}).get('high_impact_news_soon', False)  # type: ignore
-                        
+
                         if high_impact_news:
                             # High-impact news coming: Widen SL to avoid being stopped out by volatility
                             sl_adjustment_factor *= 1.20  # Increase SL distance by 20%
@@ -632,10 +631,10 @@ class FXAiApplication:
                             # Weak fundamentals: Widen SL slightly (less confident trade)
                             sl_adjustment_factor *= 1.10  # Increase SL distance by 10%
                             self.logger.info(f"{symbol}: Weak fundamentals ({fundamental_score:.2f}) - widening SL by 10%")
-                        
+
                         # Apply adjustment
                         stop_loss_distance = stop_loss_distance * sl_adjustment_factor
-                        
+
                         if sl_adjustment_factor != 1.0:
                             self.logger.info(f"{symbol}: Total SL adjustment factor: {sl_adjustment_factor:.2f}x (distance: {stop_loss_distance:.5f})")
 
@@ -656,7 +655,7 @@ class FXAiApplication:
                             if 'XAU' in symbol or 'XAG' in symbol or 'GOLD' in symbol:
                                 # Get optimized take profit for metals from parameter manager
                                 optimal_params = self.param_manager.get_optimal_parameters(symbol, 'H1')  # type: ignore
-                                
+
                                 # Different defaults and pip sizes for Gold vs Silver
                                 if 'XAG' in symbol:
                                     tp_pips = optimal_params.get('tp_pips', 1200)  # Default 1200 pips for XAGUSD
@@ -664,7 +663,7 @@ class FXAiApplication:
                                 else:  # XAU/GOLD
                                     tp_pips = optimal_params.get('tp_pips', 3300)  # Default 3300 pips for XAUUSD
                                     pip_size = 0.10  # Gold: 1 pip = 0.10 (10 points)
-                                
+
                                 # Convert TP pips to distance
                                 take_profit_distance = tp_pips * pip_size
                                 tp_atr_multiplier = take_profit_distance / atr_value if atr_value > 0 else 0  # Calculate for logging
@@ -801,7 +800,7 @@ class FXAiApplication:
 
                         # Determine initial action based on ML prediction
                         action = 'BUY' if ml_prediction.get('direction') == 1 else 'SELL'
-                        
+
                         # Validate risk-reward ratio before proceeding
                         if stop_loss is not None and take_profit is not None:
                             risk_distance = abs(stop_loss - entry_price)
@@ -833,7 +832,7 @@ class FXAiApplication:
                                         regime_analysis = self.market_regime_detector.analyze_regime(symbol, historical_data)
                                         regime_adx = regime_analysis.adx_value
                                         regime_type = regime_analysis.primary_regime.value
-                                
+
                                 # Prepare state for RL agent
                                 current_state = {
                                     'rsi': technical_signals.get('rsi', {}).get('value', 50),
@@ -887,10 +886,10 @@ class FXAiApplication:
                         signal['rl_decision'] = rl_decision
                         signal['timestamp'] = datetime.now()
                         signal['adaptive_params'] = adaptive_params
-                        
+
                         # Add signal to list (freeze fixed by disabling AdaptiveLearningManager database)
                         signals.append(signal)
-                        
+
                         # SKIP this log too - it accesses signal dict which might freeze
                         # self.logger.info(
                         #     f"Signal generated for {symbol}: {signal['action']} "
@@ -898,7 +897,7 @@ class FXAiApplication:
                         #     f"Entry: {entry_price:.5f}, SL: {stop_loss:.5f} ({sl_atr_multiplier:.1f}x ATR), "
                         #     f"TP: {tp_display} ({tp_atr_multiplier:.1f}x ATR)"
                         # )
-                    
+
                     # Log symbol processing completion for debugging (end of symbol loop iteration)
                     # This runs for ALL symbols, whether they generate signals or not
                     symbol_elapsed = time_module.time() - symbol_start_time
@@ -916,8 +915,8 @@ class FXAiApplication:
                 if signals:
                     self.logger.info(f"Generated {len(signals)} trading signal(s), evaluating for execution...")
                 else:
-                    self.logger.info(f"No trading signals generated this cycle")
-                
+                    self.logger.info("No trading signals generated this cycle")
+
                 for signal in signals:
                     # Validate signal has required trading parameters
                     print(f"Processing signal for {signal['symbol']}: action={signal['action']}", flush=True)
@@ -955,40 +954,40 @@ class FXAiApplication:
                             try:
                                 # Use already-fetched H1 data from bars_dict (100 bars available)
                                 symbol_hist_data = bars_dict.get(signal['symbol'], {}).get('H1')
-                                
+
                                 if symbol_hist_data is not None and len(symbol_hist_data) >= 30:
                                     # Calculate quick risk metrics using available data
                                     symbol_df = pd.DataFrame(symbol_hist_data)
                                     symbol_df['returns'] = symbol_df['close'].pct_change()
-                                    
+
                                     # Calculate VaR and CVaR for this symbol
                                     var_95 = self.advanced_risk_metrics.calculate_var(symbol_df['returns'].dropna(), confidence=0.95)
                                     cvar_95 = self.advanced_risk_metrics.calculate_cvar(symbol_df['returns'].dropna(), confidence=0.95)
-                                    
+
                                     # Calculate Sharpe ratio
                                     sharpe = self.advanced_risk_metrics.calculate_sharpe_ratio(symbol_df['returns'].dropna())
-                                    
+
                                     # Get account balance
                                     account_info = mt5.account_info()  # type: ignore
                                     account_balance = account_info.balance if account_info else 10000
-                                    
+
                                     # Calculate position risk as percentage of account
                                     trade_risk = abs(signal['entry_price'] - signal['stop_loss']) * signal.get('position_size', 0.01)
                                     risk_pct = (trade_risk / account_balance) * 100
-                                    
+
                                     # Risk warning if position risk > 2% of account
                                     if risk_pct > 2.0:
                                         self.logger.warning(
                                             f"{signal['symbol']}: High risk trade - {risk_pct:.2f}% of account "
-                                            f"(VaR95: {var_95*100:.2f}%, CVaR95: {cvar_95*100:.2f}%, Sharpe: {sharpe:.2f})"
+                                            f"(VaR95: {var_95 * 100:.2f}%, CVaR95: {cvar_95 * 100:.2f}%, Sharpe: {sharpe:.2f})"
                                         )
-                                    
+
                                     # Log advanced metrics every 50th loop
                                     if loop_count % 50 == 0:
                                         self.logger.info(
                                             f"{signal['symbol']} Risk Metrics: "
-                                            f"VaR(95%): {var_95*100:.2f}%, "
-                                            f"CVaR(95%): {cvar_95*100:.2f}%, "
+                                            f"VaR(95%): {var_95 * 100:.2f}%, "
+                                            f"CVaR(95%): {cvar_95 * 100:.2f}%, "
                                             f"Sharpe: {sharpe:.2f}, "
                                             f"Position Risk: {risk_pct:.2f}%"
                                         )
@@ -1108,7 +1107,7 @@ class FXAiApplication:
 
                         if trade_result.get('success', False):
                             self.session_stats['total_trades'] += 1
-                            
+
                             # Record trade for daily limit tracking (ONE TRADE PER SYMBOL PER DAY)
                             self.risk_manager.record_trade(signal['symbol'])  # type: ignore
                             self.logger.info(f"{signal['symbol']}: Trade executed and recorded - no more trades allowed today")
@@ -1125,7 +1124,7 @@ class FXAiApplication:
                                             regime_analysis = self.market_regime_detector.analyze_regime(signal['symbol'], historical_data)
                                             regime_adx = regime_analysis.adx_value
                                             regime_type = regime_analysis.primary_regime.value
-                                    
+
                                     # Record initial state and action for RL learning
                                     initial_state = {
                                         'rsi': signal['technical_signals'].get('rsi', {}).get('value', 50),
@@ -1137,7 +1136,7 @@ class FXAiApplication:
                                         'position_status': 1 if signal['action'] == 'BUY' else -1  # Position opened
                                     }
                                     action_taken = signal.get('rl_decision', 'buy' if signal['action'] == 'BUY' else 'sell')
-                                    
+
                                     # Store experience for later learning when trade closes
                                     rl_experience = {
                                         'ticket': trade_result.get('order', 0),
@@ -1147,13 +1146,13 @@ class FXAiApplication:
                                         'symbol': signal['symbol'],
                                         'timestamp': datetime.now()
                                     }
-                                    
+
                                     # Store in RL agent for learning when trade closes
                                     if hasattr(self.reinforcement_agent, 'pending_experiences'):
                                         self.reinforcement_agent.pending_experiences[trade_result.get('order', 0)] = rl_experience
-                                    
+
                                     self.logger.debug(f"RL experience recorded for ticket {trade_result.get('order', 0)}")
-                                    
+
                                 except Exception as e:
                                     self.logger.warning(f"Failed to record RL experience: {e}")
 
@@ -1304,7 +1303,7 @@ class FXAiApplication:
                                 # Get the stored experience for this ticket
                                 if hasattr(self.reinforcement_agent, 'pending_experiences') and ticket in self.reinforcement_agent.pending_experiences:
                                     experience = self.reinforcement_agent.pending_experiences[ticket]
-                                    
+
                                     # Calculate reward based on trade outcome
                                     reward = self.reinforcement_agent.calculate_reward(
                                         experience['entry_price'],
@@ -1312,24 +1311,24 @@ class FXAiApplication:
                                         trade_data['direction'],
                                         trade_data['duration_minutes']
                                     )
-                                    
+
                                     # Create next state (position closed)
                                     next_state = experience['initial_state'].copy()
                                     next_state['position_status'] = 0  # Position closed
-                                    
+
                                     # Learn from this experience
                                     self.reinforcement_agent.update_q_table(
-                                        experience['initial_state'], 
-                                        experience['action'], 
-                                        reward, 
+                                        experience['initial_state'],
+                                        experience['action'],
+                                        reward,
                                         next_state
                                     )
-                                    
+
                                     # Remove from pending experiences
                                     del self.reinforcement_agent.pending_experiences[ticket]
-                                    
+
                                     self.logger.debug(f"RL updated: action={experience['action']}, reward={reward:.4f}")
-                                    
+
                             except Exception as e:
                                 self.logger.warning(f"Failed to update RL agent: {e}")
 
@@ -1600,11 +1599,11 @@ def main():
 
         # Run async main
         asyncio.run(app.run())
-    
+
     except KeyboardInterrupt:
         logging.info("System stopped by user (Ctrl+C)")
         sys.exit(0)
-    
+
     except Exception as e:
         # Log the full crash details
         logging.critical("=" * 70)
@@ -1614,7 +1613,7 @@ def main():
         logging.critical("Full traceback:")
         logging.critical(traceback.format_exc())
         logging.critical("=" * 70)
-        
+
         # Also write to separate crash log
         try:
             import os
@@ -1627,9 +1626,9 @@ def main():
                 f.write(f"Error: {e}\n\n")
                 f.write(traceback.format_exc())
                 f.write(f"{'=' * 70}\n\n")
-        except:
+        except BaseException:
             pass
-        
+
         # Exit with error code so watchdog knows it crashed
         sys.exit(1)
 
