@@ -5,7 +5,7 @@ Version 3.0
 """
 
 # Add project root to path
-from utils.logger import setup_logger
+from utils.time_manager import get_time_manager
 from utils.config_loader import ConfigLoader
 from ai.adaptive_learning_manager import AdaptiveLearningManager
 from ai.market_regime_detector import MarketRegimeDetector
@@ -22,6 +22,7 @@ from core.clock_sync import ClockSynchronizer
 from core.risk_manager import RiskManager
 from core.trading_engine import TradingEngine
 from core.mt5_connector import MT5Connector
+from utils.time_manager import get_time_manager
 import MetaTrader5 as mt5
 import time as time_module
 import threading
@@ -174,6 +175,10 @@ class FXAiApplication:
             self.mt5 = MT5Connector(self.config)
             if not self.mt5.connect():
                 raise Exception("Failed to connect to MT5")
+
+            # Initialize Time Manager
+            self.logger.info("Initializing Time Manager...")
+            self.time_manager = get_time_manager(self.mt5)
 
             # Initialize Clock Synchronizer first (needed for logger timestamps)
             self.logger.info("Initializing Clock Synchronizer...")
@@ -901,19 +906,10 @@ class FXAiApplication:
 
                 # Check if trading is allowed (before 22:30 MT5 server time)
                 if self.config.get('trading', {}).get('day_trading_only', True):
-                    # Use local time to avoid MT5 API freeze
-                    server_time = datetime.now()
-                    if server_time:
-                        current_time = server_time.time()
-                    else:
-                        current_time = datetime.now().time()  # Fallback to local time if server time unavailable
-                    
-                    close_hour = self.config.get('trading', {}).get('close_hour', 22)
-                    close_minute = self.config.get('trading', {}).get('close_minute', 30)
-                    close_time = time(close_hour, close_minute)
-                    
-                    if current_time >= close_time:
-                        self.logger.info(f"Trading halted: MT5 server time {current_time} is after trading close time {close_hour:02d}:{close_minute:02d}")
+                    is_allowed, reason = self.time_manager.is_trading_allowed()
+
+                    if not is_allowed:
+                        self.logger.info(f"Trading halted: {reason}")
                         signals = []  # Clear all signals to prevent trading
 
                 # 4. Execute trades with risk management
@@ -1446,32 +1442,12 @@ class FXAiApplication:
                     'day_trading_only', True):
                 return
 
-            # Get MT5 server time instead of local computer time
-            server_time = self.mt5.get_server_time()  # type: ignore
-            if server_time:
-                current_time = server_time.time()
-                today = server_time.date()
-            else:
-                current_time = datetime.now().time()  # Fallback to local time
-                today = datetime.now().date()
-            
-            # Get close time from config, default to 22:30 (10:30 PM)
-            close_hour = self.config.get('trading', {}).get('close_hour', 22)
-            close_minute = self.config.get('trading', {}).get('close_minute', 30)
-            close_time = time(close_hour, close_minute)
+            # Use TimeManager for consistent time handling
+            should_close, reason = self.time_manager.should_close_positions()
 
-            # Only close once per day - check if we haven't already closed
-            # today
-            if current_time >= close_time:
-                # Check if we already closed positions today
-                if hasattr(
-                        self,
-                        '_last_closure_date') and self._last_closure_date == today:
-                    return  # Already closed today
-
-                self.logger.info(
-                    f"Day trading hours ending at {close_hour:02d}:{close_minute:02d} - closing all positions")
-                self._last_closure_date = today  # Mark as closed today
+            if should_close:
+                self.logger.info(f"Day trading hours ending - closing all positions: {reason}")
+                self._last_closure_date = self.time_manager._last_closure_date  # Sync with TimeManager
 
                 # Safe async handling for close_all_positions
                 if self.trading_engine:

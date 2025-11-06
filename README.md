@@ -40,13 +40,52 @@ A comprehensive machine learning-based forex trading system that combines traine
    python live_trading/trading_dashboard.py
    ```
 
-2. **Run Backtest** (from dashboard press 'B' or run directly):
+2. **Launch Performance Dashboard** (real-time monitoring):
 
    ```bash
-   python backtest/ml_backtester.py
+   python performance_dashboard.py
    ```
 
-3. **Start Trading** (from dashboard press 'T' or run directly):
+   For continuous monitoring:
+
+   ```bash
+   python performance_dashboard.py --continuous
+   ```
+
+### Performance Dashboard
+
+The `performance_dashboard.py` provides real-time monitoring of your trading system:
+
+#### Features
+
+- **System Health**: MT5 connection status, TimeManager status
+- **Trading Status**: Current trading permissions, time until close
+- **Account Info**: Balance, equity, margin utilization
+- **Open Positions**: Position count, unrealized P&L by symbol
+- **Recent Performance**: 24-hour trade statistics and win rates
+- **Risk Metrics**: Drawdown percentage, margin utilization, risk level assessment
+
+#### Usage
+
+```bash
+# One-time dashboard view
+python performance_dashboard.py
+
+# Continuous monitoring (updates every 60 seconds)
+python performance_dashboard.py --continuous
+```
+
+#### Sample Output
+
+```
+📊 FX-AI PERFORMANCE DASHBOARD
+🔧 SYSTEM STATUS: HEALTHY
+🕐 TRADING STATUS: Trading Allowed
+💰 ACCOUNT INFO: Balance $10,000 | Equity $10,250
+📈 OPEN POSITIONS: 11 positions | Unrealized P&L +$250
+📊 RECENT PERFORMANCE: 180 trades | Win Rate 65.2%
+⚠️  RISK METRICS: Drawdown 0.5% | Risk Level: LOW
+```
 
    ```bash
    python live_trading/trading_orchestrator.py
@@ -303,9 +342,9 @@ run_symbol_selector.bat
 
 ### v1.4.1 - Trading Hours & Risk Management Fixes (October 31, 2025)
 
-- **⏰ FIXED TRADE CLOSING TIME**: Corrected position closure from 23:30 to 22:30 MT5 platform time
-- **🚫 TRADING TIME RESTRICTIONS**: Implemented complete trade prevention between 22:30 and 24:00
-- **⚡ CONFIGURABLE TRADING HOURS**: Added `close_hour` and `close_minute` settings in config.json
+- **⏰ FIXED TRADE CLOSING TIME**: System stops trading and closes all positions at 22:30 MT5 server time daily
+- **🚫 TRADING TIME RESTRICTIONS**: No new trades placed after 22:30 MT5 time until next trading session (midnight)
+- **⚡ CONFIGURABLE TRADING HOURS**: Close time configurable via `close_hour` and `close_minute` settings in config.json
 - **🛡️ ENHANCED RISK VALIDATION**: Improved position validation with metal-specific risk requirements (50 pips minimum)
 - **📊 POSITION MONITORING**: Enhanced position change detection and automated risk assessment
 - **🔧 SYSTEM HEALTH OPTIMIZATION**: Cleaned up temporary test files and optimized file structure
@@ -313,7 +352,7 @@ run_symbol_selector.bat
 **Key Fixes:**
 
 - Trade closing time corrected from 23:30 to 22:30 MT5 time
-- No trades can be placed after 22:30 (complete restriction)
+- No new trades placed after 22:30 MT5 time until next trading session (midnight)
 - Metal positions require minimum 50 pips risk (XAUUSD, XAGUSD)
 - Configurable trading hours via `config/config.json`
 - Enhanced position validation and monitoring
@@ -1394,15 +1433,15 @@ python main.py
 - **Max Positions**: 5 concurrent trades
 - **Breakeven**: Move SL at 20 pips profit
 - **Trailing Stop**: Trail by 30 pips after 40 pips
-- **Trading Hours**: 24/5 operation with 22:30 MT5 time closure
-- **Post-Close Restriction**: No new trades after 22:30 until next session
+- **Trading Hours**: Monday-Friday operation with daily close at 22:30 MT5 server time
+- **Post-Close Restriction**: No new trades after 22:30 MT5 time until next trading session (midnight)
 
 ### Trading Hours & Time-Based Controls
 
 #### Automated Position Closure
 
-- **Close Time**: 22:30 MT5 platform time (configurable)
-- **Action**: All open positions automatically closed
+- **Close Time**: 22:30 MT5 server time daily (configurable via config.json)
+- **Action**: All open positions automatically closed once per day
 - **Scope**: Applies to all symbols and position types
 
 #### Trade Prevention After Hours
@@ -1423,6 +1462,22 @@ python main.py
   }
 }
 ```
+
+#### Time Management System
+
+The system uses a centralized `TimeManager` class (`utils/time_manager.py`) for consistent time handling:
+
+- **Time Source**: MT5 server time (preferred) with local time fallback
+- **Trading Window**: Monday-Friday, stops trading at 22:30 MT5 server time
+- **No-Trade Period**: 22:30 MT5 time until midnight (next trading session)
+- **Weekend Handling**: No trading Saturday/Sunday
+- **Daily Closure**: Positions closed once per day at 22:30 MT5 time
+
+**Key Behaviors:**
+- ✅ **Consistent Time Source**: All time checks use MT5 server time
+- ✅ **No Double Closure**: Positions only closed once per day
+- ✅ **Graceful Fallback**: Uses local time if MT5 time unavailable
+- ✅ **Configurable**: Close time adjustable via `close_hour`/`close_minute`
 
 ### Risk Management Tools
 
@@ -2264,6 +2319,7 @@ Section: "trading_rules"
 ```
 
 **Rules:**
+
 - ✅ Maximum 30 positions across all symbols
 - ✅ Only 1 open position per symbol at any time
 - ✅ **ONE trade per symbol per day** (no re-entry same day)
@@ -2282,6 +2338,7 @@ Section: "trading_rules"
 ```
 
 **Rules:**
+
 - ✅ **All trades closed at 22:30** (MT5 server time)
 - ✅ No overnight positions
 - ✅ All positions closed before weekend
@@ -2301,6 +2358,7 @@ Section: "trading_rules"
 ```
 
 **Rules:**
+
 - ✅ Fixed $50 risk per trade (not percentage)
 - ✅ Stop trading if daily loss reaches $500
 - ✅ Pause trading after 3 consecutive losses
@@ -2318,6 +2376,7 @@ Section: "trading_rules"
 ```
 
 **Rules:**
+
 - ✅ Position size calculated to risk exactly $50
 - ✅ Minimum 0.01 lots, maximum 1.0 lots
 - ✅ Based on pip distance to stop loss
@@ -2336,6 +2395,7 @@ Section: "trading_rules"
 ```
 
 **Rules:**
+
 - ✅ Signal strength must be > 0.4
 - ✅ Spread must be < 3 pips
 - ✅ Risk/Reward ratio must be > 2:1 (TP at least 2x SL)
@@ -2357,6 +2417,7 @@ Section: "trading_rules"
 ```
 
 **Rules:**
+
 - ✅ SL based on ATR (dynamic, market-adaptive)
 - ✅ Forex: 3.0× ATR, Metals: 2.5× ATR
 - ✅ Adjusted by sentiment (0.9x-1.15x)
@@ -2385,6 +2446,7 @@ Section: "trading_rules"
 ```
 
 **Rules:**
+
 - ✅ TP based on ATR (dynamic, market-adaptive)
 - ✅ Forex: 6.0× ATR, Metals: 5.0× ATR
 - ✅ Adjusted by sentiment (0.9x-1.15x)
@@ -2412,6 +2474,7 @@ Section: "trading_rules"
 ```
 
 **Rules:**
+
 - ✅ Trailing stop activates at 20 pips profit
 - ✅ Trails 15 pips behind current price
 - ✅ Breakeven activated at 15 pips profit
@@ -2427,6 +2490,7 @@ Section: "trading_rules"
 ```
 
 **Rules:**
+
 - ✅ 5-minute cooldown per symbol after position closes
 - ✅ Prevents revenge trading
 - ✅ Allows system to reassess market
@@ -2442,6 +2506,7 @@ Section: "trading_rules"
 ```
 
 **Rules:**
+
 - ✅ Avoid high-impact news events
 - ✅ 60-minute buffer before/after news
 - ✅ Widen SL if news within 1 hour
@@ -2457,6 +2522,7 @@ Section: "trading_rules"
 ```
 
 **Rules:**
+
 - ✅ Trade during liquid sessions only
 - ✅ London, New York, or overlap periods
 - ✅ Avoid Asian session (low liquidity)
@@ -2482,6 +2548,7 @@ Section: "trading_rules"
 #### Rule Enforcement
 
 **RiskManager (core/risk_manager.py)**
+
 - ✅ Enforces position limits
 - ✅ Tracks daily trades per symbol
 - ✅ Enforces daily loss limits
@@ -2489,12 +2556,14 @@ Section: "trading_rules"
 - ✅ Validates spreads
 
 **TradingEngine (core/trading_engine.py)**
+
 - ✅ Places orders
 - ✅ Sets SL/TP levels
 - ✅ Manages trailing stops
 - ✅ Closes positions at 22:30
 
 **Main Trading Loop (main.py)**
+
 - ✅ Checks time restrictions
 - ✅ Validates signal strength
 - ✅ Calculates SL/TP with adjustments
