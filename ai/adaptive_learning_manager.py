@@ -231,6 +231,9 @@ class AdaptiveLearningManager:
         # Schedule periodic tasks
         self.schedule_tasks()
 
+        # Initialize database for trade and performance tracking
+        self.init_database()
+
         logger.info("Adaptive Learning Manager initialized")
 
     def init_database(self):
