@@ -7,7 +7,7 @@ import logging
 import MetaTrader5 as mt5  # type: ignore
 import sqlite3
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from typing import Dict, Optional, Tuple
 
 # Set up logger
@@ -473,7 +473,7 @@ class RiskManager:
             if hasattr(mt5, 'time_current'):
                 server_timestamp = mt5.time_current()
                 if server_timestamp and server_timestamp > 0:
-                    server_time_utc = datetime.fromtimestamp(server_timestamp, tz=timezone.utc)
+                    server_time_utc = datetime.fromtimestamp(server_timestamp, tz=UTC)
                     date_str = server_time_utc.strftime('%Y-%m-%d')
                     logger.debug(f"MT5 time source: mt5.time_current() = {date_str} (timestamp: {server_timestamp})")
                     return (date_str, server_timestamp, True)
@@ -481,7 +481,7 @@ class RiskManager:
             # Method 2: Get tick time from EURUSD (reliable major pair)
             tick = mt5.symbol_info_tick('EURUSD')
             if tick and hasattr(tick, 'time') and tick.time > 0:
-                server_time_utc = datetime.fromtimestamp(tick.time, tz=timezone.utc)
+                server_time_utc = datetime.fromtimestamp(tick.time, tz=UTC)
                 date_str = server_time_utc.strftime('%Y-%m-%d')
                 logger.warning(f"MT5 time source: EURUSD tick time = {date_str} (timestamp: {tick.time})")
                 return (date_str, tick.time, True)
@@ -573,7 +573,7 @@ class RiskManager:
         logger.warning(
             f"{symbol}: ★★★ TRADE RECORDED ★★★\n"
             f"  MT5 Date: {current_date}\n"
-            f"  MT5 Timestamp: {current_timestamp} ({datetime.fromtimestamp(current_timestamp, tz=timezone.utc)})\n"
+            f"  MT5 Timestamp: {current_timestamp} ({datetime.fromtimestamp(current_timestamp, tz=UTC)})\n"
             f"  Trades Today: {self.daily_trades_per_symbol[symbol]['count']}/{self.max_trades_per_symbol_per_day}\n"
             f"  ⚠️  NO MORE TRADES ALLOWED TODAY FOR {symbol}"
         )
