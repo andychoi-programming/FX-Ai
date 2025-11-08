@@ -112,8 +112,9 @@ class MT5TimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
         super().__init__(filename, when=when, interval=interval, backupCount=backupCount,
                         encoding=encoding, delay=delay, utc=False, atTime=atTime)
 
-        # Set custom suffix for MT5 server time based naming
-        self.suffix = "_%Y_%m_%d.log"
+        # For dated filenames, we don't need additional suffix since date is already in filename
+        # But we still need to handle rotation properly
+        self.suffix = ""  # No additional suffix needed
 
     def _getMT5Time(self) -> datetime:
         """
@@ -168,66 +169,45 @@ class MT5TimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
     def doRollover(self):
         """
         Perform log file rollover using MT5 server time for naming
+        Since filename already includes date, we just need to close current file
+        and create new one with next day's date
         """
         try:
-            # Get current MT5 server time for filename
+            # Close the current file
+            if self.stream:
+                self.stream.close()
+                self.stream = None
+            
+            # Get current MT5 server time
             current_time = self._getMT5Time()
-
-            # Generate filename with MT5 server date
-            if self.when == 'midnight':
-                # Use yesterday's date for the rotated file (since rotation happens at midnight)
-                rollover_time = current_time.replace(hour=0, minute=0, second=0, microsecond=0)
-                if current_time.hour < 12:  # If it's early morning, use previous day
-                    from datetime import timedelta
-                    rollover_time = rollover_time - timedelta(days=1)
-            else:
-                rollover_time = current_time
-
-            # Format filename suffix with MT5 server date
-            suffix = rollover_time.strftime(self.suffix)
-
-            # Create the rotated filename
-            if self.backupCount > 0:
-                # Find the next available backup number
-                for i in range(self.backupCount - 1, 0, -1):
-                    sfn = self.rotation_filename(f"{self.baseFilename}.{i}{suffix}")
-                    dfn = self.rotation_filename(f"{self.baseFilename}.{i+1}{suffix}")
-                    if os.path.exists(sfn):
-                        try:
-                            if os.path.exists(dfn):
-                                os.remove(dfn)
-                            os.rename(sfn, dfn)
-                        except (OSError, PermissionError) as e:
-                            # File is locked, skip rotation for this backup
-                            print(f"Warning: Could not rotate log file {sfn} -> {dfn}: {e}")
-
-                # Rotate current file
-                dfn = self.rotation_filename(f"{self.baseFilename}.1{suffix}")
-                try:
-                    if os.path.exists(dfn):
-                        os.remove(dfn)
-                    self.rotate(self.baseFilename, dfn)
-                except (OSError, PermissionError) as e:
-                    # File is locked, skip rotation
-                    print(f"Warning: Could not rotate current log file to {dfn}: {e}")
-
-            else:
-                # No backups, just rotate to dated file
-                dfn = self.rotation_filename(f"{self.baseFilename}{suffix}")
-                try:
-                    if os.path.exists(dfn):
-                        os.remove(dfn)
-                    self.rotate(self.baseFilename, dfn)
-                except (OSError, PermissionError) as e:
-                    # File is locked, skip rotation
-                    print(f"Warning: Could not rotate log file to {dfn}: {e}")
-
+            
+            # Generate new filename with next day's date (since rotation happens at midnight)
+            next_day = current_time.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+            date_suffix = next_day.strftime("_%Y_%m_%d.log")
+            
+            # Extract base name (remove current date suffix)
+            base_name = self.baseFilename
+            if base_name.endswith('.log'):
+                # Find the last underscore to remove date part
+                last_underscore = base_name.rfind('_')
+                if last_underscore > 0:
+                    base_name = base_name[:last_underscore]
+            
+            # Create new filename with next day's date
+            new_filename = base_name + date_suffix
+            
+            # Update the baseFilename for the new file
+            self.baseFilename = new_filename
+            
+            # Open the new file
+            self._open()
+            
             # Update rollover time for next rotation
             self._updateRolloverTime()
             
         except Exception as e:
             # If rollover fails completely, log to console and continue
-            print(f"Warning: Log file rollover failed: {e}")
+            logging.warning(f"Warning: Log file rollover failed: {e}")
             # Try to update rollover time anyway to prevent repeated failures
             try:
                 self._updateRolloverTime()
@@ -325,9 +305,33 @@ def setup_logger(name: str = 'FX-Ai', level: str = 'INFO',
             
             # Create appropriate file handler based on rotation type
             if rotation_type == 'time':
+                # For time-based rotation, generate filename with current MT5 server date
+                if mt5_connector or clock_sync:
+                    # Get current MT5 server date for filename
+                    try:
+                        if clock_sync:
+                            current_mt5_time = clock_sync.get_server_time()
+                        elif mt5_connector:
+                            current_mt5_time = mt5_connector.get_server_time()
+                        else:
+                            current_mt5_time = datetime.now()
+                        
+                        if current_mt5_time:
+                            # Format as FX-Ai_YYYY_MM_DD.log
+                            date_suffix = current_mt5_time.strftime("_%Y_%m_%d.log")
+                            dated_log_file = log_file + date_suffix
+                        else:
+                            dated_log_file = log_file + datetime.now().strftime("_%Y_%m_%d.log")
+                    except Exception:
+                        # Fallback to local time if MT5 time unavailable
+                        dated_log_file = log_file + datetime.now().strftime("_%Y_%m_%d.log")
+                else:
+                    # No MT5 connector, use local time
+                    dated_log_file = log_file + datetime.now().strftime("_%Y_%m_%d.log")
+                
                 # MT5 server time-based rotating file handler
                 file_handler = MT5TimedRotatingFileHandler(
-                    log_file,
+                    dated_log_file,
                     when='midnight',
                     interval=1,
                     backupCount=backup_count,
@@ -502,7 +506,7 @@ def update_all_loggers_with_mt5(mt5_connector: Any):
                     handler.formatter.mt5_connector = mt5_connector
                     
     except Exception as e:
-        print(f"Error updating loggers with MT5: {e}")
+        logging.error(f"Error updating loggers with MT5: {e}")
 
 def shutdown_logger(logger: logging.Logger):
     """
@@ -523,4 +527,4 @@ def shutdown_logger(logger: logging.Logger):
             logger.removeHandler(handler)
             
     except Exception as e:
-        print(f"Error shutting down logger: {e}")
+        logging.error(f"Error shutting down logger: {e}")

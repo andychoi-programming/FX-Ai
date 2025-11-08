@@ -1,11 +1,7 @@
 # Real-time Fundamental Analyzer
 import logging
-import json
-import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
-import requests
-from pathlib import Path
 
 class FundamentalAnalyzer:
     """Real-time fundamental analyzer for economic data and market analysis"""
@@ -289,6 +285,101 @@ class FundamentalAnalyzer:
 
         except Exception:
             return False
+
+    def get_recent_events(self, minutes: int = 5) -> List[Dict]:
+        """Get economic events that occurred within the last N minutes"""
+        try:
+            all_events = self.get_economic_calendar(hours_ahead=1)  # Get next hour's events
+            recent_events = []
+
+            for event in all_events:
+                if self._is_recent_event(event, hours=minutes/60):  # Convert minutes to hours
+                    recent_events.append(event)
+
+            return recent_events
+
+        except Exception as e:
+            self.logger.error(f"Error getting recent events: {e}")
+            return []
+
+    def get_breaking_news(self, symbol: Optional[str] = None, minutes: int = 5) -> Dict:
+        """Get breaking news analysis for ongoing trades"""
+        try:
+            recent_events = self.get_recent_events(minutes=minutes)
+
+            # Filter for high-impact events
+            high_impact_events = [e for e in recent_events if e.get('impact') in ['high', 'medium']]
+
+            result = {
+                'has_breaking_news': len(high_impact_events) > 0,
+                'events': high_impact_events,
+                'severity': 'high' if any(e.get('impact') == 'high' for e in high_impact_events) else 'medium' if high_impact_events else 'low',
+                'direction': self._analyze_news_direction(high_impact_events, symbol),
+                'recommendation': self._get_news_recommendation(high_impact_events, symbol)
+            }
+
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Error getting breaking news: {e}")
+            return {
+                'has_breaking_news': False,
+                'events': [],
+                'severity': 'low',
+                'direction': 'neutral',
+                'recommendation': 'hold'
+            }
+
+    def _analyze_news_direction(self, events: List[Dict], symbol: Optional[str]) -> str:
+        """Analyze if news direction favors or hurts the position"""
+        if not events or not symbol:
+            return 'neutral'
+
+        # Simple analysis based on currency pairs
+        base_currency = symbol[:3] if symbol else None
+        quote_currency = symbol[3:] if symbol else None
+
+        positive_events = 0
+        negative_events = 0
+
+        for event in events:
+            currency = event.get('currency', '')
+            if currency in [base_currency, quote_currency]:
+                # This affects our pair
+                if event.get('forecast') == 'better':
+                    positive_events += 1
+                elif event.get('forecast') == 'worse':
+                    negative_events += 1
+
+        if positive_events > negative_events:
+            return 'favorable'
+        elif negative_events > positive_events:
+            return 'adverse'
+        else:
+            return 'neutral'
+
+    def _get_news_recommendation(self, events: List[Dict], symbol: Optional[str]) -> str:
+        """Get trading recommendation based on news events"""
+        if not events:
+            return 'hold'
+
+        severity = 'high' if any(e.get('impact') == 'high' for e in events) else 'medium'
+        direction = self._analyze_news_direction(events, symbol)
+
+        if severity == 'high':
+            if direction == 'adverse':
+                return 'close_position'
+            elif direction == 'favorable':
+                return 'lock_profits'
+            else:
+                return 'tighten_stops'
+        else:
+            if direction == 'adverse':
+                return 'tighten_stops'
+            elif direction == 'favorable':
+                return 'extend_targets'
+            else:
+                return 'monitor'
 
     def get_sl_tp_adjustments(self, symbol: str, base_sl_pips: float, base_tp_pips: float) -> Dict[str, Any]:
         """Get SL/TP adjustments based on fundamental analysis"""

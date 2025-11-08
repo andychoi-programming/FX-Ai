@@ -4,7 +4,7 @@ Validates risk calculations and prevents common errors
 """
 import MetaTrader5 as mt5
 import logging
-from typing import Optional, Tuple
+from typing import Tuple
 
 logger = logging.getLogger(__name__)
 

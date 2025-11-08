@@ -608,6 +608,9 @@ class TradingEngine:
                                 f"{time_since_update / 3600:.1f} hours ago)")
                             continue
 
+                        # Check for fundamental updates during trade (HIGH PRIORITY)
+                        await self.check_fundamental_updates_during_trade(position)
+
                         # Update take profit based on new analysis first
                         tp_increased = await self.update_take_profit(position)
 
@@ -1455,7 +1458,7 @@ class TradingEngine:
         except Exception as e:
             logger.error(f"Error closing all positions: {e}")
 
-    async def close_position(self, position) -> bool:
+    async def close_position(self, position, reason: str = "Manual close") -> bool:
         """Close a single position - ASYNC"""
         try:
             # Select symbol for trading
@@ -1482,7 +1485,7 @@ class TradingEngine:
                 "price": price,
                 "deviation": self.max_slippage,
                 "magic": self.magic_number,
-                "comment": "FX-Ai close",
+                "comment": f"FX-Ai close: {reason}",
                 "type_time": mt5.ORDER_TIME_GTC,
                 # Removed type_filling to avoid "Unsupported filling mode"
                 # errors
@@ -1556,3 +1559,126 @@ class TradingEngine:
             'total_trades': len(self.active_positions),
             'active_positions': len(self.active_positions)
         }
+
+    async def check_fundamental_updates_during_trade(self, position) -> None:
+        """Check for fundamental updates during active trade and take action"""
+        try:
+            if not hasattr(self, 'fundamental') or not self.fundamental:
+                return
+
+            # Get breaking news for the last 5 minutes
+            breaking_news = self.fundamental.get_breaking_news(
+                symbol=position.symbol,
+                minutes=5
+            )
+
+            if not breaking_news.get('has_breaking_news', False):
+                return
+
+            severity = breaking_news.get('severity', 'low')
+            direction = breaking_news.get('direction', 'neutral')
+            recommendation = breaking_news.get('recommendation', 'hold')
+
+            logger.warning(
+                f"FUNDAMENTAL ALERT for {position.symbol} position {position.ticket}:"
+            )
+            logger.warning(f"   Severity: {severity.upper()}")
+            logger.warning(f"   Direction: {direction}")
+            logger.warning(f"   Recommendation: {recommendation}")
+
+            # Execute recommendation
+            if recommendation == 'close_position':
+                await self.close_position(position, reason="Adverse fundamental news")
+            elif recommendation == 'lock_profits':
+                await self.move_sl_to_breakeven(position)
+            elif recommendation == 'tighten_stops':
+                await self.tighten_stops_aggressively(position)
+            elif recommendation == 'extend_targets':
+                await self.extend_take_profit(position)
+
+        except Exception as e:
+            logger.error(f"Error checking fundamental updates for {position.symbol}: {e}")
+
+    async def move_sl_to_breakeven(self, position) -> None:
+        """Move stop loss to breakeven level"""
+        try:
+            # Calculate breakeven SL (entry price)
+            breakeven_sl = position.price_open
+
+            request = {
+                "action": mt5.TRADE_ACTION_SLTP,
+                "symbol": position.symbol,
+                "position": position.ticket,
+                "sl": breakeven_sl,
+                "tp": position.tp,
+                "magic": self.magic_number
+            }
+
+            result = mt5.order_send(request)
+            if result.retcode == mt5.TRADE_RETCODE_DONE:
+                logger.info(f"SL moved to breakeven (${breakeven_sl:.5f}) for {position.symbol}")
+            else:
+                logger.error(f"Failed to move SL to breakeven: {result.comment}")
+
+        except Exception as e:
+            logger.error(f"Error moving SL to breakeven: {e}")
+
+    async def tighten_stops_aggressively(self, position) -> None:
+        """Tighten stop loss aggressively due to adverse conditions"""
+        try:
+            # Tighten SL by 30%
+            current_risk = abs(position.price_open - position.sl)
+            new_risk = current_risk * 0.7  # Reduce risk by 30%
+
+            if position.type == mt5.ORDER_TYPE_BUY:
+                new_sl = position.price_open - new_risk
+            else:
+                new_sl = position.price_open + new_risk
+
+            request = {
+                "action": mt5.TRADE_ACTION_SLTP,
+                "symbol": position.symbol,
+                "position": position.ticket,
+                "sl": new_sl,
+                "tp": position.tp,
+                "magic": self.magic_number
+            }
+
+            result = mt5.order_send(request)
+            if result.retcode == mt5.TRADE_RETCODE_DONE:
+                logger.info(f"SL tightened to ${new_sl:.5f} for {position.symbol} (30% risk reduction)")
+            else:
+                logger.error(f"Failed to tighten SL: {result.comment}")
+
+        except Exception as e:
+            logger.error(f"Error tightening stops: {e}")
+
+    async def extend_take_profit(self, position) -> None:
+        """Extend take profit due to favorable conditions"""
+        try:
+            # Extend TP by 20%
+            current_tp_distance = abs(position.tp - position.price_open)
+            new_tp_distance = current_tp_distance * 1.2
+
+            if position.type == mt5.ORDER_TYPE_BUY:
+                new_tp = position.price_open + new_tp_distance
+            else:
+                new_tp = position.price_open - new_tp_distance
+
+            request = {
+                "action": mt5.TRADE_ACTION_SLTP,
+                "symbol": position.symbol,
+                "position": position.ticket,
+                "sl": position.sl,
+                "tp": new_tp,
+                "magic": self.magic_number
+            }
+
+            result = mt5.order_send(request)
+            if result.retcode == mt5.TRADE_RETCODE_DONE:
+                logger.info(f"TP extended to ${new_tp:.5f} for {position.symbol} (20% increase)")
+            else:
+                logger.error(f"Failed to extend TP: {result.comment}")
+
+        except Exception as e:
+            logger.error(f"Error extending take profit: {e}")

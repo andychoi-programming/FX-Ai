@@ -1,0 +1,2398 @@
+2025-11-07 22:16:48,674 - INFO - ============================================================
+2025-11-07 22:16:48,674 - INFO - FX-AI MODEL RETRAINING PROCESS
+2025-11-07 22:16:48,675 - INFO - ============================================================
+2025-11-07 22:16:48,676 - INFO - Configuration loaded from config/config.json, trading.max_positions=30
+2025-11-07 22:16:48,676 - INFO - MT5 login loaded from environment variable
+2025-11-07 22:16:48,676 - INFO - MT5 password loaded from environment variable
+2025-11-07 22:16:48,676 - INFO - MT5 server loaded from environment: TIOMarkets-Demo1
+2025-11-07 22:16:48,676 - INFO - Configuration loaded from config/config.json, trading.max_positions=30
+2025-11-07 22:16:48,676 - INFO - MT5 login loaded from environment variable
+2025-11-07 22:16:48,676 - INFO - MT5 password loaded from environment variable
+2025-11-07 22:16:48,676 - INFO - MT5 server loaded from environment: TIOMarkets-Demo1
+2025-11-07 22:17:31,090 - INFO - ============================================================
+2025-11-07 22:17:31,090 - INFO - FX-AI MODEL RETRAINING PROCESS
+2025-11-07 22:17:31,090 - INFO - ============================================================
+2025-11-07 22:17:31,091 - INFO - Configuration loaded from config/config.json, trading.max_positions=30
+2025-11-07 22:17:31,091 - INFO - MT5 login loaded from environment variable
+2025-11-07 22:17:31,092 - INFO - MT5 password loaded from environment variable
+2025-11-07 22:17:31,092 - INFO - MT5 server loaded from environment: TIOMarkets-Demo1
+2025-11-07 22:17:31,092 - INFO - Configuration loaded from config/config.json, trading.max_positions=30
+2025-11-07 22:17:31,092 - INFO - MT5 login loaded from environment variable
+2025-11-07 22:17:31,092 - INFO - MT5 password loaded from environment variable
+2025-11-07 22:17:31,092 - INFO - MT5 server loaded from environment: TIOMarkets-Demo1
+2025-11-07 22:17:33,048 - INFO - Connected to MT5: TIOMarkets-Demo1
+2025-11-07 22:17:33,048 - INFO - Account: 53605, Balance: $8258.28
+2025-11-07 22:17:33,052 - INFO - Cached info for 30 symbols
+2025-11-07 22:17:33,052 - INFO - Starting retraining for 30 symbols
+2025-11-07 22:17:33,053 - INFO - Symbols: AUDCAD, AUDCHF, AUDJPY, AUDNZD, AUDUSD, CADCHF, CADJPY, CHFJPY, EURAUD, EURCAD, EURCHF, EURGBP, EURJPY, EURNZD, EURUSD, GBPAUD, GBPCAD, GBPCHF, GBPJPY, GBPNZD, GBPUSD, NZDCAD, NZDCHF, NZDJPY, NZDUSD, USDCAD, USDCHF, USDJPY, XAGUSD, XAUUSD
+2025-11-07 22:17:33,053 - INFO - 
+==================================================
+2025-11-07 22:17:33,053 - INFO - Retraining model for AUDCAD
+2025-11-07 22:17:33,053 - INFO - ==================================================
+2025-11-07 22:17:33,077 - INFO - Retrieved 525 H1 bars for AUDCAD
+2025-11-07 22:17:33,080 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,080 - WARNING - Insufficient features for AUDCAD
+2025-11-07 22:17:33,081 - ERROR - Failed to prepare features for AUDCAD
+2025-11-07 22:17:33,081 - INFO - 
+==================================================
+2025-11-07 22:17:33,081 - INFO - Retraining model for AUDCHF
+2025-11-07 22:17:33,081 - INFO - ==================================================
+2025-11-07 22:17:33,091 - INFO - Retrieved 525 H1 bars for AUDCHF
+2025-11-07 22:17:33,095 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,095 - WARNING - Insufficient features for AUDCHF
+2025-11-07 22:17:33,095 - ERROR - Failed to prepare features for AUDCHF
+2025-11-07 22:17:33,095 - INFO - 
+==================================================
+2025-11-07 22:17:33,095 - INFO - Retraining model for AUDJPY
+2025-11-07 22:17:33,095 - INFO - ==================================================
+2025-11-07 22:17:33,106 - INFO - Retrieved 525 H1 bars for AUDJPY
+2025-11-07 22:17:33,108 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,109 - WARNING - Insufficient features for AUDJPY
+2025-11-07 22:17:33,109 - ERROR - Failed to prepare features for AUDJPY
+2025-11-07 22:17:33,109 - INFO - 
+==================================================
+2025-11-07 22:17:33,109 - INFO - Retraining model for AUDNZD
+2025-11-07 22:17:33,109 - INFO - ==================================================
+2025-11-07 22:17:33,120 - INFO - Retrieved 525 H1 bars for AUDNZD
+2025-11-07 22:17:33,123 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,123 - WARNING - Insufficient features for AUDNZD
+2025-11-07 22:17:33,123 - ERROR - Failed to prepare features for AUDNZD
+2025-11-07 22:17:33,123 - INFO - 
+==================================================
+2025-11-07 22:17:33,123 - INFO - Retraining model for AUDUSD
+2025-11-07 22:17:33,123 - INFO - ==================================================
+2025-11-07 22:17:33,137 - INFO - Retrieved 525 H1 bars for AUDUSD
+2025-11-07 22:17:33,141 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,142 - WARNING - Insufficient features for AUDUSD
+2025-11-07 22:17:33,142 - ERROR - Failed to prepare features for AUDUSD
+2025-11-07 22:17:33,142 - INFO - 
+==================================================
+2025-11-07 22:17:33,142 - INFO - Retraining model for CADCHF
+2025-11-07 22:17:33,142 - INFO - ==================================================
+2025-11-07 22:17:33,152 - INFO - Retrieved 525 H1 bars for CADCHF
+2025-11-07 22:17:33,155 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,155 - WARNING - Insufficient features for CADCHF
+2025-11-07 22:17:33,156 - ERROR - Failed to prepare features for CADCHF
+2025-11-07 22:17:33,156 - INFO - 
+==================================================
+2025-11-07 22:17:33,156 - INFO - Retraining model for CADJPY
+2025-11-07 22:17:33,156 - INFO - ==================================================
+2025-11-07 22:17:33,157 - INFO - Retrieved 525 H1 bars for CADJPY
+2025-11-07 22:17:33,159 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,159 - WARNING - Insufficient features for CADJPY
+2025-11-07 22:17:33,159 - ERROR - Failed to prepare features for CADJPY
+2025-11-07 22:17:33,160 - INFO - 
+==================================================
+2025-11-07 22:17:33,160 - INFO - Retraining model for CHFJPY
+2025-11-07 22:17:33,160 - INFO - ==================================================
+2025-11-07 22:17:33,167 - INFO - Retrieved 525 H1 bars for CHFJPY
+2025-11-07 22:17:33,170 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,171 - WARNING - Insufficient features for CHFJPY
+2025-11-07 22:17:33,171 - ERROR - Failed to prepare features for CHFJPY
+2025-11-07 22:17:33,171 - INFO - 
+==================================================
+2025-11-07 22:17:33,171 - INFO - Retraining model for EURAUD
+2025-11-07 22:17:33,171 - INFO - ==================================================
+2025-11-07 22:17:33,183 - INFO - Retrieved 525 H1 bars for EURAUD
+2025-11-07 22:17:33,186 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,187 - WARNING - Insufficient features for EURAUD
+2025-11-07 22:17:33,187 - ERROR - Failed to prepare features for EURAUD
+2025-11-07 22:17:33,187 - INFO - 
+==================================================
+2025-11-07 22:17:33,187 - INFO - Retraining model for EURCAD
+2025-11-07 22:17:33,187 - INFO - ==================================================
+2025-11-07 22:17:33,207 - INFO - Retrieved 525 H1 bars for EURCAD
+2025-11-07 22:17:33,210 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,210 - WARNING - Insufficient features for EURCAD
+2025-11-07 22:17:33,210 - ERROR - Failed to prepare features for EURCAD
+2025-11-07 22:17:33,210 - INFO - 
+==================================================
+2025-11-07 22:17:33,211 - INFO - Retraining model for EURCHF
+2025-11-07 22:17:33,211 - INFO - ==================================================
+2025-11-07 22:17:33,223 - INFO - Retrieved 525 H1 bars for EURCHF
+2025-11-07 22:17:33,226 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,226 - WARNING - Insufficient features for EURCHF
+2025-11-07 22:17:33,226 - ERROR - Failed to prepare features for EURCHF
+2025-11-07 22:17:33,227 - INFO - 
+==================================================
+2025-11-07 22:17:33,227 - INFO - Retraining model for EURGBP
+2025-11-07 22:17:33,227 - INFO - ==================================================
+2025-11-07 22:17:33,238 - INFO - Retrieved 525 H1 bars for EURGBP
+2025-11-07 22:17:33,241 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,241 - WARNING - Insufficient features for EURGBP
+2025-11-07 22:17:33,241 - ERROR - Failed to prepare features for EURGBP
+2025-11-07 22:17:33,241 - INFO - 
+==================================================
+2025-11-07 22:17:33,241 - INFO - Retraining model for EURJPY
+2025-11-07 22:17:33,242 - INFO - ==================================================
+2025-11-07 22:17:33,242 - INFO - Retrieved 525 H1 bars for EURJPY
+2025-11-07 22:17:33,245 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,245 - WARNING - Insufficient features for EURJPY
+2025-11-07 22:17:33,245 - ERROR - Failed to prepare features for EURJPY
+2025-11-07 22:17:33,246 - INFO - 
+==================================================
+2025-11-07 22:17:33,246 - INFO - Retraining model for EURNZD
+2025-11-07 22:17:33,246 - INFO - ==================================================
+2025-11-07 22:17:33,254 - INFO - Retrieved 525 H1 bars for EURNZD
+2025-11-07 22:17:33,257 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,257 - WARNING - Insufficient features for EURNZD
+2025-11-07 22:17:33,257 - ERROR - Failed to prepare features for EURNZD
+2025-11-07 22:17:33,257 - INFO - 
+==================================================
+2025-11-07 22:17:33,258 - INFO - Retraining model for EURUSD
+2025-11-07 22:17:33,258 - INFO - ==================================================
+2025-11-07 22:17:33,258 - INFO - Retrieved 525 H1 bars for EURUSD
+2025-11-07 22:17:33,261 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,261 - WARNING - Insufficient features for EURUSD
+2025-11-07 22:17:33,261 - ERROR - Failed to prepare features for EURUSD
+2025-11-07 22:17:33,261 - INFO - 
+==================================================
+2025-11-07 22:17:33,261 - INFO - Retraining model for GBPAUD
+2025-11-07 22:17:33,262 - INFO - ==================================================
+2025-11-07 22:17:33,269 - INFO - Retrieved 525 H1 bars for GBPAUD
+2025-11-07 22:17:33,272 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,272 - WARNING - Insufficient features for GBPAUD
+2025-11-07 22:17:33,272 - ERROR - Failed to prepare features for GBPAUD
+2025-11-07 22:17:33,272 - INFO - 
+==================================================
+2025-11-07 22:17:33,272 - INFO - Retraining model for GBPCAD
+2025-11-07 22:17:33,272 - INFO - ==================================================
+2025-11-07 22:17:33,284 - INFO - Retrieved 525 H1 bars for GBPCAD
+2025-11-07 22:17:33,286 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,286 - WARNING - Insufficient features for GBPCAD
+2025-11-07 22:17:33,287 - ERROR - Failed to prepare features for GBPCAD
+2025-11-07 22:17:33,287 - INFO - 
+==================================================
+2025-11-07 22:17:33,287 - INFO - Retraining model for GBPCHF
+2025-11-07 22:17:33,287 - INFO - ==================================================
+2025-11-07 22:17:33,299 - INFO - Retrieved 525 H1 bars for GBPCHF
+2025-11-07 22:17:33,302 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,302 - WARNING - Insufficient features for GBPCHF
+2025-11-07 22:17:33,302 - ERROR - Failed to prepare features for GBPCHF
+2025-11-07 22:17:33,302 - INFO - 
+==================================================
+2025-11-07 22:17:33,302 - INFO - Retraining model for GBPJPY
+2025-11-07 22:17:33,302 - INFO - ==================================================
+2025-11-07 22:17:33,314 - INFO - Retrieved 525 H1 bars for GBPJPY
+2025-11-07 22:17:33,317 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,317 - WARNING - Insufficient features for GBPJPY
+2025-11-07 22:17:33,318 - ERROR - Failed to prepare features for GBPJPY
+2025-11-07 22:17:33,318 - INFO - 
+==================================================
+2025-11-07 22:17:33,318 - INFO - Retraining model for GBPNZD
+2025-11-07 22:17:33,318 - INFO - ==================================================
+2025-11-07 22:17:33,330 - INFO - Retrieved 525 H1 bars for GBPNZD
+2025-11-07 22:17:33,333 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,333 - WARNING - Insufficient features for GBPNZD
+2025-11-07 22:17:33,333 - ERROR - Failed to prepare features for GBPNZD
+2025-11-07 22:17:33,333 - INFO - 
+==================================================
+2025-11-07 22:17:33,333 - INFO - Retraining model for GBPUSD
+2025-11-07 22:17:33,334 - INFO - ==================================================
+2025-11-07 22:17:33,334 - INFO - Retrieved 525 H1 bars for GBPUSD
+2025-11-07 22:17:33,337 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,337 - WARNING - Insufficient features for GBPUSD
+2025-11-07 22:17:33,337 - ERROR - Failed to prepare features for GBPUSD
+2025-11-07 22:17:33,337 - INFO - 
+==================================================
+2025-11-07 22:17:33,337 - INFO - Retraining model for NZDCAD
+2025-11-07 22:17:33,337 - INFO - ==================================================
+2025-11-07 22:17:33,345 - INFO - Retrieved 525 H1 bars for NZDCAD
+2025-11-07 22:17:33,347 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,348 - WARNING - Insufficient features for NZDCAD
+2025-11-07 22:17:33,348 - ERROR - Failed to prepare features for NZDCAD
+2025-11-07 22:17:33,348 - INFO - 
+==================================================
+2025-11-07 22:17:33,348 - INFO - Retraining model for NZDCHF
+2025-11-07 22:17:33,348 - INFO - ==================================================
+2025-11-07 22:17:33,360 - INFO - Retrieved 525 H1 bars for NZDCHF
+2025-11-07 22:17:33,362 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,363 - WARNING - Insufficient features for NZDCHF
+2025-11-07 22:17:33,363 - ERROR - Failed to prepare features for NZDCHF
+2025-11-07 22:17:33,363 - INFO - 
+==================================================
+2025-11-07 22:17:33,363 - INFO - Retraining model for NZDJPY
+2025-11-07 22:17:33,363 - INFO - ==================================================
+2025-11-07 22:17:33,375 - INFO - Retrieved 525 H1 bars for NZDJPY
+2025-11-07 22:17:33,378 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,378 - WARNING - Insufficient features for NZDJPY
+2025-11-07 22:17:33,379 - ERROR - Failed to prepare features for NZDJPY
+2025-11-07 22:17:33,379 - INFO - 
+==================================================
+2025-11-07 22:17:33,379 - INFO - Retraining model for NZDUSD
+2025-11-07 22:17:33,379 - INFO - ==================================================
+2025-11-07 22:17:33,392 - INFO - Retrieved 525 H1 bars for NZDUSD
+2025-11-07 22:17:33,396 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,396 - WARNING - Insufficient features for NZDUSD
+2025-11-07 22:17:33,396 - ERROR - Failed to prepare features for NZDUSD
+2025-11-07 22:17:33,396 - INFO - 
+==================================================
+2025-11-07 22:17:33,396 - INFO - Retraining model for USDCAD
+2025-11-07 22:17:33,396 - INFO - ==================================================
+2025-11-07 22:17:33,398 - INFO - Retrieved 525 H1 bars for USDCAD
+2025-11-07 22:17:33,400 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,401 - WARNING - Insufficient features for USDCAD
+2025-11-07 22:17:33,401 - ERROR - Failed to prepare features for USDCAD
+2025-11-07 22:17:33,401 - INFO - 
+==================================================
+2025-11-07 22:17:33,401 - INFO - Retraining model for USDCHF
+2025-11-07 22:17:33,401 - INFO - ==================================================
+2025-11-07 22:17:33,408 - INFO - Retrieved 525 H1 bars for USDCHF
+2025-11-07 22:17:33,411 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,411 - WARNING - Insufficient features for USDCHF
+2025-11-07 22:17:33,411 - ERROR - Failed to prepare features for USDCHF
+2025-11-07 22:17:33,411 - INFO - 
+==================================================
+2025-11-07 22:17:33,411 - INFO - Retraining model for USDJPY
+2025-11-07 22:17:33,412 - INFO - ==================================================
+2025-11-07 22:17:33,424 - INFO - Retrieved 525 H1 bars for USDJPY
+2025-11-07 22:17:33,426 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,427 - WARNING - Insufficient features for USDJPY
+2025-11-07 22:17:33,427 - ERROR - Failed to prepare features for USDJPY
+2025-11-07 22:17:33,427 - INFO - 
+==================================================
+2025-11-07 22:17:33,427 - INFO - Retraining model for XAGUSD
+2025-11-07 22:17:33,427 - INFO - ==================================================
+2025-11-07 22:17:33,428 - INFO - Retrieved 504 H1 bars for XAGUSD
+2025-11-07 22:17:33,430 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,430 - WARNING - Insufficient features for XAGUSD
+2025-11-07 22:17:33,430 - ERROR - Failed to prepare features for XAGUSD
+2025-11-07 22:17:33,431 - INFO - 
+==================================================
+2025-11-07 22:17:33,431 - INFO - Retraining model for XAUUSD
+2025-11-07 22:17:33,431 - INFO - ==================================================
+2025-11-07 22:17:33,434 - INFO - Retrieved 504 H1 bars for XAUUSD
+2025-11-07 22:17:33,437 - WARNING - Feature count mismatch: got 10, expected 13
+2025-11-07 22:17:33,437 - WARNING - Insufficient features for XAUUSD
+2025-11-07 22:17:33,437 - ERROR - Failed to prepare features for XAUUSD
+2025-11-07 22:17:33,437 - INFO - 
+============================================================
+2025-11-07 22:17:33,438 - INFO - RETRAINING SUMMARY
+2025-11-07 22:17:33,438 - INFO - ============================================================
+2025-11-07 22:17:33,438 - INFO - Total symbols: 30
+2025-11-07 22:17:33,438 - INFO - Successful retrains: 0
+2025-11-07 22:17:33,438 - INFO - Failed retrains: 30
+2025-11-07 22:17:33,438 - INFO - Success rate: 0.0%
+2025-11-07 22:17:33,439 - INFO - ============================================================
+2025-11-07 22:18:43,780 - INFO - ============================================================
+2025-11-07 22:18:43,780 - INFO - FX-AI MODEL RETRAINING PROCESS
+2025-11-07 22:18:43,780 - INFO - ============================================================
+2025-11-07 22:18:43,781 - INFO - Configuration loaded from config/config.json, trading.max_positions=30
+2025-11-07 22:18:43,781 - INFO - MT5 login loaded from environment variable
+2025-11-07 22:18:43,781 - INFO - MT5 password loaded from environment variable
+2025-11-07 22:18:43,781 - INFO - MT5 server loaded from environment: TIOMarkets-Demo1
+2025-11-07 22:18:43,782 - INFO - Configuration loaded from config/config.json, trading.max_positions=30
+2025-11-07 22:18:43,782 - INFO - MT5 login loaded from environment variable
+2025-11-07 22:18:43,782 - INFO - MT5 password loaded from environment variable
+2025-11-07 22:18:43,782 - INFO - MT5 server loaded from environment: TIOMarkets-Demo1
+2025-11-07 22:18:43,782 - INFO - Starting retraining for 30 symbols
+2025-11-07 22:18:43,782 - INFO - Symbols: AUDCAD, AUDCHF, AUDJPY, AUDNZD, AUDUSD, CADCHF, CADJPY, CHFJPY, EURAUD, EURCAD, EURCHF, EURGBP, EURJPY, EURNZD, EURUSD, GBPAUD, GBPCAD, GBPCHF, GBPJPY, GBPNZD, GBPUSD, NZDCAD, NZDCHF, NZDJPY, NZDUSD, USDCAD, USDCHF, USDJPY, XAGUSD, XAUUSD
+2025-11-07 22:18:43,821 - ERROR - CRITICAL: Cannot get MT5 server time - BLOCKING all trades for safety
+2025-11-07 22:18:43,822 - WARNING - Cannot get MT5 server time for daily loss reset check - using local time as fallback
+2025-11-07 22:18:43,822 - INFO - Daily loss initialized for new trading day: 2025-11-07
+2025-11-07 22:18:43,822 - INFO - Risk Manager initialized with $50.0 risk per trade, max_positions=30
+2025-11-07 22:18:43,822 - INFO - Daily trade limit: 1 trade per symbol per day
+2025-11-07 22:18:43,822 - INFO - Max spread: 3.0 pips, Cooldown: 5 minutes
+2025-11-07 22:18:43,823 - INFO - Starting continuous learning thread
+2025-11-07 22:18:43,823 - INFO - Continuous learning thread started
+2025-11-07 22:18:43,824 - INFO - Adaptive Learning Manager initialized
+2025-11-07 22:18:43,824 - INFO - 
+==================================================
+2025-11-07 22:18:43,824 - INFO - Retraining model for AUDCAD
+2025-11-07 22:18:43,824 - INFO - ==================================================
+2025-11-07 22:18:43,826 - WARNING - Insufficient trade history for AUDCAD (0 trades)
+2025-11-07 22:18:43,826 - INFO - 
+==================================================
+2025-11-07 22:18:43,826 - INFO - Retraining model for AUDCHF
+2025-11-07 22:18:43,826 - INFO - ==================================================
+2025-11-07 22:18:43,827 - WARNING - Insufficient trade history for AUDCHF (0 trades)
+2025-11-07 22:18:43,827 - INFO - 
+==================================================
+2025-11-07 22:18:43,827 - INFO - Retraining model for AUDJPY
+2025-11-07 22:18:43,827 - INFO - ==================================================
+2025-11-07 22:18:43,828 - WARNING - Insufficient trade history for AUDJPY (0 trades)
+2025-11-07 22:18:43,828 - INFO - 
+==================================================
+2025-11-07 22:18:43,828 - INFO - Retraining model for AUDNZD
+2025-11-07 22:18:43,828 - INFO - ==================================================
+2025-11-07 22:18:43,829 - WARNING - Insufficient trade history for AUDNZD (0 trades)
+2025-11-07 22:18:43,829 - INFO - 
+==================================================
+2025-11-07 22:18:43,829 - INFO - Retraining model for AUDUSD
+2025-11-07 22:18:43,830 - INFO - ==================================================
+2025-11-07 22:18:43,830 - WARNING - Insufficient trade history for AUDUSD (2 trades)
+2025-11-07 22:18:43,831 - INFO - 
+==================================================
+2025-11-07 22:18:43,831 - INFO - Retraining model for CADCHF
+2025-11-07 22:18:43,831 - INFO - ==================================================
+2025-11-07 22:18:43,832 - WARNING - Insufficient trade history for CADCHF (0 trades)
+2025-11-07 22:18:43,832 - INFO - 
+==================================================
+2025-11-07 22:18:43,832 - INFO - Retraining model for CADJPY
+2025-11-07 22:18:43,832 - INFO - ==================================================
+2025-11-07 22:18:43,833 - WARNING - Insufficient trade history for CADJPY (0 trades)
+2025-11-07 22:18:43,833 - INFO - 
+==================================================
+2025-11-07 22:18:43,833 - INFO - Retraining model for CHFJPY
+2025-11-07 22:18:43,833 - INFO - ==================================================
+2025-11-07 22:18:43,834 - WARNING - Insufficient trade history for CHFJPY (0 trades)
+2025-11-07 22:18:43,834 - INFO - 
+==================================================
+2025-11-07 22:18:43,834 - INFO - Retraining model for EURAUD
+2025-11-07 22:18:43,834 - INFO - ==================================================
+2025-11-07 22:18:43,835 - WARNING - Insufficient trade history for EURAUD (0 trades)
+2025-11-07 22:18:43,835 - INFO - 
+==================================================
+2025-11-07 22:18:43,836 - INFO - Retraining model for EURCAD
+2025-11-07 22:18:43,836 - INFO - ==================================================
+2025-11-07 22:18:43,837 - WARNING - Insufficient trade history for EURCAD (0 trades)
+2025-11-07 22:18:43,837 - INFO - 
+==================================================
+2025-11-07 22:18:43,837 - INFO - Retraining model for EURCHF
+2025-11-07 22:18:43,837 - INFO - ==================================================
+2025-11-07 22:18:43,838 - WARNING - Insufficient trade history for EURCHF (0 trades)
+2025-11-07 22:18:43,838 - INFO - 
+==================================================
+2025-11-07 22:18:43,838 - INFO - Retraining model for EURGBP
+2025-11-07 22:18:43,838 - INFO - ==================================================
+2025-11-07 22:18:43,839 - WARNING - Insufficient trade history for EURGBP (2 trades)
+2025-11-07 22:18:43,839 - INFO - 
+==================================================
+2025-11-07 22:18:43,839 - INFO - Retraining model for EURJPY
+2025-11-07 22:18:43,839 - INFO - ==================================================
+2025-11-07 22:18:43,840 - ERROR - MT5 connector not available
+2025-11-07 22:18:43,840 - WARNING - Insufficient market data for EURJPY
+2025-11-07 22:18:43,840 - INFO - 
+==================================================
+2025-11-07 22:18:43,841 - INFO - Retraining model for EURNZD
+2025-11-07 22:18:43,841 - INFO - ==================================================
+2025-11-07 22:18:43,842 - WARNING - Insufficient trade history for EURNZD (0 trades)
+2025-11-07 22:18:43,842 - INFO - 
+==================================================
+2025-11-07 22:18:43,842 - INFO - Retraining model for EURUSD
+2025-11-07 22:18:43,842 - INFO - ==================================================
+2025-11-07 22:18:43,843 - WARNING - Insufficient trade history for EURUSD (3 trades)
+2025-11-07 22:18:43,843 - INFO - 
+==================================================
+2025-11-07 22:18:43,843 - INFO - Retraining model for GBPAUD
+2025-11-07 22:18:43,843 - INFO - ==================================================
+2025-11-07 22:18:43,844 - WARNING - Insufficient trade history for GBPAUD (0 trades)
+2025-11-07 22:18:43,844 - INFO - 
+==================================================
+2025-11-07 22:18:43,844 - INFO - Retraining model for GBPCAD
+2025-11-07 22:18:43,844 - INFO - ==================================================
+2025-11-07 22:18:43,845 - WARNING - Insufficient trade history for GBPCAD (0 trades)
+2025-11-07 22:18:43,845 - INFO - 
+==================================================
+2025-11-07 22:18:43,846 - INFO - Retraining model for GBPCHF
+2025-11-07 22:18:43,846 - INFO - ==================================================
+2025-11-07 22:18:43,847 - WARNING - Insufficient trade history for GBPCHF (0 trades)
+2025-11-07 22:18:43,847 - INFO - 
+==================================================
+2025-11-07 22:18:43,847 - INFO - Retraining model for GBPJPY
+2025-11-07 22:18:43,847 - INFO - ==================================================
+2025-11-07 22:18:43,848 - ERROR - MT5 connector not available
+2025-11-07 22:18:43,848 - WARNING - Insufficient market data for GBPJPY
+2025-11-07 22:18:43,848 - INFO - 
+==================================================
+2025-11-07 22:18:43,848 - INFO - Retraining model for GBPNZD
+2025-11-07 22:18:43,848 - INFO - ==================================================
+2025-11-07 22:18:43,850 - WARNING - Insufficient trade history for GBPNZD (0 trades)
+2025-11-07 22:18:43,850 - INFO - 
+==================================================
+2025-11-07 22:18:43,850 - INFO - Retraining model for GBPUSD
+2025-11-07 22:18:43,850 - INFO - ==================================================
+2025-11-07 22:18:43,851 - WARNING - Insufficient trade history for GBPUSD (0 trades)
+2025-11-07 22:18:43,851 - INFO - 
+==================================================
+2025-11-07 22:18:43,852 - INFO - Retraining model for NZDCAD
+2025-11-07 22:18:43,852 - INFO - ==================================================
+2025-11-07 22:18:43,853 - WARNING - Insufficient trade history for NZDCAD (0 trades)
+2025-11-07 22:18:43,853 - INFO - 
+==================================================
+2025-11-07 22:18:43,853 - INFO - Retraining model for NZDCHF
+2025-11-07 22:18:43,853 - INFO - ==================================================
+2025-11-07 22:18:43,854 - WARNING - Insufficient trade history for NZDCHF (0 trades)
+2025-11-07 22:18:43,854 - INFO - 
+==================================================
+2025-11-07 22:18:43,854 - INFO - Retraining model for NZDJPY
+2025-11-07 22:18:43,854 - INFO - ==================================================
+2025-11-07 22:18:43,855 - WARNING - Insufficient trade history for NZDJPY (0 trades)
+2025-11-07 22:18:43,855 - INFO - 
+==================================================
+2025-11-07 22:18:43,855 - INFO - Retraining model for NZDUSD
+2025-11-07 22:18:43,855 - INFO - ==================================================
+2025-11-07 22:18:43,856 - WARNING - Insufficient trade history for NZDUSD (0 trades)
+2025-11-07 22:18:43,856 - INFO - 
+==================================================
+2025-11-07 22:18:43,856 - INFO - Retraining model for USDCAD
+2025-11-07 22:18:43,856 - INFO - ==================================================
+2025-11-07 22:18:43,857 - WARNING - Insufficient trade history for USDCAD (3 trades)
+2025-11-07 22:18:43,857 - INFO - 
+==================================================
+2025-11-07 22:18:43,857 - INFO - Retraining model for USDCHF
+2025-11-07 22:18:43,857 - INFO - ==================================================
+2025-11-07 22:18:43,858 - WARNING - Insufficient trade history for USDCHF (2 trades)
+2025-11-07 22:18:43,858 - INFO - 
+==================================================
+2025-11-07 22:18:43,858 - INFO - Retraining model for USDJPY
+2025-11-07 22:18:43,858 - INFO - ==================================================
+2025-11-07 22:18:43,860 - WARNING - Insufficient trade history for USDJPY (3 trades)
+2025-11-07 22:18:43,860 - INFO - 
+==================================================
+2025-11-07 22:18:43,860 - INFO - Retraining model for XAGUSD
+2025-11-07 22:18:43,860 - INFO - ==================================================
+2025-11-07 22:18:43,861 - WARNING - Insufficient trade history for XAGUSD (1 trades)
+2025-11-07 22:18:43,861 - INFO - 
+==================================================
+2025-11-07 22:18:43,861 - INFO - Retraining model for XAUUSD
+2025-11-07 22:18:43,861 - INFO - ==================================================
+2025-11-07 22:18:43,862 - ERROR - MT5 connector not available
+2025-11-07 22:18:43,862 - WARNING - Insufficient market data for XAUUSD
+2025-11-07 22:18:43,862 - INFO - 
+============================================================
+2025-11-07 22:18:43,862 - INFO - RETRAINING SUMMARY
+2025-11-07 22:18:43,862 - INFO - ============================================================
+2025-11-07 22:18:43,862 - INFO - Total symbols: 30
+2025-11-07 22:18:43,862 - INFO - Successful retrains: 0
+2025-11-07 22:18:43,862 - INFO - Failed retrains: 30
+2025-11-07 22:18:43,862 - INFO - Success rate: 0.0%
+2025-11-07 22:18:43,864 - INFO - ============================================================
+2025-11-07 22:19:26,447 - INFO - ============================================================
+2025-11-07 22:19:26,447 - INFO - FX-AI MODEL RETRAINING PROCESS
+2025-11-07 22:19:26,447 - INFO - ============================================================
+2025-11-07 22:19:26,448 - INFO - Configuration loaded from config/config.json, trading.max_positions=30
+2025-11-07 22:19:26,448 - INFO - MT5 login loaded from environment variable
+2025-11-07 22:19:26,448 - INFO - MT5 password loaded from environment variable
+2025-11-07 22:19:26,449 - INFO - MT5 server loaded from environment: TIOMarkets-Demo1
+2025-11-07 22:19:26,449 - INFO - Configuration loaded from config/config.json, trading.max_positions=30
+2025-11-07 22:19:26,449 - INFO - MT5 login loaded from environment variable
+2025-11-07 22:19:26,449 - INFO - MT5 password loaded from environment variable
+2025-11-07 22:19:26,449 - INFO - MT5 server loaded from environment: TIOMarkets-Demo1
+2025-11-07 22:19:26,449 - INFO - Starting retraining for 30 symbols
+2025-11-07 22:19:26,449 - INFO - Symbols: AUDCAD, AUDCHF, AUDJPY, AUDNZD, AUDUSD, CADCHF, CADJPY, CHFJPY, EURAUD, EURCAD, EURCHF, EURGBP, EURJPY, EURNZD, EURUSD, GBPAUD, GBPCAD, GBPCHF, GBPJPY, GBPNZD, GBPUSD, NZDCAD, NZDCHF, NZDJPY, NZDUSD, USDCAD, USDCHF, USDJPY, XAGUSD, XAUUSD
+2025-11-07 22:19:26,453 - ERROR - CRITICAL: Cannot get MT5 server time - BLOCKING all trades for safety
+2025-11-07 22:19:26,454 - WARNING - Cannot get MT5 server time for daily loss reset check - using local time as fallback
+2025-11-07 22:19:26,454 - INFO - Daily loss initialized for new trading day: 2025-11-07
+2025-11-07 22:19:26,454 - INFO - Risk Manager initialized with $50.0 risk per trade, max_positions=30
+2025-11-07 22:19:26,454 - INFO - Daily trade limit: 1 trade per symbol per day
+2025-11-07 22:19:26,454 - INFO - Max spread: 3.0 pips, Cooldown: 5 minutes
+2025-11-07 22:19:26,455 - INFO - Starting continuous learning thread
+2025-11-07 22:19:26,455 - INFO - Continuous learning thread started
+2025-11-07 22:19:26,456 - INFO - Adaptive Learning Manager initialized
+2025-11-07 22:19:26,456 - INFO - 
+==================================================
+2025-11-07 22:19:26,456 - INFO - Retraining model for AUDCAD
+2025-11-07 22:19:26,456 - INFO - ==================================================
+2025-11-07 22:19:26,458 - WARNING - Insufficient trade history for AUDCAD (0 trades)
+2025-11-07 22:19:26,458 - INFO - 
+==================================================
+2025-11-07 22:19:26,458 - INFO - Retraining model for AUDCHF
+2025-11-07 22:19:26,458 - INFO - ==================================================
+2025-11-07 22:19:26,459 - WARNING - Insufficient trade history for AUDCHF (0 trades)
+2025-11-07 22:19:26,459 - INFO - 
+==================================================
+2025-11-07 22:19:26,459 - INFO - Retraining model for AUDJPY
+2025-11-07 22:19:26,459 - INFO - ==================================================
+2025-11-07 22:19:26,460 - WARNING - Insufficient trade history for AUDJPY (0 trades)
+2025-11-07 22:19:26,460 - INFO - 
+==================================================
+2025-11-07 22:19:26,461 - INFO - Retraining model for AUDNZD
+2025-11-07 22:19:26,461 - INFO - ==================================================
+2025-11-07 22:19:26,462 - WARNING - Insufficient trade history for AUDNZD (0 trades)
+2025-11-07 22:19:26,462 - INFO - 
+==================================================
+2025-11-07 22:19:26,462 - INFO - Retraining model for AUDUSD
+2025-11-07 22:19:26,462 - INFO - ==================================================
+2025-11-07 22:19:26,463 - ERROR - MT5 connector not available
+2025-11-07 22:19:26,463 - WARNING - Insufficient market data for AUDUSD
+2025-11-07 22:19:26,463 - INFO - 
+==================================================
+2025-11-07 22:19:26,463 - INFO - Retraining model for CADCHF
+2025-11-07 22:19:26,463 - INFO - ==================================================
+2025-11-07 22:19:26,464 - WARNING - Insufficient trade history for CADCHF (0 trades)
+2025-11-07 22:19:26,464 - INFO - 
+==================================================
+2025-11-07 22:19:26,464 - INFO - Retraining model for CADJPY
+2025-11-07 22:19:26,465 - INFO - ==================================================
+2025-11-07 22:19:26,466 - WARNING - Insufficient trade history for CADJPY (0 trades)
+2025-11-07 22:19:26,466 - INFO - 
+==================================================
+2025-11-07 22:19:26,466 - INFO - Retraining model for CHFJPY
+2025-11-07 22:19:26,466 - INFO - ==================================================
+2025-11-07 22:19:26,467 - WARNING - Insufficient trade history for CHFJPY (0 trades)
+2025-11-07 22:19:26,467 - INFO - 
+==================================================
+2025-11-07 22:19:26,467 - INFO - Retraining model for EURAUD
+2025-11-07 22:19:26,467 - INFO - ==================================================
+2025-11-07 22:19:26,468 - WARNING - Insufficient trade history for EURAUD (0 trades)
+2025-11-07 22:19:26,469 - INFO - 
+==================================================
+2025-11-07 22:19:26,469 - INFO - Retraining model for EURCAD
+2025-11-07 22:19:26,469 - INFO - ==================================================
+2025-11-07 22:19:26,470 - WARNING - Insufficient trade history for EURCAD (0 trades)
+2025-11-07 22:19:26,470 - INFO - 
+==================================================
+2025-11-07 22:19:26,470 - INFO - Retraining model for EURCHF
+2025-11-07 22:19:26,470 - INFO - ==================================================
+2025-11-07 22:19:26,471 - WARNING - Insufficient trade history for EURCHF (0 trades)
+2025-11-07 22:19:26,471 - INFO - 
+==================================================
+2025-11-07 22:19:26,472 - INFO - Retraining model for EURGBP
+2025-11-07 22:19:26,472 - INFO - ==================================================
+2025-11-07 22:19:26,473 - ERROR - MT5 connector not available
+2025-11-07 22:19:26,473 - WARNING - Insufficient market data for EURGBP
+2025-11-07 22:19:26,473 - INFO - 
+==================================================
+2025-11-07 22:19:26,473 - INFO - Retraining model for EURJPY
+2025-11-07 22:19:26,473 - INFO - ==================================================
+2025-11-07 22:19:26,474 - ERROR - MT5 connector not available
+2025-11-07 22:19:26,474 - WARNING - Insufficient market data for EURJPY
+2025-11-07 22:19:26,474 - INFO - 
+==================================================
+2025-11-07 22:19:26,474 - INFO - Retraining model for EURNZD
+2025-11-07 22:19:26,474 - INFO - ==================================================
+2025-11-07 22:19:26,476 - WARNING - Insufficient trade history for EURNZD (0 trades)
+2025-11-07 22:19:26,476 - INFO - 
+==================================================
+2025-11-07 22:19:26,476 - INFO - Retraining model for EURUSD
+2025-11-07 22:19:26,476 - INFO - ==================================================
+2025-11-07 22:19:26,477 - ERROR - MT5 connector not available
+2025-11-07 22:19:26,477 - WARNING - Insufficient market data for EURUSD
+2025-11-07 22:19:26,478 - INFO - 
+==================================================
+2025-11-07 22:19:26,478 - INFO - Retraining model for GBPAUD
+2025-11-07 22:19:26,478 - INFO - ==================================================
+2025-11-07 22:19:26,479 - WARNING - Insufficient trade history for GBPAUD (0 trades)
+2025-11-07 22:19:26,479 - INFO - 
+==================================================
+2025-11-07 22:19:26,479 - INFO - Retraining model for GBPCAD
+2025-11-07 22:19:26,479 - INFO - ==================================================
+2025-11-07 22:19:26,480 - WARNING - Insufficient trade history for GBPCAD (0 trades)
+2025-11-07 22:19:26,480 - INFO - 
+==================================================
+2025-11-07 22:19:26,480 - INFO - Retraining model for GBPCHF
+2025-11-07 22:19:26,480 - INFO - ==================================================
+2025-11-07 22:19:26,481 - WARNING - Insufficient trade history for GBPCHF (0 trades)
+2025-11-07 22:19:26,481 - INFO - 
+==================================================
+2025-11-07 22:19:26,481 - INFO - Retraining model for GBPJPY
+2025-11-07 22:19:26,481 - INFO - ==================================================
+2025-11-07 22:19:26,482 - ERROR - MT5 connector not available
+2025-11-07 22:19:26,482 - WARNING - Insufficient market data for GBPJPY
+2025-11-07 22:19:26,482 - INFO - 
+==================================================
+2025-11-07 22:19:26,482 - INFO - Retraining model for GBPNZD
+2025-11-07 22:19:26,483 - INFO - ==================================================
+2025-11-07 22:19:26,484 - WARNING - Insufficient trade history for GBPNZD (0 trades)
+2025-11-07 22:19:26,484 - INFO - 
+==================================================
+2025-11-07 22:19:26,484 - INFO - Retraining model for GBPUSD
+2025-11-07 22:19:26,484 - INFO - ==================================================
+2025-11-07 22:19:26,485 - WARNING - Insufficient trade history for GBPUSD (0 trades)
+2025-11-07 22:19:26,485 - INFO - 
+==================================================
+2025-11-07 22:19:26,485 - INFO - Retraining model for NZDCAD
+2025-11-07 22:19:26,485 - INFO - ==================================================
+2025-11-07 22:19:26,486 - WARNING - Insufficient trade history for NZDCAD (0 trades)
+2025-11-07 22:19:26,486 - INFO - 
+==================================================
+2025-11-07 22:19:26,486 - INFO - Retraining model for NZDCHF
+2025-11-07 22:19:26,486 - INFO - ==================================================
+2025-11-07 22:19:26,487 - WARNING - Insufficient trade history for NZDCHF (0 trades)
+2025-11-07 22:19:26,487 - INFO - 
+==================================================
+2025-11-07 22:19:26,487 - INFO - Retraining model for NZDJPY
+2025-11-07 22:19:26,488 - INFO - ==================================================
+2025-11-07 22:19:26,488 - WARNING - Insufficient trade history for NZDJPY (0 trades)
+2025-11-07 22:19:26,489 - INFO - 
+==================================================
+2025-11-07 22:19:26,489 - INFO - Retraining model for NZDUSD
+2025-11-07 22:19:26,489 - INFO - ==================================================
+2025-11-07 22:19:26,490 - WARNING - Insufficient trade history for NZDUSD (0 trades)
+2025-11-07 22:19:26,490 - INFO - 
+==================================================
+2025-11-07 22:19:26,490 - INFO - Retraining model for USDCAD
+2025-11-07 22:19:26,490 - INFO - ==================================================
+2025-11-07 22:19:26,491 - ERROR - MT5 connector not available
+2025-11-07 22:19:26,491 - WARNING - Insufficient market data for USDCAD
+2025-11-07 22:19:26,491 - INFO - 
+==================================================
+2025-11-07 22:19:26,491 - INFO - Retraining model for USDCHF
+2025-11-07 22:19:26,491 - INFO - ==================================================
+2025-11-07 22:19:26,492 - ERROR - MT5 connector not available
+2025-11-07 22:19:26,492 - WARNING - Insufficient market data for USDCHF
+2025-11-07 22:19:26,492 - INFO - 
+==================================================
+2025-11-07 22:19:26,492 - INFO - Retraining model for USDJPY
+2025-11-07 22:19:26,492 - INFO - ==================================================
+2025-11-07 22:19:26,493 - ERROR - MT5 connector not available
+2025-11-07 22:19:26,493 - WARNING - Insufficient market data for USDJPY
+2025-11-07 22:19:26,493 - INFO - 
+==================================================
+2025-11-07 22:19:26,493 - INFO - Retraining model for XAGUSD
+2025-11-07 22:19:26,493 - INFO - ==================================================
+2025-11-07 22:19:26,494 - WARNING - Insufficient trade history for XAGUSD (1 trades)
+2025-11-07 22:19:26,494 - INFO - 
+==================================================
+2025-11-07 22:19:26,495 - INFO - Retraining model for XAUUSD
+2025-11-07 22:19:26,495 - INFO - ==================================================
+2025-11-07 22:19:26,496 - ERROR - MT5 connector not available
+2025-11-07 22:19:26,496 - WARNING - Insufficient market data for XAUUSD
+2025-11-07 22:19:26,496 - INFO - 
+============================================================
+2025-11-07 22:19:26,496 - INFO - RETRAINING SUMMARY
+2025-11-07 22:19:26,496 - INFO - ============================================================
+2025-11-07 22:19:26,496 - INFO - Total symbols: 30
+2025-11-07 22:19:26,496 - INFO - Successful retrains: 0
+2025-11-07 22:19:26,496 - INFO - Failed retrains: 30
+2025-11-07 22:19:26,496 - INFO - Success rate: 0.0%
+2025-11-07 22:19:26,498 - INFO - ============================================================
+2025-11-07 22:21:33,192 - INFO - ============================================================
+2025-11-07 22:21:33,193 - INFO - FX-AI MODEL RETRAINING PROCESS
+2025-11-07 22:21:33,193 - INFO - ============================================================
+2025-11-07 22:21:33,194 - INFO - Configuration loaded from config/config.json, trading.max_positions=30
+2025-11-07 22:21:33,194 - INFO - MT5 login loaded from environment variable
+2025-11-07 22:21:33,194 - INFO - MT5 password loaded from environment variable
+2025-11-07 22:21:33,194 - INFO - MT5 server loaded from environment: TIOMarkets-Demo1
+2025-11-07 22:21:33,194 - INFO - Configuration loaded from config/config.json, trading.max_positions=30
+2025-11-07 22:21:33,194 - INFO - MT5 login loaded from environment variable
+2025-11-07 22:21:33,195 - INFO - MT5 password loaded from environment variable
+2025-11-07 22:21:33,195 - INFO - MT5 server loaded from environment: TIOMarkets-Demo1
+2025-11-07 22:21:33,195 - INFO - Starting retraining for 30 symbols
+2025-11-07 22:21:33,195 - INFO - Symbols: AUDCAD, AUDCHF, AUDJPY, AUDNZD, AUDUSD, CADCHF, CADJPY, CHFJPY, EURAUD, EURCAD, EURCHF, EURGBP, EURJPY, EURNZD, EURUSD, GBPAUD, GBPCAD, GBPCHF, GBPJPY, GBPNZD, GBPUSD, NZDCAD, NZDCHF, NZDJPY, NZDUSD, USDCAD, USDCHF, USDJPY, XAGUSD, XAUUSD
+2025-11-07 22:21:33,230 - ERROR - CRITICAL: Cannot get MT5 server time - BLOCKING all trades for safety
+2025-11-07 22:21:33,230 - WARNING - Cannot get MT5 server time for daily loss reset check - using local time as fallback
+2025-11-07 22:21:33,230 - INFO - Daily loss initialized for new trading day: 2025-11-07
+2025-11-07 22:21:33,230 - INFO - Risk Manager initialized with $50.0 risk per trade, max_positions=30
+2025-11-07 22:21:33,230 - INFO - Daily trade limit: 1 trade per symbol per day
+2025-11-07 22:21:33,230 - INFO - Max spread: 3.0 pips, Cooldown: 5 minutes
+2025-11-07 22:21:33,231 - INFO - Starting continuous learning thread
+2025-11-07 22:21:33,231 - INFO - Continuous learning thread started
+2025-11-07 22:21:33,232 - INFO - Adaptive Learning Manager initialized
+2025-11-07 22:21:33,232 - INFO - 
+==================================================
+2025-11-07 22:21:33,232 - INFO - Retraining model for AUDCAD
+2025-11-07 22:21:33,232 - INFO - ==================================================
+2025-11-07 22:21:33,234 - INFO - Found 0 recent trades for AUDCAD
+2025-11-07 22:21:33,234 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,234 - WARNING - Insufficient market data for AUDCAD
+2025-11-07 22:21:33,234 - INFO - 
+==================================================
+2025-11-07 22:21:33,234 - INFO - Retraining model for AUDCHF
+2025-11-07 22:21:33,234 - INFO - ==================================================
+2025-11-07 22:21:33,235 - INFO - Found 0 recent trades for AUDCHF
+2025-11-07 22:21:33,236 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,236 - WARNING - Insufficient market data for AUDCHF
+2025-11-07 22:21:33,236 - INFO - 
+==================================================
+2025-11-07 22:21:33,236 - INFO - Retraining model for AUDJPY
+2025-11-07 22:21:33,236 - INFO - ==================================================
+2025-11-07 22:21:33,237 - INFO - Found 0 recent trades for AUDJPY
+2025-11-07 22:21:33,237 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,237 - WARNING - Insufficient market data for AUDJPY
+2025-11-07 22:21:33,237 - INFO - 
+==================================================
+2025-11-07 22:21:33,237 - INFO - Retraining model for AUDNZD
+2025-11-07 22:21:33,237 - INFO - ==================================================
+2025-11-07 22:21:33,238 - INFO - Found 0 recent trades for AUDNZD
+2025-11-07 22:21:33,238 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,239 - WARNING - Insufficient market data for AUDNZD
+2025-11-07 22:21:33,239 - INFO - 
+==================================================
+2025-11-07 22:21:33,239 - INFO - Retraining model for AUDUSD
+2025-11-07 22:21:33,239 - INFO - ==================================================
+2025-11-07 22:21:33,240 - INFO - Found 2 recent trades for AUDUSD
+2025-11-07 22:21:33,240 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,240 - WARNING - Insufficient market data for AUDUSD
+2025-11-07 22:21:33,240 - INFO - 
+==================================================
+2025-11-07 22:21:33,240 - INFO - Retraining model for CADCHF
+2025-11-07 22:21:33,240 - INFO - ==================================================
+2025-11-07 22:21:33,241 - INFO - Found 0 recent trades for CADCHF
+2025-11-07 22:21:33,241 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,241 - WARNING - Insufficient market data for CADCHF
+2025-11-07 22:21:33,241 - INFO - 
+==================================================
+2025-11-07 22:21:33,241 - INFO - Retraining model for CADJPY
+2025-11-07 22:21:33,241 - INFO - ==================================================
+2025-11-07 22:21:33,242 - INFO - Found 0 recent trades for CADJPY
+2025-11-07 22:21:33,242 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,243 - WARNING - Insufficient market data for CADJPY
+2025-11-07 22:21:33,243 - INFO - 
+==================================================
+2025-11-07 22:21:33,243 - INFO - Retraining model for CHFJPY
+2025-11-07 22:21:33,243 - INFO - ==================================================
+2025-11-07 22:21:33,244 - INFO - Found 0 recent trades for CHFJPY
+2025-11-07 22:21:33,244 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,244 - WARNING - Insufficient market data for CHFJPY
+2025-11-07 22:21:33,244 - INFO - 
+==================================================
+2025-11-07 22:21:33,244 - INFO - Retraining model for EURAUD
+2025-11-07 22:21:33,244 - INFO - ==================================================
+2025-11-07 22:21:33,245 - INFO - Found 0 recent trades for EURAUD
+2025-11-07 22:21:33,245 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,245 - WARNING - Insufficient market data for EURAUD
+2025-11-07 22:21:33,245 - INFO - 
+==================================================
+2025-11-07 22:21:33,245 - INFO - Retraining model for EURCAD
+2025-11-07 22:21:33,245 - INFO - ==================================================
+2025-11-07 22:21:33,246 - INFO - Found 0 recent trades for EURCAD
+2025-11-07 22:21:33,246 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,247 - WARNING - Insufficient market data for EURCAD
+2025-11-07 22:21:33,247 - INFO - 
+==================================================
+2025-11-07 22:21:33,247 - INFO - Retraining model for EURCHF
+2025-11-07 22:21:33,247 - INFO - ==================================================
+2025-11-07 22:21:33,248 - INFO - Found 0 recent trades for EURCHF
+2025-11-07 22:21:33,248 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,248 - WARNING - Insufficient market data for EURCHF
+2025-11-07 22:21:33,248 - INFO - 
+==================================================
+2025-11-07 22:21:33,248 - INFO - Retraining model for EURGBP
+2025-11-07 22:21:33,248 - INFO - ==================================================
+2025-11-07 22:21:33,249 - INFO - Found 2 recent trades for EURGBP
+2025-11-07 22:21:33,249 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,249 - WARNING - Insufficient market data for EURGBP
+2025-11-07 22:21:33,249 - INFO - 
+==================================================
+2025-11-07 22:21:33,249 - INFO - Retraining model for EURJPY
+2025-11-07 22:21:33,249 - INFO - ==================================================
+2025-11-07 22:21:33,250 - INFO - Found 29 recent trades for EURJPY
+2025-11-07 22:21:33,250 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,250 - WARNING - Insufficient market data for EURJPY
+2025-11-07 22:21:33,250 - INFO - 
+==================================================
+2025-11-07 22:21:33,251 - INFO - Retraining model for EURNZD
+2025-11-07 22:21:33,251 - INFO - ==================================================
+2025-11-07 22:21:33,252 - INFO - Found 0 recent trades for EURNZD
+2025-11-07 22:21:33,252 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,252 - WARNING - Insufficient market data for EURNZD
+2025-11-07 22:21:33,252 - INFO - 
+==================================================
+2025-11-07 22:21:33,252 - INFO - Retraining model for EURUSD
+2025-11-07 22:21:33,252 - INFO - ==================================================
+2025-11-07 22:21:33,253 - INFO - Found 3 recent trades for EURUSD
+2025-11-07 22:21:33,253 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,253 - WARNING - Insufficient market data for EURUSD
+2025-11-07 22:21:33,253 - INFO - 
+==================================================
+2025-11-07 22:21:33,253 - INFO - Retraining model for GBPAUD
+2025-11-07 22:21:33,253 - INFO - ==================================================
+2025-11-07 22:21:33,254 - INFO - Found 0 recent trades for GBPAUD
+2025-11-07 22:21:33,254 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,254 - WARNING - Insufficient market data for GBPAUD
+2025-11-07 22:21:33,254 - INFO - 
+==================================================
+2025-11-07 22:21:33,254 - INFO - Retraining model for GBPCAD
+2025-11-07 22:21:33,255 - INFO - ==================================================
+2025-11-07 22:21:33,255 - INFO - Found 0 recent trades for GBPCAD
+2025-11-07 22:21:33,256 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,256 - WARNING - Insufficient market data for GBPCAD
+2025-11-07 22:21:33,256 - INFO - 
+==================================================
+2025-11-07 22:21:33,256 - INFO - Retraining model for GBPCHF
+2025-11-07 22:21:33,256 - INFO - ==================================================
+2025-11-07 22:21:33,257 - INFO - Found 0 recent trades for GBPCHF
+2025-11-07 22:21:33,257 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,257 - WARNING - Insufficient market data for GBPCHF
+2025-11-07 22:21:33,257 - INFO - 
+==================================================
+2025-11-07 22:21:33,257 - INFO - Retraining model for GBPJPY
+2025-11-07 22:21:33,257 - INFO - ==================================================
+2025-11-07 22:21:33,258 - INFO - Found 13 recent trades for GBPJPY
+2025-11-07 22:21:33,258 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,258 - WARNING - Insufficient market data for GBPJPY
+2025-11-07 22:21:33,258 - INFO - 
+==================================================
+2025-11-07 22:21:33,258 - INFO - Retraining model for GBPNZD
+2025-11-07 22:21:33,258 - INFO - ==================================================
+2025-11-07 22:21:33,259 - INFO - Found 0 recent trades for GBPNZD
+2025-11-07 22:21:33,259 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,259 - WARNING - Insufficient market data for GBPNZD
+2025-11-07 22:21:33,259 - INFO - 
+==================================================
+2025-11-07 22:21:33,259 - INFO - Retraining model for GBPUSD
+2025-11-07 22:21:33,260 - INFO - ==================================================
+2025-11-07 22:21:33,260 - INFO - Found 0 recent trades for GBPUSD
+2025-11-07 22:21:33,261 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,261 - WARNING - Insufficient market data for GBPUSD
+2025-11-07 22:21:33,261 - INFO - 
+==================================================
+2025-11-07 22:21:33,261 - INFO - Retraining model for NZDCAD
+2025-11-07 22:21:33,261 - INFO - ==================================================
+2025-11-07 22:21:33,262 - INFO - Found 0 recent trades for NZDCAD
+2025-11-07 22:21:33,262 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,262 - WARNING - Insufficient market data for NZDCAD
+2025-11-07 22:21:33,262 - INFO - 
+==================================================
+2025-11-07 22:21:33,262 - INFO - Retraining model for NZDCHF
+2025-11-07 22:21:33,262 - INFO - ==================================================
+2025-11-07 22:21:33,263 - INFO - Found 0 recent trades for NZDCHF
+2025-11-07 22:21:33,263 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,263 - WARNING - Insufficient market data for NZDCHF
+2025-11-07 22:21:33,263 - INFO - 
+==================================================
+2025-11-07 22:21:33,263 - INFO - Retraining model for NZDJPY
+2025-11-07 22:21:33,263 - INFO - ==================================================
+2025-11-07 22:21:33,264 - INFO - Found 0 recent trades for NZDJPY
+2025-11-07 22:21:33,264 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,264 - WARNING - Insufficient market data for NZDJPY
+2025-11-07 22:21:33,265 - INFO - 
+==================================================
+2025-11-07 22:21:33,265 - INFO - Retraining model for NZDUSD
+2025-11-07 22:21:33,265 - INFO - ==================================================
+2025-11-07 22:21:33,266 - INFO - Found 0 recent trades for NZDUSD
+2025-11-07 22:21:33,266 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,266 - WARNING - Insufficient market data for NZDUSD
+2025-11-07 22:21:33,266 - INFO - 
+==================================================
+2025-11-07 22:21:33,266 - INFO - Retraining model for USDCAD
+2025-11-07 22:21:33,266 - INFO - ==================================================
+2025-11-07 22:21:33,267 - INFO - Found 3 recent trades for USDCAD
+2025-11-07 22:21:33,267 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,267 - WARNING - Insufficient market data for USDCAD
+2025-11-07 22:21:33,267 - INFO - 
+==================================================
+2025-11-07 22:21:33,267 - INFO - Retraining model for USDCHF
+2025-11-07 22:21:33,267 - INFO - ==================================================
+2025-11-07 22:21:33,269 - INFO - Found 2 recent trades for USDCHF
+2025-11-07 22:21:33,269 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,269 - WARNING - Insufficient market data for USDCHF
+2025-11-07 22:21:33,269 - INFO - 
+==================================================
+2025-11-07 22:21:33,269 - INFO - Retraining model for USDJPY
+2025-11-07 22:21:33,269 - INFO - ==================================================
+2025-11-07 22:21:33,270 - INFO - Found 3 recent trades for USDJPY
+2025-11-07 22:21:33,270 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,270 - WARNING - Insufficient market data for USDJPY
+2025-11-07 22:21:33,270 - INFO - 
+==================================================
+2025-11-07 22:21:33,270 - INFO - Retraining model for XAGUSD
+2025-11-07 22:21:33,270 - INFO - ==================================================
+2025-11-07 22:21:33,271 - INFO - Found 1 recent trades for XAGUSD
+2025-11-07 22:21:33,271 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,271 - WARNING - Insufficient market data for XAGUSD
+2025-11-07 22:21:33,271 - INFO - 
+==================================================
+2025-11-07 22:21:33,271 - INFO - Retraining model for XAUUSD
+2025-11-07 22:21:33,272 - INFO - ==================================================
+2025-11-07 22:21:33,272 - INFO - Found 31 recent trades for XAUUSD
+2025-11-07 22:21:33,273 - ERROR - MT5 connector not available
+2025-11-07 22:21:33,273 - WARNING - Insufficient market data for XAUUSD
+2025-11-07 22:21:33,273 - INFO - 
+============================================================
+2025-11-07 22:21:33,273 - INFO - RETRAINING SUMMARY
+2025-11-07 22:21:33,273 - INFO - ============================================================
+2025-11-07 22:21:33,273 - INFO - Total symbols: 30
+2025-11-07 22:21:33,273 - INFO - Successful retrains: 0
+2025-11-07 22:21:33,273 - INFO - Failed retrains: 30
+2025-11-07 22:21:33,273 - INFO - Success rate: 0.0%
+2025-11-07 22:21:33,274 - INFO - ============================================================
+2025-11-07 22:22:05,476 - INFO - ============================================================
+2025-11-07 22:22:05,476 - INFO - FX-AI MODEL RETRAINING PROCESS
+2025-11-07 22:22:05,476 - INFO - ============================================================
+2025-11-07 22:22:05,477 - INFO - Configuration loaded from config/config.json, trading.max_positions=30
+2025-11-07 22:22:05,477 - INFO - MT5 login loaded from environment variable
+2025-11-07 22:22:05,477 - INFO - MT5 password loaded from environment variable
+2025-11-07 22:22:05,477 - INFO - MT5 server loaded from environment: TIOMarkets-Demo1
+2025-11-07 22:22:05,478 - INFO - Configuration loaded from config/config.json, trading.max_positions=30
+2025-11-07 22:22:05,478 - INFO - MT5 login loaded from environment variable
+2025-11-07 22:22:05,478 - INFO - MT5 password loaded from environment variable
+2025-11-07 22:22:05,478 - INFO - MT5 server loaded from environment: TIOMarkets-Demo1
+2025-11-07 22:22:05,478 - INFO - Starting retraining for 30 symbols
+2025-11-07 22:22:05,478 - INFO - Symbols: AUDCAD, AUDCHF, AUDJPY, AUDNZD, AUDUSD, CADCHF, CADJPY, CHFJPY, EURAUD, EURCAD, EURCHF, EURGBP, EURJPY, EURNZD, EURUSD, GBPAUD, GBPCAD, GBPCHF, GBPJPY, GBPNZD, GBPUSD, NZDCAD, NZDCHF, NZDJPY, NZDUSD, USDCAD, USDCHF, USDJPY, XAGUSD, XAUUSD
+2025-11-07 22:22:05,512 - ERROR - CRITICAL: Cannot get MT5 server time - BLOCKING all trades for safety
+2025-11-07 22:22:05,512 - WARNING - Cannot get MT5 server time for daily loss reset check - using local time as fallback
+2025-11-07 22:22:05,512 - INFO - Daily loss initialized for new trading day: 2025-11-07
+2025-11-07 22:22:05,512 - INFO - Risk Manager initialized with $50.0 risk per trade, max_positions=30
+2025-11-07 22:22:05,512 - INFO - Daily trade limit: 1 trade per symbol per day
+2025-11-07 22:22:05,512 - INFO - Max spread: 3.0 pips, Cooldown: 5 minutes
+2025-11-07 22:22:05,513 - INFO - Starting continuous learning thread
+2025-11-07 22:22:05,513 - INFO - Continuous learning thread started
+2025-11-07 22:22:05,514 - INFO - Adaptive Learning Manager initialized
+2025-11-07 22:22:05,514 - INFO - 
+==================================================
+2025-11-07 22:22:05,515 - INFO - Retraining model for AUDCAD
+2025-11-07 22:22:05,515 - INFO - ==================================================
+2025-11-07 22:22:05,516 - INFO - Found 0 recent trades for AUDCAD
+2025-11-07 22:22:05,516 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,516 - INFO - MT5 market data unavailable, generating synthetic data for AUDCAD
+2025-11-07 22:22:05,520 - INFO - Generated 721 synthetic H1 bars for AUDCAD
+2025-11-07 22:22:05,520 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,521 - INFO - Retraining model for AUDCAD with 0 trades...
+2025-11-07 22:22:05,523 - INFO - 
+==================================================
+2025-11-07 22:22:05,523 - INFO - Retraining model for AUDCHF
+2025-11-07 22:22:05,523 - INFO - ==================================================
+2025-11-07 22:22:05,524 - INFO - Found 0 recent trades for AUDCHF
+2025-11-07 22:22:05,524 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,524 - INFO - MT5 market data unavailable, generating synthetic data for AUDCHF
+2025-11-07 22:22:05,526 - INFO - Generated 721 synthetic H1 bars for AUDCHF
+2025-11-07 22:22:05,527 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,527 - INFO - Retraining model for AUDCHF with 0 trades...
+2025-11-07 22:22:05,528 - INFO - 
+==================================================
+2025-11-07 22:22:05,529 - INFO - Retraining model for AUDJPY
+2025-11-07 22:22:05,529 - INFO - ==================================================
+2025-11-07 22:22:05,530 - INFO - Found 0 recent trades for AUDJPY
+2025-11-07 22:22:05,530 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,530 - INFO - MT5 market data unavailable, generating synthetic data for AUDJPY
+2025-11-07 22:22:05,532 - INFO - Generated 721 synthetic H1 bars for AUDJPY
+2025-11-07 22:22:05,532 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,532 - INFO - Retraining model for AUDJPY with 0 trades...
+2025-11-07 22:22:05,533 - INFO - 
+==================================================
+2025-11-07 22:22:05,533 - INFO - Retraining model for AUDNZD
+2025-11-07 22:22:05,534 - INFO - ==================================================
+2025-11-07 22:22:05,535 - INFO - Found 0 recent trades for AUDNZD
+2025-11-07 22:22:05,535 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,535 - INFO - MT5 market data unavailable, generating synthetic data for AUDNZD
+2025-11-07 22:22:05,537 - INFO - Generated 721 synthetic H1 bars for AUDNZD
+2025-11-07 22:22:05,537 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,537 - INFO - Retraining model for AUDNZD with 0 trades...
+2025-11-07 22:22:05,539 - INFO - 
+==================================================
+2025-11-07 22:22:05,539 - INFO - Retraining model for AUDUSD
+2025-11-07 22:22:05,539 - INFO - ==================================================
+2025-11-07 22:22:05,540 - INFO - Found 2 recent trades for AUDUSD
+2025-11-07 22:22:05,540 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,540 - INFO - MT5 market data unavailable, generating synthetic data for AUDUSD
+2025-11-07 22:22:05,542 - INFO - Generated 721 synthetic H1 bars for AUDUSD
+2025-11-07 22:22:05,542 - INFO - Using 2 trades for full retraining
+2025-11-07 22:22:05,542 - INFO - Retraining model for AUDUSD with 2 trades...
+2025-11-07 22:22:05,544 - INFO - 
+==================================================
+2025-11-07 22:22:05,544 - INFO - Retraining model for CADCHF
+2025-11-07 22:22:05,544 - INFO - ==================================================
+2025-11-07 22:22:05,545 - INFO - Found 0 recent trades for CADCHF
+2025-11-07 22:22:05,545 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,545 - INFO - MT5 market data unavailable, generating synthetic data for CADCHF
+2025-11-07 22:22:05,547 - INFO - Generated 721 synthetic H1 bars for CADCHF
+2025-11-07 22:22:05,547 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,548 - INFO - Retraining model for CADCHF with 0 trades...
+2025-11-07 22:22:05,549 - INFO - 
+==================================================
+2025-11-07 22:22:05,549 - INFO - Retraining model for CADJPY
+2025-11-07 22:22:05,549 - INFO - ==================================================
+2025-11-07 22:22:05,550 - INFO - Found 0 recent trades for CADJPY
+2025-11-07 22:22:05,550 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,550 - INFO - MT5 market data unavailable, generating synthetic data for CADJPY
+2025-11-07 22:22:05,552 - INFO - Generated 721 synthetic H1 bars for CADJPY
+2025-11-07 22:22:05,552 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,553 - INFO - Retraining model for CADJPY with 0 trades...
+2025-11-07 22:22:05,554 - INFO - 
+==================================================
+2025-11-07 22:22:05,554 - INFO - Retraining model for CHFJPY
+2025-11-07 22:22:05,554 - INFO - ==================================================
+2025-11-07 22:22:05,555 - INFO - Found 0 recent trades for CHFJPY
+2025-11-07 22:22:05,555 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,555 - INFO - MT5 market data unavailable, generating synthetic data for CHFJPY
+2025-11-07 22:22:05,557 - INFO - Generated 721 synthetic H1 bars for CHFJPY
+2025-11-07 22:22:05,557 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,558 - INFO - Retraining model for CHFJPY with 0 trades...
+2025-11-07 22:22:05,559 - INFO - 
+==================================================
+2025-11-07 22:22:05,559 - INFO - Retraining model for EURAUD
+2025-11-07 22:22:05,559 - INFO - ==================================================
+2025-11-07 22:22:05,560 - INFO - Found 0 recent trades for EURAUD
+2025-11-07 22:22:05,560 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,560 - INFO - MT5 market data unavailable, generating synthetic data for EURAUD
+2025-11-07 22:22:05,562 - INFO - Generated 721 synthetic H1 bars for EURAUD
+2025-11-07 22:22:05,562 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,563 - INFO - Retraining model for EURAUD with 0 trades...
+2025-11-07 22:22:05,564 - INFO - 
+==================================================
+2025-11-07 22:22:05,564 - INFO - Retraining model for EURCAD
+2025-11-07 22:22:05,564 - INFO - ==================================================
+2025-11-07 22:22:05,565 - INFO - Found 0 recent trades for EURCAD
+2025-11-07 22:22:05,565 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,566 - INFO - MT5 market data unavailable, generating synthetic data for EURCAD
+2025-11-07 22:22:05,567 - INFO - Generated 721 synthetic H1 bars for EURCAD
+2025-11-07 22:22:05,568 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,568 - INFO - Retraining model for EURCAD with 0 trades...
+2025-11-07 22:22:05,570 - INFO - 
+==================================================
+2025-11-07 22:22:05,570 - INFO - Retraining model for EURCHF
+2025-11-07 22:22:05,570 - INFO - ==================================================
+2025-11-07 22:22:05,571 - INFO - Found 0 recent trades for EURCHF
+2025-11-07 22:22:05,571 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,571 - INFO - MT5 market data unavailable, generating synthetic data for EURCHF
+2025-11-07 22:22:05,573 - INFO - Generated 721 synthetic H1 bars for EURCHF
+2025-11-07 22:22:05,573 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,574 - INFO - Retraining model for EURCHF with 0 trades...
+2025-11-07 22:22:05,575 - INFO - 
+==================================================
+2025-11-07 22:22:05,575 - INFO - Retraining model for EURGBP
+2025-11-07 22:22:05,575 - INFO - ==================================================
+2025-11-07 22:22:05,576 - INFO - Found 2 recent trades for EURGBP
+2025-11-07 22:22:05,576 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,576 - INFO - MT5 market data unavailable, generating synthetic data for EURGBP
+2025-11-07 22:22:05,578 - INFO - Generated 721 synthetic H1 bars for EURGBP
+2025-11-07 22:22:05,578 - INFO - Using 2 trades for full retraining
+2025-11-07 22:22:05,578 - INFO - Retraining model for EURGBP with 2 trades...
+2025-11-07 22:22:05,580 - INFO - 
+==================================================
+2025-11-07 22:22:05,580 - INFO - Retraining model for EURJPY
+2025-11-07 22:22:05,580 - INFO - ==================================================
+2025-11-07 22:22:05,581 - INFO - Found 29 recent trades for EURJPY
+2025-11-07 22:22:05,581 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,581 - INFO - MT5 market data unavailable, generating synthetic data for EURJPY
+2025-11-07 22:22:05,583 - INFO - Generated 721 synthetic H1 bars for EURJPY
+2025-11-07 22:22:05,583 - INFO - Using 29 trades for full retraining
+2025-11-07 22:22:05,583 - INFO - Retraining model for EURJPY with 29 trades...
+2025-11-07 22:22:05,584 - INFO - 
+==================================================
+2025-11-07 22:22:05,584 - INFO - Retraining model for EURNZD
+2025-11-07 22:22:05,585 - INFO - ==================================================
+2025-11-07 22:22:05,586 - INFO - Found 0 recent trades for EURNZD
+2025-11-07 22:22:05,586 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,586 - INFO - MT5 market data unavailable, generating synthetic data for EURNZD
+2025-11-07 22:22:05,588 - INFO - Generated 721 synthetic H1 bars for EURNZD
+2025-11-07 22:22:05,588 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,589 - INFO - Retraining model for EURNZD with 0 trades...
+2025-11-07 22:22:05,590 - INFO - 
+==================================================
+2025-11-07 22:22:05,590 - INFO - Retraining model for EURUSD
+2025-11-07 22:22:05,590 - INFO - ==================================================
+2025-11-07 22:22:05,591 - INFO - Found 3 recent trades for EURUSD
+2025-11-07 22:22:05,591 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,591 - INFO - MT5 market data unavailable, generating synthetic data for EURUSD
+2025-11-07 22:22:05,593 - INFO - Generated 721 synthetic H1 bars for EURUSD
+2025-11-07 22:22:05,593 - INFO - Using 3 trades for full retraining
+2025-11-07 22:22:05,593 - INFO - Retraining model for EURUSD with 3 trades...
+2025-11-07 22:22:05,594 - INFO - 
+==================================================
+2025-11-07 22:22:05,594 - INFO - Retraining model for GBPAUD
+2025-11-07 22:22:05,594 - INFO - ==================================================
+2025-11-07 22:22:05,595 - INFO - Found 0 recent trades for GBPAUD
+2025-11-07 22:22:05,595 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,595 - INFO - MT5 market data unavailable, generating synthetic data for GBPAUD
+2025-11-07 22:22:05,597 - INFO - Generated 721 synthetic H1 bars for GBPAUD
+2025-11-07 22:22:05,597 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,598 - INFO - Retraining model for GBPAUD with 0 trades...
+2025-11-07 22:22:05,599 - INFO - 
+==================================================
+2025-11-07 22:22:05,599 - INFO - Retraining model for GBPCAD
+2025-11-07 22:22:05,599 - INFO - ==================================================
+2025-11-07 22:22:05,600 - INFO - Found 0 recent trades for GBPCAD
+2025-11-07 22:22:05,600 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,600 - INFO - MT5 market data unavailable, generating synthetic data for GBPCAD
+2025-11-07 22:22:05,602 - INFO - Generated 721 synthetic H1 bars for GBPCAD
+2025-11-07 22:22:05,602 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,603 - INFO - Retraining model for GBPCAD with 0 trades...
+2025-11-07 22:22:05,604 - INFO - 
+==================================================
+2025-11-07 22:22:05,604 - INFO - Retraining model for GBPCHF
+2025-11-07 22:22:05,604 - INFO - ==================================================
+2025-11-07 22:22:05,605 - INFO - Found 0 recent trades for GBPCHF
+2025-11-07 22:22:05,606 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,606 - INFO - MT5 market data unavailable, generating synthetic data for GBPCHF
+2025-11-07 22:22:05,607 - INFO - Generated 721 synthetic H1 bars for GBPCHF
+2025-11-07 22:22:05,608 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,608 - INFO - Retraining model for GBPCHF with 0 trades...
+2025-11-07 22:22:05,609 - INFO - 
+==================================================
+2025-11-07 22:22:05,609 - INFO - Retraining model for GBPJPY
+2025-11-07 22:22:05,609 - INFO - ==================================================
+2025-11-07 22:22:05,610 - INFO - Found 13 recent trades for GBPJPY
+2025-11-07 22:22:05,611 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,611 - INFO - MT5 market data unavailable, generating synthetic data for GBPJPY
+2025-11-07 22:22:05,612 - INFO - Generated 721 synthetic H1 bars for GBPJPY
+2025-11-07 22:22:05,613 - INFO - Using 13 trades for full retraining
+2025-11-07 22:22:05,613 - INFO - Retraining model for GBPJPY with 13 trades...
+2025-11-07 22:22:05,614 - INFO - 
+==================================================
+2025-11-07 22:22:05,614 - INFO - Retraining model for GBPNZD
+2025-11-07 22:22:05,614 - INFO - ==================================================
+2025-11-07 22:22:05,615 - INFO - Found 0 recent trades for GBPNZD
+2025-11-07 22:22:05,615 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,615 - INFO - MT5 market data unavailable, generating synthetic data for GBPNZD
+2025-11-07 22:22:05,617 - INFO - Generated 721 synthetic H1 bars for GBPNZD
+2025-11-07 22:22:05,617 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,618 - INFO - Retraining model for GBPNZD with 0 trades...
+2025-11-07 22:22:05,619 - INFO - 
+==================================================
+2025-11-07 22:22:05,619 - INFO - Retraining model for GBPUSD
+2025-11-07 22:22:05,619 - INFO - ==================================================
+2025-11-07 22:22:05,620 - INFO - Found 0 recent trades for GBPUSD
+2025-11-07 22:22:05,620 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,620 - INFO - MT5 market data unavailable, generating synthetic data for GBPUSD
+2025-11-07 22:22:05,622 - INFO - Generated 721 synthetic H1 bars for GBPUSD
+2025-11-07 22:22:05,622 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,623 - INFO - Retraining model for GBPUSD with 0 trades...
+2025-11-07 22:22:05,624 - INFO - 
+==================================================
+2025-11-07 22:22:05,624 - INFO - Retraining model for NZDCAD
+2025-11-07 22:22:05,624 - INFO - ==================================================
+2025-11-07 22:22:05,625 - INFO - Found 0 recent trades for NZDCAD
+2025-11-07 22:22:05,625 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,626 - INFO - MT5 market data unavailable, generating synthetic data for NZDCAD
+2025-11-07 22:22:05,628 - INFO - Generated 721 synthetic H1 bars for NZDCAD
+2025-11-07 22:22:05,628 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,628 - INFO - Retraining model for NZDCAD with 0 trades...
+2025-11-07 22:22:05,630 - INFO - 
+==================================================
+2025-11-07 22:22:05,630 - INFO - Retraining model for NZDCHF
+2025-11-07 22:22:05,630 - INFO - ==================================================
+2025-11-07 22:22:05,631 - INFO - Found 0 recent trades for NZDCHF
+2025-11-07 22:22:05,631 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,631 - INFO - MT5 market data unavailable, generating synthetic data for NZDCHF
+2025-11-07 22:22:05,633 - INFO - Generated 721 synthetic H1 bars for NZDCHF
+2025-11-07 22:22:05,633 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,634 - INFO - Retraining model for NZDCHF with 0 trades...
+2025-11-07 22:22:05,635 - INFO - 
+==================================================
+2025-11-07 22:22:05,635 - INFO - Retraining model for NZDJPY
+2025-11-07 22:22:05,635 - INFO - ==================================================
+2025-11-07 22:22:05,636 - INFO - Found 0 recent trades for NZDJPY
+2025-11-07 22:22:05,636 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,636 - INFO - MT5 market data unavailable, generating synthetic data for NZDJPY
+2025-11-07 22:22:05,638 - INFO - Generated 721 synthetic H1 bars for NZDJPY
+2025-11-07 22:22:05,638 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,639 - INFO - Retraining model for NZDJPY with 0 trades...
+2025-11-07 22:22:05,640 - INFO - 
+==================================================
+2025-11-07 22:22:05,640 - INFO - Retraining model for NZDUSD
+2025-11-07 22:22:05,640 - INFO - ==================================================
+2025-11-07 22:22:05,641 - INFO - Found 0 recent trades for NZDUSD
+2025-11-07 22:22:05,641 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,641 - INFO - MT5 market data unavailable, generating synthetic data for NZDUSD
+2025-11-07 22:22:05,644 - INFO - Generated 721 synthetic H1 bars for NZDUSD
+2025-11-07 22:22:05,644 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:05,644 - INFO - Retraining model for NZDUSD with 0 trades...
+2025-11-07 22:22:05,645 - INFO - 
+==================================================
+2025-11-07 22:22:05,645 - INFO - Retraining model for USDCAD
+2025-11-07 22:22:05,645 - INFO - ==================================================
+2025-11-07 22:22:05,646 - INFO - Found 3 recent trades for USDCAD
+2025-11-07 22:22:05,647 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,647 - INFO - MT5 market data unavailable, generating synthetic data for USDCAD
+2025-11-07 22:22:05,648 - INFO - Generated 721 synthetic H1 bars for USDCAD
+2025-11-07 22:22:05,649 - INFO - Using 3 trades for full retraining
+2025-11-07 22:22:05,649 - INFO - Retraining model for USDCAD with 3 trades...
+2025-11-07 22:22:05,650 - INFO - 
+==================================================
+2025-11-07 22:22:05,650 - INFO - Retraining model for USDCHF
+2025-11-07 22:22:05,650 - INFO - ==================================================
+2025-11-07 22:22:05,651 - INFO - Found 2 recent trades for USDCHF
+2025-11-07 22:22:05,651 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,651 - INFO - MT5 market data unavailable, generating synthetic data for USDCHF
+2025-11-07 22:22:05,653 - INFO - Generated 721 synthetic H1 bars for USDCHF
+2025-11-07 22:22:05,653 - INFO - Using 2 trades for full retraining
+2025-11-07 22:22:05,653 - INFO - Retraining model for USDCHF with 2 trades...
+2025-11-07 22:22:05,654 - INFO - 
+==================================================
+2025-11-07 22:22:05,654 - INFO - Retraining model for USDJPY
+2025-11-07 22:22:05,654 - INFO - ==================================================
+2025-11-07 22:22:05,656 - INFO - Found 3 recent trades for USDJPY
+2025-11-07 22:22:05,656 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,656 - INFO - MT5 market data unavailable, generating synthetic data for USDJPY
+2025-11-07 22:22:05,657 - INFO - Generated 721 synthetic H1 bars for USDJPY
+2025-11-07 22:22:05,658 - INFO - Using 3 trades for full retraining
+2025-11-07 22:22:05,658 - INFO - Retraining model for USDJPY with 3 trades...
+2025-11-07 22:22:05,659 - INFO - 
+==================================================
+2025-11-07 22:22:05,659 - INFO - Retraining model for XAGUSD
+2025-11-07 22:22:05,659 - INFO - ==================================================
+2025-11-07 22:22:05,660 - INFO - Found 1 recent trades for XAGUSD
+2025-11-07 22:22:05,660 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,660 - INFO - MT5 market data unavailable, generating synthetic data for XAGUSD
+2025-11-07 22:22:05,662 - INFO - Generated 721 synthetic H1 bars for XAGUSD
+2025-11-07 22:22:05,662 - INFO - Using 1 trade for limited retraining
+2025-11-07 22:22:05,662 - INFO - Retraining model for XAGUSD with 1 trades...
+2025-11-07 22:22:05,663 - INFO - 
+==================================================
+2025-11-07 22:22:05,663 - INFO - Retraining model for XAUUSD
+2025-11-07 22:22:05,663 - INFO - ==================================================
+2025-11-07 22:22:05,664 - INFO - Found 31 recent trades for XAUUSD
+2025-11-07 22:22:05,664 - ERROR - MT5 connector not available
+2025-11-07 22:22:05,664 - INFO - MT5 market data unavailable, generating synthetic data for XAUUSD
+2025-11-07 22:22:05,666 - INFO - Generated 721 synthetic H1 bars for XAUUSD
+2025-11-07 22:22:05,666 - INFO - Using 31 trades for full retraining
+2025-11-07 22:22:05,666 - INFO - Retraining model for XAUUSD with 31 trades...
+2025-11-07 22:22:05,668 - INFO - 
+============================================================
+2025-11-07 22:22:05,668 - INFO - RETRAINING SUMMARY
+2025-11-07 22:22:05,668 - INFO - ============================================================
+2025-11-07 22:22:05,668 - INFO - Total symbols: 30
+2025-11-07 22:22:05,668 - INFO - Successful retrains: 0
+2025-11-07 22:22:05,668 - INFO - Failed retrains: 30
+2025-11-07 22:22:05,668 - INFO - Success rate: 0.0%
+2025-11-07 22:22:05,669 - INFO - ============================================================
+2025-11-07 22:22:30,228 - INFO - ============================================================
+2025-11-07 22:22:30,228 - INFO - FX-AI MODEL RETRAINING PROCESS
+2025-11-07 22:22:30,228 - INFO - ============================================================
+2025-11-07 22:22:30,229 - INFO - Configuration loaded from config/config.json, trading.max_positions=30
+2025-11-07 22:22:30,229 - INFO - MT5 login loaded from environment variable
+2025-11-07 22:22:30,229 - INFO - MT5 password loaded from environment variable
+2025-11-07 22:22:30,229 - INFO - MT5 server loaded from environment: TIOMarkets-Demo1
+2025-11-07 22:22:30,229 - INFO - Configuration loaded from config/config.json, trading.max_positions=30
+2025-11-07 22:22:30,229 - INFO - MT5 login loaded from environment variable
+2025-11-07 22:22:30,229 - INFO - MT5 password loaded from environment variable
+2025-11-07 22:22:30,230 - INFO - MT5 server loaded from environment: TIOMarkets-Demo1
+2025-11-07 22:22:30,230 - INFO - Starting retraining for 30 symbols
+2025-11-07 22:22:30,230 - INFO - Symbols: AUDCAD, AUDCHF, AUDJPY, AUDNZD, AUDUSD, CADCHF, CADJPY, CHFJPY, EURAUD, EURCAD, EURCHF, EURGBP, EURJPY, EURNZD, EURUSD, GBPAUD, GBPCAD, GBPCHF, GBPJPY, GBPNZD, GBPUSD, NZDCAD, NZDCHF, NZDJPY, NZDUSD, USDCAD, USDCHF, USDJPY, XAGUSD, XAUUSD
+2025-11-07 22:22:30,234 - ERROR - CRITICAL: Cannot get MT5 server time - BLOCKING all trades for safety
+2025-11-07 22:22:30,234 - WARNING - Cannot get MT5 server time for daily loss reset check - using local time as fallback
+2025-11-07 22:22:30,234 - INFO - Daily loss initialized for new trading day: 2025-11-07
+2025-11-07 22:22:30,234 - INFO - Risk Manager initialized with $50.0 risk per trade, max_positions=30
+2025-11-07 22:22:30,234 - INFO - Daily trade limit: 1 trade per symbol per day
+2025-11-07 22:22:30,234 - INFO - Max spread: 3.0 pips, Cooldown: 5 minutes
+2025-11-07 22:22:30,235 - INFO - Starting continuous learning thread
+2025-11-07 22:22:30,235 - INFO - Continuous learning thread started
+2025-11-07 22:22:30,236 - INFO - Adaptive Learning Manager initialized
+2025-11-07 22:22:30,237 - INFO - 
+==================================================
+2025-11-07 22:22:30,237 - INFO - Retraining model for AUDCAD
+2025-11-07 22:22:30,237 - INFO - ==================================================
+2025-11-07 22:22:30,238 - INFO - Found 0 recent trades for AUDCAD
+2025-11-07 22:22:30,238 - ERROR - MT5 connector not available
+2025-11-07 22:22:30,238 - INFO - MT5 market data unavailable, generating synthetic data for AUDCAD
+2025-11-07 22:22:30,241 - INFO - Generated 721 synthetic H1 bars for AUDCAD
+2025-11-07 22:22:30,241 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:30,242 - INFO - Retraining model for AUDCAD with 0 trades...
+2025-11-07 22:22:30,400 - INFO - Model for AUDCAD - Train accuracy: 0.994, Test accuracy: 0.504
+2025-11-07 22:22:30,414 - INFO - Trained and saved model for AUDCAD
+2025-11-07 22:22:30,416 - INFO - 
+==================================================
+2025-11-07 22:22:30,416 - INFO - Retraining model for AUDCHF
+2025-11-07 22:22:30,416 - INFO - ==================================================
+2025-11-07 22:22:30,417 - INFO - Found 0 recent trades for AUDCHF
+2025-11-07 22:22:30,417 - ERROR - MT5 connector not available
+2025-11-07 22:22:30,417 - INFO - MT5 market data unavailable, generating synthetic data for AUDCHF
+2025-11-07 22:22:30,419 - INFO - Generated 721 synthetic H1 bars for AUDCHF
+2025-11-07 22:22:30,420 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:30,420 - INFO - Retraining model for AUDCHF with 0 trades...
+2025-11-07 22:22:30,581 - INFO - Model for AUDCHF - Train accuracy: 0.992, Test accuracy: 0.481
+2025-11-07 22:22:30,595 - INFO - Trained and saved model for AUDCHF
+2025-11-07 22:22:30,596 - INFO - 
+==================================================
+2025-11-07 22:22:30,596 - INFO - Retraining model for AUDJPY
+2025-11-07 22:22:30,596 - INFO - ==================================================
+2025-11-07 22:22:30,598 - INFO - Found 0 recent trades for AUDJPY
+2025-11-07 22:22:30,598 - ERROR - MT5 connector not available
+2025-11-07 22:22:30,598 - INFO - MT5 market data unavailable, generating synthetic data for AUDJPY
+2025-11-07 22:22:30,600 - INFO - Generated 721 synthetic H1 bars for AUDJPY
+2025-11-07 22:22:30,600 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:30,601 - INFO - Retraining model for AUDJPY with 0 trades...
+2025-11-07 22:22:30,763 - INFO - Model for AUDJPY - Train accuracy: 0.992, Test accuracy: 0.405
+2025-11-07 22:22:30,777 - INFO - Trained and saved model for AUDJPY
+2025-11-07 22:22:30,778 - INFO - 
+==================================================
+2025-11-07 22:22:30,778 - INFO - Retraining model for AUDNZD
+2025-11-07 22:22:30,779 - INFO - ==================================================
+2025-11-07 22:22:30,780 - INFO - Found 0 recent trades for AUDNZD
+2025-11-07 22:22:30,780 - ERROR - MT5 connector not available
+2025-11-07 22:22:30,780 - INFO - MT5 market data unavailable, generating synthetic data for AUDNZD
+2025-11-07 22:22:30,782 - INFO - Generated 721 synthetic H1 bars for AUDNZD
+2025-11-07 22:22:30,782 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:30,783 - INFO - Retraining model for AUDNZD with 0 trades...
+2025-11-07 22:22:30,969 - INFO - Model for AUDNZD - Train accuracy: 0.987, Test accuracy: 0.573
+2025-11-07 22:22:30,984 - INFO - Trained and saved model for AUDNZD
+2025-11-07 22:22:30,985 - INFO - 
+==================================================
+2025-11-07 22:22:30,985 - INFO - Retraining model for AUDUSD
+2025-11-07 22:22:30,986 - INFO - ==================================================
+2025-11-07 22:22:30,987 - INFO - Found 2 recent trades for AUDUSD
+2025-11-07 22:22:30,987 - ERROR - MT5 connector not available
+2025-11-07 22:22:30,987 - INFO - MT5 market data unavailable, generating synthetic data for AUDUSD
+2025-11-07 22:22:30,989 - INFO - Generated 721 synthetic H1 bars for AUDUSD
+2025-11-07 22:22:30,989 - INFO - Using 2 trades for full retraining
+2025-11-07 22:22:30,989 - INFO - Retraining model for AUDUSD with 2 trades...
+2025-11-07 22:22:31,144 - INFO - Model for AUDUSD - Train accuracy: 0.990, Test accuracy: 0.481
+2025-11-07 22:22:31,158 - INFO - Trained and saved model for AUDUSD
+2025-11-07 22:22:31,159 - INFO - 
+==================================================
+2025-11-07 22:22:31,159 - INFO - Retraining model for CADCHF
+2025-11-07 22:22:31,159 - INFO - ==================================================
+2025-11-07 22:22:31,161 - INFO - Found 0 recent trades for CADCHF
+2025-11-07 22:22:31,161 - ERROR - MT5 connector not available
+2025-11-07 22:22:31,161 - INFO - MT5 market data unavailable, generating synthetic data for CADCHF
+2025-11-07 22:22:31,163 - INFO - Generated 721 synthetic H1 bars for CADCHF
+2025-11-07 22:22:31,163 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:31,164 - INFO - Retraining model for CADCHF with 0 trades...
+2025-11-07 22:22:31,319 - INFO - Model for CADCHF - Train accuracy: 0.994, Test accuracy: 0.511
+2025-11-07 22:22:31,332 - INFO - Trained and saved model for CADCHF
+2025-11-07 22:22:31,334 - INFO - 
+==================================================
+2025-11-07 22:22:31,334 - INFO - Retraining model for CADJPY
+2025-11-07 22:22:31,334 - INFO - ==================================================
+2025-11-07 22:22:31,336 - INFO - Found 0 recent trades for CADJPY
+2025-11-07 22:22:31,336 - ERROR - MT5 connector not available
+2025-11-07 22:22:31,336 - INFO - MT5 market data unavailable, generating synthetic data for CADJPY
+2025-11-07 22:22:31,338 - INFO - Generated 721 synthetic H1 bars for CADJPY
+2025-11-07 22:22:31,338 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:31,339 - INFO - Retraining model for CADJPY with 0 trades...
+2025-11-07 22:22:31,497 - INFO - Model for CADJPY - Train accuracy: 0.994, Test accuracy: 0.504
+2025-11-07 22:22:31,514 - INFO - Trained and saved model for CADJPY
+2025-11-07 22:22:31,516 - INFO - 
+==================================================
+2025-11-07 22:22:31,516 - INFO - Retraining model for CHFJPY
+2025-11-07 22:22:31,516 - INFO - ==================================================
+2025-11-07 22:22:31,519 - INFO - Found 0 recent trades for CHFJPY
+2025-11-07 22:22:31,520 - ERROR - MT5 connector not available
+2025-11-07 22:22:31,520 - INFO - MT5 market data unavailable, generating synthetic data for CHFJPY
+2025-11-07 22:22:31,522 - INFO - Generated 721 synthetic H1 bars for CHFJPY
+2025-11-07 22:22:31,522 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:31,523 - INFO - Retraining model for CHFJPY with 0 trades...
+2025-11-07 22:22:31,692 - INFO - Model for CHFJPY - Train accuracy: 0.994, Test accuracy: 0.519
+2025-11-07 22:22:31,706 - INFO - Trained and saved model for CHFJPY
+2025-11-07 22:22:31,707 - INFO - 
+==================================================
+2025-11-07 22:22:31,707 - INFO - Retraining model for EURAUD
+2025-11-07 22:22:31,707 - INFO - ==================================================
+2025-11-07 22:22:31,708 - INFO - Found 0 recent trades for EURAUD
+2025-11-07 22:22:31,708 - ERROR - MT5 connector not available
+2025-11-07 22:22:31,708 - INFO - MT5 market data unavailable, generating synthetic data for EURAUD
+2025-11-07 22:22:31,711 - INFO - Generated 721 synthetic H1 bars for EURAUD
+2025-11-07 22:22:31,711 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:31,712 - INFO - Retraining model for EURAUD with 0 trades...
+2025-11-07 22:22:31,866 - INFO - Model for EURAUD - Train accuracy: 0.990, Test accuracy: 0.466
+2025-11-07 22:22:31,902 - INFO - Trained and saved model for EURAUD
+2025-11-07 22:22:31,903 - INFO - 
+==================================================
+2025-11-07 22:22:31,903 - INFO - Retraining model for EURCAD
+2025-11-07 22:22:31,903 - INFO - ==================================================
+2025-11-07 22:22:31,904 - INFO - Found 0 recent trades for EURCAD
+2025-11-07 22:22:31,904 - ERROR - MT5 connector not available
+2025-11-07 22:22:31,904 - INFO - MT5 market data unavailable, generating synthetic data for EURCAD
+2025-11-07 22:22:31,906 - INFO - Generated 721 synthetic H1 bars for EURCAD
+2025-11-07 22:22:31,906 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:31,907 - INFO - Retraining model for EURCAD with 0 trades...
+2025-11-07 22:22:32,065 - INFO - Model for EURCAD - Train accuracy: 0.988, Test accuracy: 0.511
+2025-11-07 22:22:32,079 - INFO - Trained and saved model for EURCAD
+2025-11-07 22:22:32,080 - INFO - 
+==================================================
+2025-11-07 22:22:32,080 - INFO - Retraining model for EURCHF
+2025-11-07 22:22:32,080 - INFO - ==================================================
+2025-11-07 22:22:32,082 - INFO - Found 0 recent trades for EURCHF
+2025-11-07 22:22:32,082 - ERROR - MT5 connector not available
+2025-11-07 22:22:32,082 - INFO - MT5 market data unavailable, generating synthetic data for EURCHF
+2025-11-07 22:22:32,084 - INFO - Generated 721 synthetic H1 bars for EURCHF
+2025-11-07 22:22:32,084 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:32,085 - INFO - Retraining model for EURCHF with 0 trades...
+2025-11-07 22:22:32,245 - INFO - Model for EURCHF - Train accuracy: 0.994, Test accuracy: 0.557
+2025-11-07 22:22:32,260 - INFO - Trained and saved model for EURCHF
+2025-11-07 22:22:32,261 - INFO - 
+==================================================
+2025-11-07 22:22:32,262 - INFO - Retraining model for EURGBP
+2025-11-07 22:22:32,262 - INFO - ==================================================
+2025-11-07 22:22:32,263 - INFO - Found 2 recent trades for EURGBP
+2025-11-07 22:22:32,263 - ERROR - MT5 connector not available
+2025-11-07 22:22:32,263 - INFO - MT5 market data unavailable, generating synthetic data for EURGBP
+2025-11-07 22:22:32,265 - INFO - Generated 721 synthetic H1 bars for EURGBP
+2025-11-07 22:22:32,265 - INFO - Using 2 trades for full retraining
+2025-11-07 22:22:32,265 - INFO - Retraining model for EURGBP with 2 trades...
+2025-11-07 22:22:32,425 - INFO - Model for EURGBP - Train accuracy: 0.994, Test accuracy: 0.511
+2025-11-07 22:22:32,440 - INFO - Trained and saved model for EURGBP
+2025-11-07 22:22:32,441 - INFO - 
+==================================================
+2025-11-07 22:22:32,441 - INFO - Retraining model for EURJPY
+2025-11-07 22:22:32,441 - INFO - ==================================================
+2025-11-07 22:22:32,442 - INFO - Found 29 recent trades for EURJPY
+2025-11-07 22:22:32,442 - ERROR - MT5 connector not available
+2025-11-07 22:22:32,442 - INFO - MT5 market data unavailable, generating synthetic data for EURJPY
+2025-11-07 22:22:32,444 - INFO - Generated 721 synthetic H1 bars for EURJPY
+2025-11-07 22:22:32,445 - INFO - Using 29 trades for full retraining
+2025-11-07 22:22:32,445 - INFO - Retraining model for EURJPY with 29 trades...
+2025-11-07 22:22:32,606 - INFO - Model for EURJPY - Train accuracy: 0.992, Test accuracy: 0.466
+2025-11-07 22:22:32,620 - INFO - Trained and saved model for EURJPY
+2025-11-07 22:22:32,621 - INFO - 
+==================================================
+2025-11-07 22:22:32,621 - INFO - Retraining model for EURNZD
+2025-11-07 22:22:32,621 - INFO - ==================================================
+2025-11-07 22:22:32,622 - INFO - Found 0 recent trades for EURNZD
+2025-11-07 22:22:32,622 - ERROR - MT5 connector not available
+2025-11-07 22:22:32,623 - INFO - MT5 market data unavailable, generating synthetic data for EURNZD
+2025-11-07 22:22:32,625 - INFO - Generated 721 synthetic H1 bars for EURNZD
+2025-11-07 22:22:32,625 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:32,625 - INFO - Retraining model for EURNZD with 0 trades...
+2025-11-07 22:22:32,783 - INFO - Model for EURNZD - Train accuracy: 0.998, Test accuracy: 0.435
+2025-11-07 22:22:32,797 - INFO - Trained and saved model for EURNZD
+2025-11-07 22:22:32,798 - INFO - 
+==================================================
+2025-11-07 22:22:32,798 - INFO - Retraining model for EURUSD
+2025-11-07 22:22:32,798 - INFO - ==================================================
+2025-11-07 22:22:32,799 - INFO - Found 3 recent trades for EURUSD
+2025-11-07 22:22:32,800 - ERROR - MT5 connector not available
+2025-11-07 22:22:32,800 - INFO - MT5 market data unavailable, generating synthetic data for EURUSD
+2025-11-07 22:22:32,802 - INFO - Generated 721 synthetic H1 bars for EURUSD
+2025-11-07 22:22:32,803 - INFO - Using 3 trades for full retraining
+2025-11-07 22:22:32,803 - INFO - Retraining model for EURUSD with 3 trades...
+2025-11-07 22:22:32,959 - INFO - Model for EURUSD - Train accuracy: 0.998, Test accuracy: 0.496
+2025-11-07 22:22:32,973 - INFO - Trained and saved model for EURUSD
+2025-11-07 22:22:32,974 - INFO - 
+==================================================
+2025-11-07 22:22:32,974 - INFO - Retraining model for GBPAUD
+2025-11-07 22:22:32,974 - INFO - ==================================================
+2025-11-07 22:22:32,976 - INFO - Found 0 recent trades for GBPAUD
+2025-11-07 22:22:32,976 - ERROR - MT5 connector not available
+2025-11-07 22:22:32,976 - INFO - MT5 market data unavailable, generating synthetic data for GBPAUD
+2025-11-07 22:22:32,978 - INFO - Generated 721 synthetic H1 bars for GBPAUD
+2025-11-07 22:22:32,978 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:32,979 - INFO - Retraining model for GBPAUD with 0 trades...
+2025-11-07 22:22:33,138 - INFO - Model for GBPAUD - Train accuracy: 0.994, Test accuracy: 0.466
+2025-11-07 22:22:33,153 - INFO - Trained and saved model for GBPAUD
+2025-11-07 22:22:33,154 - INFO - 
+==================================================
+2025-11-07 22:22:33,154 - INFO - Retraining model for GBPCAD
+2025-11-07 22:22:33,154 - INFO - ==================================================
+2025-11-07 22:22:33,155 - INFO - Found 0 recent trades for GBPCAD
+2025-11-07 22:22:33,155 - ERROR - MT5 connector not available
+2025-11-07 22:22:33,155 - INFO - MT5 market data unavailable, generating synthetic data for GBPCAD
+2025-11-07 22:22:33,157 - INFO - Generated 721 synthetic H1 bars for GBPCAD
+2025-11-07 22:22:33,157 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:33,158 - INFO - Retraining model for GBPCAD with 0 trades...
+2025-11-07 22:22:33,317 - INFO - Model for GBPCAD - Train accuracy: 0.998, Test accuracy: 0.489
+2025-11-07 22:22:33,331 - INFO - Trained and saved model for GBPCAD
+2025-11-07 22:22:33,332 - INFO - 
+==================================================
+2025-11-07 22:22:33,332 - INFO - Retraining model for GBPCHF
+2025-11-07 22:22:33,332 - INFO - ==================================================
+2025-11-07 22:22:33,333 - INFO - Found 0 recent trades for GBPCHF
+2025-11-07 22:22:33,334 - ERROR - MT5 connector not available
+2025-11-07 22:22:33,334 - INFO - MT5 market data unavailable, generating synthetic data for GBPCHF
+2025-11-07 22:22:33,336 - INFO - Generated 721 synthetic H1 bars for GBPCHF
+2025-11-07 22:22:33,336 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:33,337 - INFO - Retraining model for GBPCHF with 0 trades...
+2025-11-07 22:22:33,497 - INFO - Model for GBPCHF - Train accuracy: 0.994, Test accuracy: 0.412
+2025-11-07 22:22:33,511 - INFO - Trained and saved model for GBPCHF
+2025-11-07 22:22:33,512 - INFO - 
+==================================================
+2025-11-07 22:22:33,512 - INFO - Retraining model for GBPJPY
+2025-11-07 22:22:33,512 - INFO - ==================================================
+2025-11-07 22:22:33,513 - INFO - Found 13 recent trades for GBPJPY
+2025-11-07 22:22:33,514 - ERROR - MT5 connector not available
+2025-11-07 22:22:33,514 - INFO - MT5 market data unavailable, generating synthetic data for GBPJPY
+2025-11-07 22:22:33,516 - INFO - Generated 721 synthetic H1 bars for GBPJPY
+2025-11-07 22:22:33,516 - INFO - Using 13 trades for full retraining
+2025-11-07 22:22:33,516 - INFO - Retraining model for GBPJPY with 13 trades...
+2025-11-07 22:22:33,674 - INFO - Model for GBPJPY - Train accuracy: 0.994, Test accuracy: 0.542
+2025-11-07 22:22:33,688 - INFO - Trained and saved model for GBPJPY
+2025-11-07 22:22:33,689 - INFO - 
+==================================================
+2025-11-07 22:22:33,689 - INFO - Retraining model for GBPNZD
+2025-11-07 22:22:33,689 - INFO - ==================================================
+2025-11-07 22:22:33,690 - INFO - Found 0 recent trades for GBPNZD
+2025-11-07 22:22:33,691 - ERROR - MT5 connector not available
+2025-11-07 22:22:33,691 - INFO - MT5 market data unavailable, generating synthetic data for GBPNZD
+2025-11-07 22:22:33,693 - INFO - Generated 721 synthetic H1 bars for GBPNZD
+2025-11-07 22:22:33,693 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:33,694 - INFO - Retraining model for GBPNZD with 0 trades...
+2025-11-07 22:22:33,852 - INFO - Model for GBPNZD - Train accuracy: 0.992, Test accuracy: 0.542
+2025-11-07 22:22:33,866 - INFO - Trained and saved model for GBPNZD
+2025-11-07 22:22:33,867 - INFO - 
+==================================================
+2025-11-07 22:22:33,867 - INFO - Retraining model for GBPUSD
+2025-11-07 22:22:33,867 - INFO - ==================================================
+2025-11-07 22:22:33,868 - INFO - Found 0 recent trades for GBPUSD
+2025-11-07 22:22:33,868 - ERROR - MT5 connector not available
+2025-11-07 22:22:33,868 - INFO - MT5 market data unavailable, generating synthetic data for GBPUSD
+2025-11-07 22:22:33,870 - INFO - Generated 721 synthetic H1 bars for GBPUSD
+2025-11-07 22:22:33,871 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:33,871 - INFO - Retraining model for GBPUSD with 0 trades...
+2025-11-07 22:22:34,029 - INFO - Model for GBPUSD - Train accuracy: 0.996, Test accuracy: 0.458
+2025-11-07 22:22:34,044 - INFO - Trained and saved model for GBPUSD
+2025-11-07 22:22:34,045 - INFO - 
+==================================================
+2025-11-07 22:22:34,045 - INFO - Retraining model for NZDCAD
+2025-11-07 22:22:34,045 - INFO - ==================================================
+2025-11-07 22:22:34,046 - INFO - Found 0 recent trades for NZDCAD
+2025-11-07 22:22:34,046 - ERROR - MT5 connector not available
+2025-11-07 22:22:34,046 - INFO - MT5 market data unavailable, generating synthetic data for NZDCAD
+2025-11-07 22:22:34,048 - INFO - Generated 721 synthetic H1 bars for NZDCAD
+2025-11-07 22:22:34,048 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:34,049 - INFO - Retraining model for NZDCAD with 0 trades...
+2025-11-07 22:22:34,208 - INFO - Model for NZDCAD - Train accuracy: 0.990, Test accuracy: 0.511
+2025-11-07 22:22:34,223 - INFO - Trained and saved model for NZDCAD
+2025-11-07 22:22:34,224 - INFO - 
+==================================================
+2025-11-07 22:22:34,224 - INFO - Retraining model for NZDCHF
+2025-11-07 22:22:34,224 - INFO - ==================================================
+2025-11-07 22:22:34,225 - INFO - Found 0 recent trades for NZDCHF
+2025-11-07 22:22:34,225 - ERROR - MT5 connector not available
+2025-11-07 22:22:34,225 - INFO - MT5 market data unavailable, generating synthetic data for NZDCHF
+2025-11-07 22:22:34,228 - INFO - Generated 721 synthetic H1 bars for NZDCHF
+2025-11-07 22:22:34,228 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:34,229 - INFO - Retraining model for NZDCHF with 0 trades...
+2025-11-07 22:22:34,388 - INFO - Model for NZDCHF - Train accuracy: 0.998, Test accuracy: 0.534
+2025-11-07 22:22:34,403 - INFO - Trained and saved model for NZDCHF
+2025-11-07 22:22:34,404 - INFO - 
+==================================================
+2025-11-07 22:22:34,404 - INFO - Retraining model for NZDJPY
+2025-11-07 22:22:34,404 - INFO - ==================================================
+2025-11-07 22:22:34,405 - INFO - Found 0 recent trades for NZDJPY
+2025-11-07 22:22:34,405 - ERROR - MT5 connector not available
+2025-11-07 22:22:34,405 - INFO - MT5 market data unavailable, generating synthetic data for NZDJPY
+2025-11-07 22:22:34,407 - INFO - Generated 721 synthetic H1 bars for NZDJPY
+2025-11-07 22:22:34,408 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:34,408 - INFO - Retraining model for NZDJPY with 0 trades...
+2025-11-07 22:22:34,566 - INFO - Model for NZDJPY - Train accuracy: 1.000, Test accuracy: 0.504
+2025-11-07 22:22:34,580 - INFO - Trained and saved model for NZDJPY
+2025-11-07 22:22:34,581 - INFO - 
+==================================================
+2025-11-07 22:22:34,581 - INFO - Retraining model for NZDUSD
+2025-11-07 22:22:34,581 - INFO - ==================================================
+2025-11-07 22:22:34,582 - INFO - Found 0 recent trades for NZDUSD
+2025-11-07 22:22:34,583 - ERROR - MT5 connector not available
+2025-11-07 22:22:34,583 - INFO - MT5 market data unavailable, generating synthetic data for NZDUSD
+2025-11-07 22:22:34,585 - INFO - Generated 721 synthetic H1 bars for NZDUSD
+2025-11-07 22:22:34,585 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:22:34,586 - INFO - Retraining model for NZDUSD with 0 trades...
+2025-11-07 22:22:34,743 - INFO - Model for NZDUSD - Train accuracy: 0.996, Test accuracy: 0.489
+2025-11-07 22:22:34,758 - INFO - Trained and saved model for NZDUSD
+2025-11-07 22:22:34,759 - INFO - 
+==================================================
+2025-11-07 22:22:34,759 - INFO - Retraining model for USDCAD
+2025-11-07 22:22:34,759 - INFO - ==================================================
+2025-11-07 22:22:34,760 - INFO - Found 3 recent trades for USDCAD
+2025-11-07 22:22:34,760 - ERROR - MT5 connector not available
+2025-11-07 22:22:34,760 - INFO - MT5 market data unavailable, generating synthetic data for USDCAD
+2025-11-07 22:22:34,762 - INFO - Generated 721 synthetic H1 bars for USDCAD
+2025-11-07 22:22:34,762 - INFO - Using 3 trades for full retraining
+2025-11-07 22:22:34,762 - INFO - Retraining model for USDCAD with 3 trades...
+2025-11-07 22:22:34,923 - INFO - Model for USDCAD - Train accuracy: 0.996, Test accuracy: 0.542
+2025-11-07 22:22:34,938 - INFO - Trained and saved model for USDCAD
+2025-11-07 22:22:34,939 - INFO - 
+==================================================
+2025-11-07 22:22:34,939 - INFO - Retraining model for USDCHF
+2025-11-07 22:22:34,939 - INFO - ==================================================
+2025-11-07 22:22:34,940 - INFO - Found 2 recent trades for USDCHF
+2025-11-07 22:22:34,940 - ERROR - MT5 connector not available
+2025-11-07 22:22:34,940 - INFO - MT5 market data unavailable, generating synthetic data for USDCHF
+2025-11-07 22:22:34,943 - INFO - Generated 721 synthetic H1 bars for USDCHF
+2025-11-07 22:22:34,943 - INFO - Using 2 trades for full retraining
+2025-11-07 22:22:34,943 - INFO - Retraining model for USDCHF with 2 trades...
+2025-11-07 22:22:35,104 - INFO - Model for USDCHF - Train accuracy: 0.992, Test accuracy: 0.450
+2025-11-07 22:22:35,117 - INFO - Trained and saved model for USDCHF
+2025-11-07 22:22:35,119 - INFO - 
+==================================================
+2025-11-07 22:22:35,119 - INFO - Retraining model for USDJPY
+2025-11-07 22:22:35,119 - INFO - ==================================================
+2025-11-07 22:22:35,120 - INFO - Found 3 recent trades for USDJPY
+2025-11-07 22:22:35,120 - ERROR - MT5 connector not available
+2025-11-07 22:22:35,120 - INFO - MT5 market data unavailable, generating synthetic data for USDJPY
+2025-11-07 22:22:35,122 - INFO - Generated 721 synthetic H1 bars for USDJPY
+2025-11-07 22:22:35,122 - INFO - Using 3 trades for full retraining
+2025-11-07 22:22:35,122 - INFO - Retraining model for USDJPY with 3 trades...
+2025-11-07 22:22:35,278 - INFO - Model for USDJPY - Train accuracy: 0.990, Test accuracy: 0.519
+2025-11-07 22:22:35,291 - INFO - Trained and saved model for USDJPY
+2025-11-07 22:22:35,292 - INFO - 
+==================================================
+2025-11-07 22:22:35,293 - INFO - Retraining model for XAGUSD
+2025-11-07 22:22:35,293 - INFO - ==================================================
+2025-11-07 22:22:35,294 - INFO - Found 1 recent trades for XAGUSD
+2025-11-07 22:22:35,294 - ERROR - MT5 connector not available
+2025-11-07 22:22:35,294 - INFO - MT5 market data unavailable, generating synthetic data for XAGUSD
+2025-11-07 22:22:35,296 - INFO - Generated 721 synthetic H1 bars for XAGUSD
+2025-11-07 22:22:35,296 - INFO - Using 1 trade for limited retraining
+2025-11-07 22:22:35,296 - INFO - Retraining model for XAGUSD with 1 trades...
+2025-11-07 22:22:35,454 - INFO - Model for XAGUSD - Train accuracy: 0.998, Test accuracy: 0.618
+2025-11-07 22:22:35,469 - INFO - Trained and saved model for XAGUSD
+2025-11-07 22:22:35,470 - INFO - 
+==================================================
+2025-11-07 22:22:35,470 - INFO - Retraining model for XAUUSD
+2025-11-07 22:22:35,470 - INFO - ==================================================
+2025-11-07 22:22:35,471 - INFO - Found 31 recent trades for XAUUSD
+2025-11-07 22:22:35,471 - ERROR - MT5 connector not available
+2025-11-07 22:22:35,471 - INFO - MT5 market data unavailable, generating synthetic data for XAUUSD
+2025-11-07 22:22:35,473 - INFO - Generated 721 synthetic H1 bars for XAUUSD
+2025-11-07 22:22:35,473 - INFO - Using 31 trades for full retraining
+2025-11-07 22:22:35,473 - INFO - Retraining model for XAUUSD with 31 trades...
+2025-11-07 22:22:35,642 - INFO - Model for XAUUSD - Train accuracy: 0.992, Test accuracy: 0.542
+2025-11-07 22:22:35,657 - INFO - Trained and saved model for XAUUSD
+2025-11-07 22:22:35,659 - INFO - 
+============================================================
+2025-11-07 22:22:35,659 - INFO - RETRAINING SUMMARY
+2025-11-07 22:22:35,659 - INFO - ============================================================
+2025-11-07 22:22:35,659 - INFO - Total symbols: 30
+2025-11-07 22:22:35,659 - INFO - Successful retrains: 30
+2025-11-07 22:22:35,659 - INFO - Failed retrains: 0
+2025-11-07 22:22:35,660 - INFO - Success rate: 100.0%
+2025-11-07 22:22:35,661 - INFO - Models have been updated with recent trading data.
+2025-11-07 22:22:35,661 - INFO - ============================================================
+2025-11-07 22:24:46,399 - INFO - ============================================================
+2025-11-07 22:24:46,399 - INFO - FX-AI MODEL RETRAINING PROCESS
+2025-11-07 22:24:46,399 - INFO - ============================================================
+2025-11-07 22:24:46,400 - INFO - Configuration loaded from config/config.json, trading.max_positions=30
+2025-11-07 22:24:46,400 - INFO - MT5 login loaded from environment variable
+2025-11-07 22:24:46,400 - INFO - MT5 password loaded from environment variable
+2025-11-07 22:24:46,401 - INFO - MT5 server loaded from environment: TIOMarkets-Demo1
+2025-11-07 22:24:46,401 - INFO - Configuration loaded from config/config.json, trading.max_positions=30
+2025-11-07 22:24:46,401 - INFO - MT5 login loaded from environment variable
+2025-11-07 22:24:46,401 - INFO - MT5 password loaded from environment variable
+2025-11-07 22:24:46,401 - INFO - MT5 server loaded from environment: TIOMarkets-Demo1
+2025-11-07 22:24:46,401 - INFO - Starting retraining for 30 symbols
+2025-11-07 22:24:46,401 - INFO - Symbols: AUDCAD, AUDCHF, AUDJPY, AUDNZD, AUDUSD, CADCHF, CADJPY, CHFJPY, EURAUD, EURCAD, EURCHF, EURGBP, EURJPY, EURNZD, EURUSD, GBPAUD, GBPCAD, GBPCHF, GBPJPY, GBPNZD, GBPUSD, NZDCAD, NZDCHF, NZDJPY, NZDUSD, USDCAD, USDCHF, USDJPY, XAGUSD, XAUUSD
+2025-11-07 22:24:46,406 - ERROR - CRITICAL: Cannot get MT5 server time - BLOCKING all trades for safety
+2025-11-07 22:24:46,406 - WARNING - Cannot get MT5 server time for daily loss reset check - using local time as fallback
+2025-11-07 22:24:46,406 - INFO - Daily loss initialized for new trading day: 2025-11-07
+2025-11-07 22:24:46,406 - INFO - Risk Manager initialized with $50.0 risk per trade, max_positions=30
+2025-11-07 22:24:46,406 - INFO - Daily trade limit: 1 trade per symbol per day
+2025-11-07 22:24:46,406 - INFO - Max spread: 3.0 pips, Cooldown: 5 minutes
+2025-11-07 22:24:46,407 - INFO - Starting continuous learning thread
+2025-11-07 22:24:46,407 - INFO - Continuous learning thread started
+2025-11-07 22:24:46,408 - INFO - Adaptive Learning Manager initialized
+2025-11-07 22:24:46,408 - INFO - 
+==================================================
+2025-11-07 22:24:46,408 - INFO - Retraining model for AUDCAD
+2025-11-07 22:24:46,408 - INFO - ==================================================
+2025-11-07 22:24:46,410 - INFO - Found 0 recent trades for AUDCAD
+2025-11-07 22:24:46,412 - ERROR - MT5 connector not available
+2025-11-07 22:24:46,412 - INFO - MT5 market data unavailable, generating synthetic data for AUDCAD
+2025-11-07 22:24:46,415 - INFO - Generated 721 synthetic H1 bars for AUDCAD
+2025-11-07 22:24:46,415 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:46,416 - INFO - Retraining model for AUDCAD with 0 trades...
+2025-11-07 22:24:46,576 - INFO - Model for AUDCAD - Train accuracy: 0.994, Test accuracy: 0.557
+2025-11-07 22:24:46,590 - INFO - Trained and saved model for AUDCAD
+2025-11-07 22:24:46,592 - INFO - 
+==================================================
+2025-11-07 22:24:46,592 - INFO - Retraining model for AUDCHF
+2025-11-07 22:24:46,592 - INFO - ==================================================
+2025-11-07 22:24:46,593 - INFO - Found 0 recent trades for AUDCHF
+2025-11-07 22:24:46,593 - ERROR - MT5 connector not available
+2025-11-07 22:24:46,594 - INFO - MT5 market data unavailable, generating synthetic data for AUDCHF
+2025-11-07 22:24:46,596 - INFO - Generated 721 synthetic H1 bars for AUDCHF
+2025-11-07 22:24:46,596 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:46,597 - INFO - Retraining model for AUDCHF with 0 trades...
+2025-11-07 22:24:46,758 - INFO - Model for AUDCHF - Train accuracy: 0.992, Test accuracy: 0.550
+2025-11-07 22:24:46,771 - INFO - Trained and saved model for AUDCHF
+2025-11-07 22:24:46,772 - INFO - 
+==================================================
+2025-11-07 22:24:46,772 - INFO - Retraining model for AUDJPY
+2025-11-07 22:24:46,773 - INFO - ==================================================
+2025-11-07 22:24:46,774 - INFO - Found 0 recent trades for AUDJPY
+2025-11-07 22:24:46,774 - ERROR - MT5 connector not available
+2025-11-07 22:24:46,774 - INFO - MT5 market data unavailable, generating synthetic data for AUDJPY
+2025-11-07 22:24:46,776 - INFO - Generated 721 synthetic H1 bars for AUDJPY
+2025-11-07 22:24:46,776 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:46,777 - INFO - Retraining model for AUDJPY with 0 trades...
+2025-11-07 22:24:46,937 - INFO - Model for AUDJPY - Train accuracy: 0.996, Test accuracy: 0.557
+2025-11-07 22:24:46,951 - INFO - Trained and saved model for AUDJPY
+2025-11-07 22:24:46,952 - INFO - 
+==================================================
+2025-11-07 22:24:46,952 - INFO - Retraining model for AUDNZD
+2025-11-07 22:24:46,952 - INFO - ==================================================
+2025-11-07 22:24:46,953 - INFO - Found 0 recent trades for AUDNZD
+2025-11-07 22:24:46,953 - ERROR - MT5 connector not available
+2025-11-07 22:24:46,953 - INFO - MT5 market data unavailable, generating synthetic data for AUDNZD
+2025-11-07 22:24:46,955 - INFO - Generated 721 synthetic H1 bars for AUDNZD
+2025-11-07 22:24:46,956 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:46,956 - INFO - Retraining model for AUDNZD with 0 trades...
+2025-11-07 22:24:47,116 - INFO - Model for AUDNZD - Train accuracy: 0.996, Test accuracy: 0.450
+2025-11-07 22:24:47,130 - INFO - Trained and saved model for AUDNZD
+2025-11-07 22:24:47,131 - INFO - 
+==================================================
+2025-11-07 22:24:47,131 - INFO - Retraining model for AUDUSD
+2025-11-07 22:24:47,131 - INFO - ==================================================
+2025-11-07 22:24:47,132 - INFO - Found 2 recent trades for AUDUSD
+2025-11-07 22:24:47,132 - ERROR - MT5 connector not available
+2025-11-07 22:24:47,132 - INFO - MT5 market data unavailable, generating synthetic data for AUDUSD
+2025-11-07 22:24:47,134 - INFO - Generated 721 synthetic H1 bars for AUDUSD
+2025-11-07 22:24:47,134 - INFO - Using 2 trades for full retraining
+2025-11-07 22:24:47,134 - INFO - Retraining model for AUDUSD with 2 trades...
+2025-11-07 22:24:47,295 - INFO - Model for AUDUSD - Train accuracy: 0.998, Test accuracy: 0.466
+2025-11-07 22:24:47,309 - INFO - Trained and saved model for AUDUSD
+2025-11-07 22:24:47,310 - INFO - 
+==================================================
+2025-11-07 22:24:47,310 - INFO - Retraining model for CADCHF
+2025-11-07 22:24:47,310 - INFO - ==================================================
+2025-11-07 22:24:47,311 - INFO - Found 0 recent trades for CADCHF
+2025-11-07 22:24:47,312 - ERROR - MT5 connector not available
+2025-11-07 22:24:47,312 - INFO - MT5 market data unavailable, generating synthetic data for CADCHF
+2025-11-07 22:24:47,314 - INFO - Generated 721 synthetic H1 bars for CADCHF
+2025-11-07 22:24:47,314 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:47,315 - INFO - Retraining model for CADCHF with 0 trades...
+2025-11-07 22:24:47,474 - INFO - Model for CADCHF - Train accuracy: 0.988, Test accuracy: 0.534
+2025-11-07 22:24:47,488 - INFO - Trained and saved model for CADCHF
+2025-11-07 22:24:47,489 - INFO - 
+==================================================
+2025-11-07 22:24:47,489 - INFO - Retraining model for CADJPY
+2025-11-07 22:24:47,489 - INFO - ==================================================
+2025-11-07 22:24:47,490 - INFO - Found 0 recent trades for CADJPY
+2025-11-07 22:24:47,490 - ERROR - MT5 connector not available
+2025-11-07 22:24:47,490 - INFO - MT5 market data unavailable, generating synthetic data for CADJPY
+2025-11-07 22:24:47,492 - INFO - Generated 721 synthetic H1 bars for CADJPY
+2025-11-07 22:24:47,492 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:47,493 - INFO - Retraining model for CADJPY with 0 trades...
+2025-11-07 22:24:47,651 - INFO - Model for CADJPY - Train accuracy: 0.998, Test accuracy: 0.519
+2025-11-07 22:24:47,664 - INFO - Trained and saved model for CADJPY
+2025-11-07 22:24:47,665 - INFO - 
+==================================================
+2025-11-07 22:24:47,665 - INFO - Retraining model for CHFJPY
+2025-11-07 22:24:47,665 - INFO - ==================================================
+2025-11-07 22:24:47,666 - INFO - Found 0 recent trades for CHFJPY
+2025-11-07 22:24:47,667 - ERROR - MT5 connector not available
+2025-11-07 22:24:47,667 - INFO - MT5 market data unavailable, generating synthetic data for CHFJPY
+2025-11-07 22:24:47,669 - INFO - Generated 721 synthetic H1 bars for CHFJPY
+2025-11-07 22:24:47,669 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:47,670 - INFO - Retraining model for CHFJPY with 0 trades...
+2025-11-07 22:24:47,830 - INFO - Model for CHFJPY - Train accuracy: 0.987, Test accuracy: 0.519
+2025-11-07 22:24:47,844 - INFO - Trained and saved model for CHFJPY
+2025-11-07 22:24:47,845 - INFO - 
+==================================================
+2025-11-07 22:24:47,845 - INFO - Retraining model for EURAUD
+2025-11-07 22:24:47,845 - INFO - ==================================================
+2025-11-07 22:24:47,846 - INFO - Found 0 recent trades for EURAUD
+2025-11-07 22:24:47,846 - ERROR - MT5 connector not available
+2025-11-07 22:24:47,846 - INFO - MT5 market data unavailable, generating synthetic data for EURAUD
+2025-11-07 22:24:47,848 - INFO - Generated 721 synthetic H1 bars for EURAUD
+2025-11-07 22:24:47,848 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:47,849 - INFO - Retraining model for EURAUD with 0 trades...
+2025-11-07 22:24:48,008 - INFO - Model for EURAUD - Train accuracy: 0.992, Test accuracy: 0.489
+2025-11-07 22:24:48,045 - INFO - Trained and saved model for EURAUD
+2025-11-07 22:24:48,046 - INFO - 
+==================================================
+2025-11-07 22:24:48,046 - INFO - Retraining model for EURCAD
+2025-11-07 22:24:48,046 - INFO - ==================================================
+2025-11-07 22:24:48,047 - INFO - Found 0 recent trades for EURCAD
+2025-11-07 22:24:48,047 - ERROR - MT5 connector not available
+2025-11-07 22:24:48,047 - INFO - MT5 market data unavailable, generating synthetic data for EURCAD
+2025-11-07 22:24:48,049 - INFO - Generated 721 synthetic H1 bars for EURCAD
+2025-11-07 22:24:48,049 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:48,050 - INFO - Retraining model for EURCAD with 0 trades...
+2025-11-07 22:24:48,207 - INFO - Model for EURCAD - Train accuracy: 0.990, Test accuracy: 0.496
+2025-11-07 22:24:48,222 - INFO - Trained and saved model for EURCAD
+2025-11-07 22:24:48,223 - INFO - 
+==================================================
+2025-11-07 22:24:48,223 - INFO - Retraining model for EURCHF
+2025-11-07 22:24:48,223 - INFO - ==================================================
+2025-11-07 22:24:48,224 - INFO - Found 0 recent trades for EURCHF
+2025-11-07 22:24:48,224 - ERROR - MT5 connector not available
+2025-11-07 22:24:48,224 - INFO - MT5 market data unavailable, generating synthetic data for EURCHF
+2025-11-07 22:24:48,226 - INFO - Generated 721 synthetic H1 bars for EURCHF
+2025-11-07 22:24:48,226 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:48,227 - INFO - Retraining model for EURCHF with 0 trades...
+2025-11-07 22:24:48,385 - INFO - Model for EURCHF - Train accuracy: 0.996, Test accuracy: 0.489
+2025-11-07 22:24:48,400 - INFO - Trained and saved model for EURCHF
+2025-11-07 22:24:48,401 - INFO - 
+==================================================
+2025-11-07 22:24:48,401 - INFO - Retraining model for EURGBP
+2025-11-07 22:24:48,401 - INFO - ==================================================
+2025-11-07 22:24:48,403 - INFO - Found 2 recent trades for EURGBP
+2025-11-07 22:24:48,403 - ERROR - MT5 connector not available
+2025-11-07 22:24:48,403 - INFO - MT5 market data unavailable, generating synthetic data for EURGBP
+2025-11-07 22:24:48,405 - INFO - Generated 721 synthetic H1 bars for EURGBP
+2025-11-07 22:24:48,405 - INFO - Using 2 trades for full retraining
+2025-11-07 22:24:48,405 - INFO - Retraining model for EURGBP with 2 trades...
+2025-11-07 22:24:48,568 - INFO - Model for EURGBP - Train accuracy: 0.992, Test accuracy: 0.511
+2025-11-07 22:24:48,582 - INFO - Trained and saved model for EURGBP
+2025-11-07 22:24:48,583 - INFO - 
+==================================================
+2025-11-07 22:24:48,583 - INFO - Retraining model for EURJPY
+2025-11-07 22:24:48,584 - INFO - ==================================================
+2025-11-07 22:24:48,586 - INFO - Found 29 recent trades for EURJPY
+2025-11-07 22:24:48,586 - ERROR - MT5 connector not available
+2025-11-07 22:24:48,587 - INFO - MT5 market data unavailable, generating synthetic data for EURJPY
+2025-11-07 22:24:48,589 - INFO - Generated 721 synthetic H1 bars for EURJPY
+2025-11-07 22:24:48,589 - INFO - Using 29 trades for full retraining
+2025-11-07 22:24:48,589 - INFO - Retraining model for EURJPY with 29 trades...
+2025-11-07 22:24:48,748 - INFO - Model for EURJPY - Train accuracy: 0.992, Test accuracy: 0.527
+2025-11-07 22:24:48,763 - INFO - Trained and saved model for EURJPY
+2025-11-07 22:24:48,764 - INFO - 
+==================================================
+2025-11-07 22:24:48,764 - INFO - Retraining model for EURNZD
+2025-11-07 22:24:48,764 - INFO - ==================================================
+2025-11-07 22:24:48,765 - INFO - Found 0 recent trades for EURNZD
+2025-11-07 22:24:48,765 - ERROR - MT5 connector not available
+2025-11-07 22:24:48,765 - INFO - MT5 market data unavailable, generating synthetic data for EURNZD
+2025-11-07 22:24:48,767 - INFO - Generated 721 synthetic H1 bars for EURNZD
+2025-11-07 22:24:48,767 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:48,768 - INFO - Retraining model for EURNZD with 0 trades...
+2025-11-07 22:24:48,927 - INFO - Model for EURNZD - Train accuracy: 0.996, Test accuracy: 0.573
+2025-11-07 22:24:48,941 - INFO - Trained and saved model for EURNZD
+2025-11-07 22:24:48,942 - INFO - 
+==================================================
+2025-11-07 22:24:48,942 - INFO - Retraining model for EURUSD
+2025-11-07 22:24:48,942 - INFO - ==================================================
+2025-11-07 22:24:48,943 - INFO - Found 3 recent trades for EURUSD
+2025-11-07 22:24:48,943 - ERROR - MT5 connector not available
+2025-11-07 22:24:48,943 - INFO - MT5 market data unavailable, generating synthetic data for EURUSD
+2025-11-07 22:24:48,946 - INFO - Generated 721 synthetic H1 bars for EURUSD
+2025-11-07 22:24:48,946 - INFO - Using 3 trades for full retraining
+2025-11-07 22:24:48,946 - INFO - Retraining model for EURUSD with 3 trades...
+2025-11-07 22:24:49,104 - INFO - Model for EURUSD - Train accuracy: 0.998, Test accuracy: 0.489
+2025-11-07 22:24:49,119 - INFO - Trained and saved model for EURUSD
+2025-11-07 22:24:49,120 - INFO - 
+==================================================
+2025-11-07 22:24:49,120 - INFO - Retraining model for GBPAUD
+2025-11-07 22:24:49,120 - INFO - ==================================================
+2025-11-07 22:24:49,121 - INFO - Found 0 recent trades for GBPAUD
+2025-11-07 22:24:49,121 - ERROR - MT5 connector not available
+2025-11-07 22:24:49,121 - INFO - MT5 market data unavailable, generating synthetic data for GBPAUD
+2025-11-07 22:24:49,123 - INFO - Generated 721 synthetic H1 bars for GBPAUD
+2025-11-07 22:24:49,123 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:49,124 - INFO - Retraining model for GBPAUD with 0 trades...
+2025-11-07 22:24:49,281 - INFO - Model for GBPAUD - Train accuracy: 0.998, Test accuracy: 0.435
+2025-11-07 22:24:49,295 - INFO - Trained and saved model for GBPAUD
+2025-11-07 22:24:49,296 - INFO - 
+==================================================
+2025-11-07 22:24:49,296 - INFO - Retraining model for GBPCAD
+2025-11-07 22:24:49,296 - INFO - ==================================================
+2025-11-07 22:24:49,297 - INFO - Found 0 recent trades for GBPCAD
+2025-11-07 22:24:49,297 - ERROR - MT5 connector not available
+2025-11-07 22:24:49,298 - INFO - MT5 market data unavailable, generating synthetic data for GBPCAD
+2025-11-07 22:24:49,300 - INFO - Generated 721 synthetic H1 bars for GBPCAD
+2025-11-07 22:24:49,300 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:49,300 - INFO - Retraining model for GBPCAD with 0 trades...
+2025-11-07 22:24:49,461 - INFO - Model for GBPCAD - Train accuracy: 0.990, Test accuracy: 0.527
+2025-11-07 22:24:49,475 - INFO - Trained and saved model for GBPCAD
+2025-11-07 22:24:49,477 - INFO - 
+==================================================
+2025-11-07 22:24:49,477 - INFO - Retraining model for GBPCHF
+2025-11-07 22:24:49,477 - INFO - ==================================================
+2025-11-07 22:24:49,478 - INFO - Found 0 recent trades for GBPCHF
+2025-11-07 22:24:49,478 - ERROR - MT5 connector not available
+2025-11-07 22:24:49,478 - INFO - MT5 market data unavailable, generating synthetic data for GBPCHF
+2025-11-07 22:24:49,480 - INFO - Generated 721 synthetic H1 bars for GBPCHF
+2025-11-07 22:24:49,480 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:49,481 - INFO - Retraining model for GBPCHF with 0 trades...
+2025-11-07 22:24:49,642 - INFO - Model for GBPCHF - Train accuracy: 0.990, Test accuracy: 0.496
+2025-11-07 22:24:49,657 - INFO - Trained and saved model for GBPCHF
+2025-11-07 22:24:49,658 - INFO - 
+==================================================
+2025-11-07 22:24:49,658 - INFO - Retraining model for GBPJPY
+2025-11-07 22:24:49,658 - INFO - ==================================================
+2025-11-07 22:24:49,659 - INFO - Found 13 recent trades for GBPJPY
+2025-11-07 22:24:49,659 - ERROR - MT5 connector not available
+2025-11-07 22:24:49,660 - INFO - MT5 market data unavailable, generating synthetic data for GBPJPY
+2025-11-07 22:24:49,662 - INFO - Generated 721 synthetic H1 bars for GBPJPY
+2025-11-07 22:24:49,662 - INFO - Using 13 trades for full retraining
+2025-11-07 22:24:49,662 - INFO - Retraining model for GBPJPY with 13 trades...
+2025-11-07 22:24:49,821 - INFO - Model for GBPJPY - Train accuracy: 0.996, Test accuracy: 0.481
+2025-11-07 22:24:49,835 - INFO - Trained and saved model for GBPJPY
+2025-11-07 22:24:49,836 - INFO - 
+==================================================
+2025-11-07 22:24:49,836 - INFO - Retraining model for GBPNZD
+2025-11-07 22:24:49,836 - INFO - ==================================================
+2025-11-07 22:24:49,837 - INFO - Found 0 recent trades for GBPNZD
+2025-11-07 22:24:49,837 - ERROR - MT5 connector not available
+2025-11-07 22:24:49,837 - INFO - MT5 market data unavailable, generating synthetic data for GBPNZD
+2025-11-07 22:24:49,839 - INFO - Generated 721 synthetic H1 bars for GBPNZD
+2025-11-07 22:24:49,839 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:49,840 - INFO - Retraining model for GBPNZD with 0 trades...
+2025-11-07 22:24:50,000 - INFO - Model for GBPNZD - Train accuracy: 0.992, Test accuracy: 0.489
+2025-11-07 22:24:50,013 - INFO - Trained and saved model for GBPNZD
+2025-11-07 22:24:50,014 - INFO - 
+==================================================
+2025-11-07 22:24:50,014 - INFO - Retraining model for GBPUSD
+2025-11-07 22:24:50,015 - INFO - ==================================================
+2025-11-07 22:24:50,016 - INFO - Found 0 recent trades for GBPUSD
+2025-11-07 22:24:50,016 - ERROR - MT5 connector not available
+2025-11-07 22:24:50,016 - INFO - MT5 market data unavailable, generating synthetic data for GBPUSD
+2025-11-07 22:24:50,018 - INFO - Generated 721 synthetic H1 bars for GBPUSD
+2025-11-07 22:24:50,018 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:50,019 - INFO - Retraining model for GBPUSD with 0 trades...
+2025-11-07 22:24:50,179 - INFO - Model for GBPUSD - Train accuracy: 0.990, Test accuracy: 0.450
+2025-11-07 22:24:50,193 - INFO - Trained and saved model for GBPUSD
+2025-11-07 22:24:50,194 - INFO - 
+==================================================
+2025-11-07 22:24:50,194 - INFO - Retraining model for NZDCAD
+2025-11-07 22:24:50,195 - INFO - ==================================================
+2025-11-07 22:24:50,196 - INFO - Found 0 recent trades for NZDCAD
+2025-11-07 22:24:50,196 - ERROR - MT5 connector not available
+2025-11-07 22:24:50,196 - INFO - MT5 market data unavailable, generating synthetic data for NZDCAD
+2025-11-07 22:24:50,198 - INFO - Generated 721 synthetic H1 bars for NZDCAD
+2025-11-07 22:24:50,198 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:50,199 - INFO - Retraining model for NZDCAD with 0 trades...
+2025-11-07 22:24:50,357 - INFO - Model for NZDCAD - Train accuracy: 0.998, Test accuracy: 0.527
+2025-11-07 22:24:50,372 - INFO - Trained and saved model for NZDCAD
+2025-11-07 22:24:50,373 - INFO - 
+==================================================
+2025-11-07 22:24:50,373 - INFO - Retraining model for NZDCHF
+2025-11-07 22:24:50,373 - INFO - ==================================================
+2025-11-07 22:24:50,374 - INFO - Found 0 recent trades for NZDCHF
+2025-11-07 22:24:50,374 - ERROR - MT5 connector not available
+2025-11-07 22:24:50,374 - INFO - MT5 market data unavailable, generating synthetic data for NZDCHF
+2025-11-07 22:24:50,376 - INFO - Generated 721 synthetic H1 bars for NZDCHF
+2025-11-07 22:24:50,376 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:50,377 - INFO - Retraining model for NZDCHF with 0 trades...
+2025-11-07 22:24:50,536 - INFO - Model for NZDCHF - Train accuracy: 0.992, Test accuracy: 0.458
+2025-11-07 22:24:50,551 - INFO - Trained and saved model for NZDCHF
+2025-11-07 22:24:50,552 - INFO - 
+==================================================
+2025-11-07 22:24:50,552 - INFO - Retraining model for NZDJPY
+2025-11-07 22:24:50,552 - INFO - ==================================================
+2025-11-07 22:24:50,554 - INFO - Found 0 recent trades for NZDJPY
+2025-11-07 22:24:50,554 - ERROR - MT5 connector not available
+2025-11-07 22:24:50,554 - INFO - MT5 market data unavailable, generating synthetic data for NZDJPY
+2025-11-07 22:24:50,556 - INFO - Generated 721 synthetic H1 bars for NZDJPY
+2025-11-07 22:24:50,556 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:50,557 - INFO - Retraining model for NZDJPY with 0 trades...
+2025-11-07 22:24:50,717 - INFO - Model for NZDJPY - Train accuracy: 0.994, Test accuracy: 0.473
+2025-11-07 22:24:50,731 - INFO - Trained and saved model for NZDJPY
+2025-11-07 22:24:50,732 - INFO - 
+==================================================
+2025-11-07 22:24:50,732 - INFO - Retraining model for NZDUSD
+2025-11-07 22:24:50,732 - INFO - ==================================================
+2025-11-07 22:24:50,734 - INFO - Found 0 recent trades for NZDUSD
+2025-11-07 22:24:50,734 - ERROR - MT5 connector not available
+2025-11-07 22:24:50,734 - INFO - MT5 market data unavailable, generating synthetic data for NZDUSD
+2025-11-07 22:24:50,736 - INFO - Generated 721 synthetic H1 bars for NZDUSD
+2025-11-07 22:24:50,736 - INFO - No trades available, attempting market-data-only retraining
+2025-11-07 22:24:50,737 - INFO - Retraining model for NZDUSD with 0 trades...
+2025-11-07 22:24:50,899 - INFO - Model for NZDUSD - Train accuracy: 0.988, Test accuracy: 0.542
+2025-11-07 22:24:50,913 - INFO - Trained and saved model for NZDUSD
+2025-11-07 22:24:50,914 - INFO - 
+==================================================
+2025-11-07 22:24:50,914 - INFO - Retraining model for USDCAD
+2025-11-07 22:24:50,914 - INFO - ==================================================
+2025-11-07 22:24:50,915 - INFO - Found 3 recent trades for USDCAD
+2025-11-07 22:24:50,916 - ERROR - MT5 connector not available
+2025-11-07 22:24:50,916 - INFO - MT5 market data unavailable, generating synthetic data for USDCAD
+2025-11-07 22:24:50,918 - INFO - Generated 721 synthetic H1 bars for USDCAD
+2025-11-07 22:24:50,918 - INFO - Using 3 trades for full retraining
+2025-11-07 22:24:50,918 - INFO - Retraining model for USDCAD with 3 trades...
+2025-11-07 22:24:51,079 - INFO - Model for USDCAD - Train accuracy: 0.996, Test accuracy: 0.473
+2025-11-07 22:24:51,094 - INFO - Trained and saved model for USDCAD
+2025-11-07 22:24:51,095 - INFO - 
+==================================================
+2025-11-07 22:24:51,095 - INFO - Retraining model for USDCHF
+2025-11-07 22:24:51,095 - INFO - ==================================================
+2025-11-07 22:24:51,097 - INFO - Found 2 recent trades for USDCHF
+2025-11-07 22:24:51,097 - ERROR - MT5 connector not available
+2025-11-07 22:24:51,097 - INFO - MT5 market data unavailable, generating synthetic data for USDCHF
+2025-11-07 22:24:51,099 - INFO - Generated 721 synthetic H1 bars for USDCHF
+2025-11-07 22:24:51,099 - INFO - Using 2 trades for full retraining
+2025-11-07 22:24:51,099 - INFO - Retraining model for USDCHF with 2 trades...
+2025-11-07 22:24:51,257 - INFO - Model for USDCHF - Train accuracy: 0.987, Test accuracy: 0.511
+2025-11-07 22:24:51,272 - INFO - Trained and saved model for USDCHF
+2025-11-07 22:24:51,272 - INFO - 
+==================================================
+2025-11-07 22:24:51,273 - INFO - Retraining model for USDJPY
+2025-11-07 22:24:51,273 - INFO - ==================================================
+2025-11-07 22:24:51,274 - INFO - Found 3 recent trades for USDJPY
+2025-11-07 22:24:51,274 - ERROR - MT5 connector not available
+2025-11-07 22:24:51,274 - INFO - MT5 market data unavailable, generating synthetic data for USDJPY
+2025-11-07 22:24:51,276 - INFO - Generated 721 synthetic H1 bars for USDJPY
+2025-11-07 22:24:51,276 - INFO - Using 3 trades for full retraining
+2025-11-07 22:24:51,276 - INFO - Retraining model for USDJPY with 3 trades...
+2025-11-07 22:24:51,433 - INFO - Model for USDJPY - Train accuracy: 1.000, Test accuracy: 0.542
+2025-11-07 22:24:51,448 - INFO - Trained and saved model for USDJPY
+2025-11-07 22:24:51,449 - INFO - 
+==================================================
+2025-11-07 22:24:51,450 - INFO - Retraining model for XAGUSD
+2025-11-07 22:24:51,450 - INFO - ==================================================
+2025-11-07 22:24:51,451 - INFO - Found 1 recent trades for XAGUSD
+2025-11-07 22:24:51,451 - ERROR - MT5 connector not available
+2025-11-07 22:24:51,451 - INFO - MT5 market data unavailable, generating synthetic data for XAGUSD
+2025-11-07 22:24:51,453 - INFO - Generated 721 synthetic H1 bars for XAGUSD
+2025-11-07 22:24:51,453 - INFO - Using 1 trade for limited retraining
+2025-11-07 22:24:51,454 - INFO - Retraining model for XAGUSD with 1 trades...
+2025-11-07 22:24:51,610 - INFO - Model for XAGUSD - Train accuracy: 0.994, Test accuracy: 0.489
+2025-11-07 22:24:51,624 - INFO - Trained and saved model for XAGUSD
+2025-11-07 22:24:51,625 - INFO - 
+==================================================
+2025-11-07 22:24:51,626 - INFO - Retraining model for XAUUSD
+2025-11-07 22:24:51,626 - INFO - ==================================================
+2025-11-07 22:24:51,627 - INFO - Found 31 recent trades for XAUUSD
+2025-11-07 22:24:51,627 - ERROR - MT5 connector not available
+2025-11-07 22:24:51,627 - INFO - MT5 market data unavailable, generating synthetic data for XAUUSD
+2025-11-07 22:24:51,629 - INFO - Generated 721 synthetic H1 bars for XAUUSD
+2025-11-07 22:24:51,629 - INFO - Using 31 trades for full retraining
+2025-11-07 22:24:51,630 - INFO - Retraining model for XAUUSD with 31 trades...
+2025-11-07 22:24:51,789 - INFO - Model for XAUUSD - Train accuracy: 0.994, Test accuracy: 0.542
+2025-11-07 22:24:51,803 - INFO - Trained and saved model for XAUUSD
+2025-11-07 22:24:51,804 - INFO - 
+============================================================
+2025-11-07 22:24:51,804 - INFO - RETRAINING SUMMARY
+2025-11-07 22:24:51,804 - INFO - ============================================================
+2025-11-07 22:24:51,804 - INFO - Total symbols: 30
+2025-11-07 22:24:51,804 - INFO - Successful retrains: 30
+2025-11-07 22:24:51,804 - INFO - Failed retrains: 0
+2025-11-07 22:24:51,804 - INFO - Success rate: 100.0%
+2025-11-07 22:24:51,805 - INFO - Models have been updated with recent trading data.
+2025-11-07 22:24:51,805 - INFO - ============================================================
+2025-11-07 22:31:38,063 - INFO - ============================================================
+2025-11-07 22:31:38,063 - INFO - FX-AI MODEL RETRAINING PROCESS
+2025-11-07 22:31:38,063 - INFO - ============================================================
+2025-11-07 22:31:38,064 - INFO - Configuration loaded from config/config.json, trading.max_positions=30
+2025-11-07 22:31:38,064 - INFO - MT5 login loaded from environment variable
+2025-11-07 22:31:38,064 - INFO - MT5 password loaded from environment variable
+2025-11-07 22:31:38,064 - INFO - MT5 server loaded from environment: TIOMarkets-Demo1
+2025-11-07 22:31:38,064 - INFO - Configuration loaded from config/config.json, trading.max_positions=30
+2025-11-07 22:31:38,064 - INFO - MT5 login loaded from environment variable
+2025-11-07 22:31:38,064 - INFO - MT5 password loaded from environment variable
+2025-11-07 22:31:38,064 - INFO - MT5 server loaded from environment: TIOMarkets-Demo1
+2025-11-07 22:31:38,065 - INFO - Starting retraining for 30 symbols
+2025-11-07 22:31:38,065 - INFO - Symbols: AUDCAD, AUDCHF, AUDJPY, AUDNZD, AUDUSD, CADCHF, CADJPY, CHFJPY, EURAUD, EURCAD, EURCHF, EURGBP, EURJPY, EURNZD, EURUSD, GBPAUD, GBPCAD, GBPCHF, GBPJPY, GBPNZD, GBPUSD, NZDCAD, NZDCHF, NZDJPY, NZDUSD, USDCAD, USDCHF, USDJPY, XAGUSD, XAUUSD
+2025-11-07 22:31:38,069 - ERROR - CRITICAL: Cannot get MT5 server time - BLOCKING all trades for safety
+2025-11-07 22:31:38,069 - WARNING - Cannot get MT5 server time for daily loss reset check - using local time as fallback
+2025-11-07 22:31:38,069 - INFO - Daily loss initialized for new trading day: 2025-11-07
+2025-11-07 22:31:38,069 - INFO - Risk Manager initialized with $50.0 risk per trade, max_positions=30
+2025-11-07 22:31:38,069 - INFO - Daily trade limit: 1 trade per symbol per day
+2025-11-07 22:31:38,070 - INFO - Max spread: 3.0 pips, Cooldown: 5 minutes
+2025-11-07 22:31:38,070 - INFO - Starting continuous learning thread
+2025-11-07 22:31:38,070 - INFO - Continuous learning thread started
+2025-11-07 22:31:38,072 - INFO - Adaptive Learning Manager initialized
+2025-11-07 22:31:38,072 - INFO - 
+==================================================
+2025-11-07 22:31:38,072 - INFO - Retraining model for AUDCAD
+2025-11-07 22:31:38,072 - INFO - ==================================================
+2025-11-07 22:31:38,073 - INFO - Found 16 recent trades for AUDCAD
+2025-11-07 22:31:38,073 - ERROR - MT5 connector not available
+2025-11-07 22:31:38,073 - INFO - MT5 market data unavailable, generating synthetic data for AUDCAD
+2025-11-07 22:31:38,076 - INFO - Generated 721 synthetic H1 bars for AUDCAD
+2025-11-07 22:31:38,076 - INFO - Using 16 trades for full retraining
+2025-11-07 22:31:38,076 - INFO - Retraining model for AUDCAD with 16 trades...
+2025-11-07 22:31:38,233 - INFO - Model for AUDCAD - Train accuracy: 0.990, Test accuracy: 0.420
+2025-11-07 22:31:38,248 - INFO - Trained and saved model for AUDCAD
+2025-11-07 22:31:38,249 - INFO - 
+==================================================
+2025-11-07 22:31:38,250 - INFO - Retraining model for AUDCHF
+2025-11-07 22:31:38,250 - INFO - ==================================================
+2025-11-07 22:31:38,251 - INFO - Found 20 recent trades for AUDCHF
+2025-11-07 22:31:38,251 - ERROR - MT5 connector not available
+2025-11-07 22:31:38,251 - INFO - MT5 market data unavailable, generating synthetic data for AUDCHF
+2025-11-07 22:31:38,253 - INFO - Generated 721 synthetic H1 bars for AUDCHF
+2025-11-07 22:31:38,253 - INFO - Using 20 trades for full retraining
+2025-11-07 22:31:38,253 - INFO - Retraining model for AUDCHF with 20 trades...
+2025-11-07 22:31:38,413 - INFO - Model for AUDCHF - Train accuracy: 0.990, Test accuracy: 0.557
+2025-11-07 22:31:38,427 - INFO - Trained and saved model for AUDCHF
+2025-11-07 22:31:38,429 - INFO - 
+==================================================
+2025-11-07 22:31:38,429 - INFO - Retraining model for AUDJPY
+2025-11-07 22:31:38,429 - INFO - ==================================================
+2025-11-07 22:31:38,430 - INFO - Found 10 recent trades for AUDJPY
+2025-11-07 22:31:38,430 - ERROR - MT5 connector not available
+2025-11-07 22:31:38,430 - INFO - MT5 market data unavailable, generating synthetic data for AUDJPY
+2025-11-07 22:31:38,432 - INFO - Generated 721 synthetic H1 bars for AUDJPY
+2025-11-07 22:31:38,432 - INFO - Using 10 trades for full retraining
+2025-11-07 22:31:38,432 - INFO - Retraining model for AUDJPY with 10 trades...
+2025-11-07 22:31:38,595 - INFO - Model for AUDJPY - Train accuracy: 0.992, Test accuracy: 0.443
+2025-11-07 22:31:38,609 - INFO - Trained and saved model for AUDJPY
+2025-11-07 22:31:38,610 - INFO - 
+==================================================
+2025-11-07 22:31:38,610 - INFO - Retraining model for AUDNZD
+2025-11-07 22:31:38,610 - INFO - ==================================================
+2025-11-07 22:31:38,612 - INFO - Found 14 recent trades for AUDNZD
+2025-11-07 22:31:38,612 - ERROR - MT5 connector not available
+2025-11-07 22:31:38,612 - INFO - MT5 market data unavailable, generating synthetic data for AUDNZD
+2025-11-07 22:31:38,614 - INFO - Generated 721 synthetic H1 bars for AUDNZD
+2025-11-07 22:31:38,614 - INFO - Using 14 trades for full retraining
+2025-11-07 22:31:38,614 - INFO - Retraining model for AUDNZD with 14 trades...
+2025-11-07 22:31:38,778 - INFO - Model for AUDNZD - Train accuracy: 0.992, Test accuracy: 0.473
+2025-11-07 22:31:38,792 - INFO - Trained and saved model for AUDNZD
+2025-11-07 22:31:38,793 - INFO - 
+==================================================
+2025-11-07 22:31:38,793 - INFO - Retraining model for AUDUSD
+2025-11-07 22:31:38,793 - INFO - ==================================================
+2025-11-07 22:31:38,795 - INFO - Found 16 recent trades for AUDUSD
+2025-11-07 22:31:38,795 - ERROR - MT5 connector not available
+2025-11-07 22:31:38,795 - INFO - MT5 market data unavailable, generating synthetic data for AUDUSD
+2025-11-07 22:31:38,797 - INFO - Generated 721 synthetic H1 bars for AUDUSD
+2025-11-07 22:31:38,797 - INFO - Using 16 trades for full retraining
+2025-11-07 22:31:38,797 - INFO - Retraining model for AUDUSD with 16 trades...
+2025-11-07 22:31:38,960 - INFO - Model for AUDUSD - Train accuracy: 0.992, Test accuracy: 0.534
+2025-11-07 22:31:38,974 - INFO - Trained and saved model for AUDUSD
+2025-11-07 22:31:38,975 - INFO - 
+==================================================
+2025-11-07 22:31:38,975 - INFO - Retraining model for CADCHF
+2025-11-07 22:31:38,975 - INFO - ==================================================
+2025-11-07 22:31:38,976 - INFO - Found 10 recent trades for CADCHF
+2025-11-07 22:31:38,976 - ERROR - MT5 connector not available
+2025-11-07 22:31:38,977 - INFO - MT5 market data unavailable, generating synthetic data for CADCHF
+2025-11-07 22:31:38,979 - INFO - Generated 721 synthetic H1 bars for CADCHF
+2025-11-07 22:31:38,979 - INFO - Using 10 trades for full retraining
+2025-11-07 22:31:38,979 - INFO - Retraining model for CADCHF with 10 trades...
+2025-11-07 22:31:39,137 - INFO - Model for CADCHF - Train accuracy: 0.998, Test accuracy: 0.542
+2025-11-07 22:31:39,151 - INFO - Trained and saved model for CADCHF
+2025-11-07 22:31:39,152 - INFO - 
+==================================================
+2025-11-07 22:31:39,152 - INFO - Retraining model for CADJPY
+2025-11-07 22:31:39,152 - INFO - ==================================================
+2025-11-07 22:31:39,153 - INFO - Found 12 recent trades for CADJPY
+2025-11-07 22:31:39,154 - ERROR - MT5 connector not available
+2025-11-07 22:31:39,154 - INFO - MT5 market data unavailable, generating synthetic data for CADJPY
+2025-11-07 22:31:39,156 - INFO - Generated 721 synthetic H1 bars for CADJPY
+2025-11-07 22:31:39,156 - INFO - Using 12 trades for full retraining
+2025-11-07 22:31:39,156 - INFO - Retraining model for CADJPY with 12 trades...
+2025-11-07 22:31:39,314 - INFO - Model for CADJPY - Train accuracy: 0.996, Test accuracy: 0.534
+2025-11-07 22:31:39,329 - INFO - Trained and saved model for CADJPY
+2025-11-07 22:31:39,330 - INFO - 
+==================================================
+2025-11-07 22:31:39,330 - INFO - Retraining model for CHFJPY
+2025-11-07 22:31:39,330 - INFO - ==================================================
+2025-11-07 22:31:39,331 - INFO - Found 12 recent trades for CHFJPY
+2025-11-07 22:31:39,331 - ERROR - MT5 connector not available
+2025-11-07 22:31:39,331 - INFO - MT5 market data unavailable, generating synthetic data for CHFJPY
+2025-11-07 22:31:39,333 - INFO - Generated 721 synthetic H1 bars for CHFJPY
+2025-11-07 22:31:39,333 - INFO - Using 12 trades for full retraining
+2025-11-07 22:31:39,333 - INFO - Retraining model for CHFJPY with 12 trades...
+2025-11-07 22:31:39,495 - INFO - Model for CHFJPY - Train accuracy: 0.996, Test accuracy: 0.573
+2025-11-07 22:31:39,509 - INFO - Trained and saved model for CHFJPY
+2025-11-07 22:31:39,510 - INFO - 
+==================================================
+2025-11-07 22:31:39,510 - INFO - Retraining model for EURAUD
+2025-11-07 22:31:39,510 - INFO - ==================================================
+2025-11-07 22:31:39,511 - INFO - Found 10 recent trades for EURAUD
+2025-11-07 22:31:39,511 - ERROR - MT5 connector not available
+2025-11-07 22:31:39,512 - INFO - MT5 market data unavailable, generating synthetic data for EURAUD
+2025-11-07 22:31:39,514 - INFO - Generated 721 synthetic H1 bars for EURAUD
+2025-11-07 22:31:39,514 - INFO - Using 10 trades for full retraining
+2025-11-07 22:31:39,514 - INFO - Retraining model for EURAUD with 10 trades...
+2025-11-07 22:31:39,672 - INFO - Model for EURAUD - Train accuracy: 0.992, Test accuracy: 0.481
+2025-11-07 22:31:39,707 - INFO - Trained and saved model for EURAUD
+2025-11-07 22:31:39,707 - INFO - 
+==================================================
+2025-11-07 22:31:39,708 - INFO - Retraining model for EURCAD
+2025-11-07 22:31:39,708 - INFO - ==================================================
+2025-11-07 22:31:39,709 - INFO - Found 14 recent trades for EURCAD
+2025-11-07 22:31:39,709 - ERROR - MT5 connector not available
+2025-11-07 22:31:39,709 - INFO - MT5 market data unavailable, generating synthetic data for EURCAD
+2025-11-07 22:31:39,711 - INFO - Generated 721 synthetic H1 bars for EURCAD
+2025-11-07 22:31:39,711 - INFO - Using 14 trades for full retraining
+2025-11-07 22:31:39,712 - INFO - Retraining model for EURCAD with 14 trades...
+2025-11-07 22:31:39,871 - INFO - Model for EURCAD - Train accuracy: 0.994, Test accuracy: 0.466
+2025-11-07 22:31:39,885 - INFO - Trained and saved model for EURCAD
+2025-11-07 22:31:39,887 - INFO - 
+==================================================
+2025-11-07 22:31:39,887 - INFO - Retraining model for EURCHF
+2025-11-07 22:31:39,887 - INFO - ==================================================
+2025-11-07 22:31:39,888 - INFO - Found 12 recent trades for EURCHF
+2025-11-07 22:31:39,888 - ERROR - MT5 connector not available
+2025-11-07 22:31:39,888 - INFO - MT5 market data unavailable, generating synthetic data for EURCHF
+2025-11-07 22:31:39,890 - INFO - Generated 721 synthetic H1 bars for EURCHF
+2025-11-07 22:31:39,891 - INFO - Using 12 trades for full retraining
+2025-11-07 22:31:39,891 - INFO - Retraining model for EURCHF with 12 trades...
+2025-11-07 22:31:40,050 - INFO - Model for EURCHF - Train accuracy: 0.998, Test accuracy: 0.450
+2025-11-07 22:31:40,065 - INFO - Trained and saved model for EURCHF
+2025-11-07 22:31:40,066 - INFO - 
+==================================================
+2025-11-07 22:31:40,066 - INFO - Retraining model for EURGBP
+2025-11-07 22:31:40,066 - INFO - ==================================================
+2025-11-07 22:31:40,067 - INFO - Found 10 recent trades for EURGBP
+2025-11-07 22:31:40,067 - ERROR - MT5 connector not available
+2025-11-07 22:31:40,067 - INFO - MT5 market data unavailable, generating synthetic data for EURGBP
+2025-11-07 22:31:40,070 - INFO - Generated 721 synthetic H1 bars for EURGBP
+2025-11-07 22:31:40,070 - INFO - Using 10 trades for full retraining
+2025-11-07 22:31:40,070 - INFO - Retraining model for EURGBP with 10 trades...
+2025-11-07 22:31:40,224 - INFO - Model for EURGBP - Train accuracy: 0.998, Test accuracy: 0.511
+2025-11-07 22:31:40,239 - INFO - Trained and saved model for EURGBP
+2025-11-07 22:31:40,240 - INFO - 
+==================================================
+2025-11-07 22:31:40,240 - INFO - Retraining model for EURJPY
+2025-11-07 22:31:40,240 - INFO - ==================================================
+2025-11-07 22:31:40,241 - INFO - Found 41 recent trades for EURJPY
+2025-11-07 22:31:40,241 - ERROR - MT5 connector not available
+2025-11-07 22:31:40,241 - INFO - MT5 market data unavailable, generating synthetic data for EURJPY
+2025-11-07 22:31:40,243 - INFO - Generated 721 synthetic H1 bars for EURJPY
+2025-11-07 22:31:40,243 - INFO - Using 41 trades for full retraining
+2025-11-07 22:31:40,243 - INFO - Retraining model for EURJPY with 41 trades...
+2025-11-07 22:31:40,401 - INFO - Model for EURJPY - Train accuracy: 0.998, Test accuracy: 0.573
+2025-11-07 22:31:40,416 - INFO - Trained and saved model for EURJPY
+2025-11-07 22:31:40,417 - INFO - 
+==================================================
+2025-11-07 22:31:40,417 - INFO - Retraining model for EURNZD
+2025-11-07 22:31:40,417 - INFO - ==================================================
+2025-11-07 22:31:40,418 - INFO - Found 10 recent trades for EURNZD
+2025-11-07 22:31:40,418 - ERROR - MT5 connector not available
+2025-11-07 22:31:40,418 - INFO - MT5 market data unavailable, generating synthetic data for EURNZD
+2025-11-07 22:31:40,420 - INFO - Generated 721 synthetic H1 bars for EURNZD
+2025-11-07 22:31:40,420 - INFO - Using 10 trades for full retraining
+2025-11-07 22:31:40,421 - INFO - Retraining model for EURNZD with 10 trades...
+2025-11-07 22:31:40,579 - INFO - Model for EURNZD - Train accuracy: 0.994, Test accuracy: 0.565
+2025-11-07 22:31:40,594 - INFO - Trained and saved model for EURNZD
+2025-11-07 22:31:40,595 - INFO - 
+==================================================
+2025-11-07 22:31:40,596 - INFO - Retraining model for EURUSD
+2025-11-07 22:31:40,596 - INFO - ==================================================
+2025-11-07 22:31:40,597 - INFO - Found 11 recent trades for EURUSD
+2025-11-07 22:31:40,597 - ERROR - MT5 connector not available
+2025-11-07 22:31:40,597 - INFO - MT5 market data unavailable, generating synthetic data for EURUSD
+2025-11-07 22:31:40,599 - INFO - Generated 721 synthetic H1 bars for EURUSD
+2025-11-07 22:31:40,599 - INFO - Using 11 trades for full retraining
+2025-11-07 22:31:40,599 - INFO - Retraining model for EURUSD with 11 trades...
+2025-11-07 22:31:40,754 - INFO - Model for EURUSD - Train accuracy: 0.994, Test accuracy: 0.450
+2025-11-07 22:31:40,767 - INFO - Trained and saved model for EURUSD
+2025-11-07 22:31:40,768 - INFO - 
+==================================================
+2025-11-07 22:31:40,768 - INFO - Retraining model for GBPAUD
+2025-11-07 22:31:40,768 - INFO - ==================================================
+2025-11-07 22:31:40,770 - INFO - Found 8 recent trades for GBPAUD
+2025-11-07 22:31:40,770 - ERROR - MT5 connector not available
+2025-11-07 22:31:40,770 - INFO - MT5 market data unavailable, generating synthetic data for GBPAUD
+2025-11-07 22:31:40,772 - INFO - Generated 721 synthetic H1 bars for GBPAUD
+2025-11-07 22:31:40,772 - INFO - Using 8 trades for full retraining
+2025-11-07 22:31:40,772 - INFO - Retraining model for GBPAUD with 8 trades...
+2025-11-07 22:31:40,929 - INFO - Model for GBPAUD - Train accuracy: 0.994, Test accuracy: 0.473
+2025-11-07 22:31:40,942 - INFO - Trained and saved model for GBPAUD
+2025-11-07 22:31:40,943 - INFO - 
+==================================================
+2025-11-07 22:31:40,943 - INFO - Retraining model for GBPCAD
+2025-11-07 22:31:40,944 - INFO - ==================================================
+2025-11-07 22:31:40,945 - INFO - Found 18 recent trades for GBPCAD
+2025-11-07 22:31:40,945 - ERROR - MT5 connector not available
+2025-11-07 22:31:40,945 - INFO - MT5 market data unavailable, generating synthetic data for GBPCAD
+2025-11-07 22:31:40,947 - INFO - Generated 721 synthetic H1 bars for GBPCAD
+2025-11-07 22:31:40,947 - INFO - Using 18 trades for full retraining
+2025-11-07 22:31:40,947 - INFO - Retraining model for GBPCAD with 18 trades...
+2025-11-07 22:31:41,106 - INFO - Model for GBPCAD - Train accuracy: 0.990, Test accuracy: 0.557
+2025-11-07 22:31:41,121 - INFO - Trained and saved model for GBPCAD
+2025-11-07 22:31:41,122 - INFO - 
+==================================================
+2025-11-07 22:31:41,122 - INFO - Retraining model for GBPCHF
+2025-11-07 22:31:41,122 - INFO - ==================================================
+2025-11-07 22:31:41,123 - INFO - Found 14 recent trades for GBPCHF
+2025-11-07 22:31:41,123 - ERROR - MT5 connector not available
+2025-11-07 22:31:41,123 - INFO - MT5 market data unavailable, generating synthetic data for GBPCHF
+2025-11-07 22:31:41,125 - INFO - Generated 721 synthetic H1 bars for GBPCHF
+2025-11-07 22:31:41,125 - INFO - Using 14 trades for full retraining
+2025-11-07 22:31:41,125 - INFO - Retraining model for GBPCHF with 14 trades...
+2025-11-07 22:31:41,284 - INFO - Model for GBPCHF - Train accuracy: 0.990, Test accuracy: 0.511
+2025-11-07 22:31:41,300 - INFO - Trained and saved model for GBPCHF
+2025-11-07 22:31:41,301 - INFO - 
+==================================================
+2025-11-07 22:31:41,301 - INFO - Retraining model for GBPJPY
+2025-11-07 22:31:41,301 - INFO - ==================================================
+2025-11-07 22:31:41,302 - INFO - Found 25 recent trades for GBPJPY
+2025-11-07 22:31:41,302 - ERROR - MT5 connector not available
+2025-11-07 22:31:41,302 - INFO - MT5 market data unavailable, generating synthetic data for GBPJPY
+2025-11-07 22:31:41,305 - INFO - Generated 721 synthetic H1 bars for GBPJPY
+2025-11-07 22:31:41,305 - INFO - Using 25 trades for full retraining
+2025-11-07 22:31:41,305 - INFO - Retraining model for GBPJPY with 25 trades...
+2025-11-07 22:31:41,463 - INFO - Model for GBPJPY - Train accuracy: 0.988, Test accuracy: 0.542
+2025-11-07 22:31:41,477 - INFO - Trained and saved model for GBPJPY
+2025-11-07 22:31:41,478 - INFO - 
+==================================================
+2025-11-07 22:31:41,478 - INFO - Retraining model for GBPNZD
+2025-11-07 22:31:41,479 - INFO - ==================================================
+2025-11-07 22:31:41,480 - INFO - Found 14 recent trades for GBPNZD
+2025-11-07 22:31:41,480 - ERROR - MT5 connector not available
+2025-11-07 22:31:41,480 - INFO - MT5 market data unavailable, generating synthetic data for GBPNZD
+2025-11-07 22:31:41,482 - INFO - Generated 721 synthetic H1 bars for GBPNZD
+2025-11-07 22:31:41,482 - INFO - Using 14 trades for full retraining
+2025-11-07 22:31:41,482 - INFO - Retraining model for GBPNZD with 14 trades...
+2025-11-07 22:31:41,639 - INFO - Model for GBPNZD - Train accuracy: 0.996, Test accuracy: 0.580
+2025-11-07 22:31:41,654 - INFO - Trained and saved model for GBPNZD
+2025-11-07 22:31:41,655 - INFO - 
+==================================================
+2025-11-07 22:31:41,655 - INFO - Retraining model for GBPUSD
+2025-11-07 22:31:41,655 - INFO - ==================================================
+2025-11-07 22:31:41,656 - INFO - Found 12 recent trades for GBPUSD
+2025-11-07 22:31:41,656 - ERROR - MT5 connector not available
+2025-11-07 22:31:41,656 - INFO - MT5 market data unavailable, generating synthetic data for GBPUSD
+2025-11-07 22:31:41,658 - INFO - Generated 721 synthetic H1 bars for GBPUSD
+2025-11-07 22:31:41,659 - INFO - Using 12 trades for full retraining
+2025-11-07 22:31:41,659 - INFO - Retraining model for GBPUSD with 12 trades...
+2025-11-07 22:31:41,819 - INFO - Model for GBPUSD - Train accuracy: 0.998, Test accuracy: 0.542
+2025-11-07 22:31:41,833 - INFO - Trained and saved model for GBPUSD
+2025-11-07 22:31:41,834 - INFO - 
+==================================================
+2025-11-07 22:31:41,834 - INFO - Retraining model for NZDCAD
+2025-11-07 22:31:41,834 - INFO - ==================================================
+2025-11-07 22:31:41,836 - INFO - Found 12 recent trades for NZDCAD
+2025-11-07 22:31:41,836 - ERROR - MT5 connector not available
+2025-11-07 22:31:41,836 - INFO - MT5 market data unavailable, generating synthetic data for NZDCAD
+2025-11-07 22:31:41,838 - INFO - Generated 721 synthetic H1 bars for NZDCAD
+2025-11-07 22:31:41,838 - INFO - Using 12 trades for full retraining
+2025-11-07 22:31:41,838 - INFO - Retraining model for NZDCAD with 12 trades...
+2025-11-07 22:31:42,000 - INFO - Model for NZDCAD - Train accuracy: 0.998, Test accuracy: 0.435
+2025-11-07 22:31:42,014 - INFO - Trained and saved model for NZDCAD
+2025-11-07 22:31:42,015 - INFO - 
+==================================================
+2025-11-07 22:31:42,015 - INFO - Retraining model for NZDCHF
+2025-11-07 22:31:42,015 - INFO - ==================================================
+2025-11-07 22:31:42,016 - INFO - Found 14 recent trades for NZDCHF
+2025-11-07 22:31:42,016 - ERROR - MT5 connector not available
+2025-11-07 22:31:42,016 - INFO - MT5 market data unavailable, generating synthetic data for NZDCHF
+2025-11-07 22:31:42,018 - INFO - Generated 721 synthetic H1 bars for NZDCHF
+2025-11-07 22:31:42,019 - INFO - Using 14 trades for full retraining
+2025-11-07 22:31:42,019 - INFO - Retraining model for NZDCHF with 14 trades...
+2025-11-07 22:31:42,174 - INFO - Model for NZDCHF - Train accuracy: 0.994, Test accuracy: 0.504
+2025-11-07 22:31:42,188 - INFO - Trained and saved model for NZDCHF
+2025-11-07 22:31:42,189 - INFO - 
+==================================================
+2025-11-07 22:31:42,189 - INFO - Retraining model for NZDJPY
+2025-11-07 22:31:42,189 - INFO - ==================================================
+2025-11-07 22:31:42,190 - INFO - Found 12 recent trades for NZDJPY
+2025-11-07 22:31:42,190 - ERROR - MT5 connector not available
+2025-11-07 22:31:42,190 - INFO - MT5 market data unavailable, generating synthetic data for NZDJPY
+2025-11-07 22:31:42,192 - INFO - Generated 721 synthetic H1 bars for NZDJPY
+2025-11-07 22:31:42,192 - INFO - Using 12 trades for full retraining
+2025-11-07 22:31:42,192 - INFO - Retraining model for NZDJPY with 12 trades...
+2025-11-07 22:31:42,353 - INFO - Model for NZDJPY - Train accuracy: 0.994, Test accuracy: 0.473
+2025-11-07 22:31:42,367 - INFO - Trained and saved model for NZDJPY
+2025-11-07 22:31:42,368 - INFO - 
+==================================================
+2025-11-07 22:31:42,368 - INFO - Retraining model for NZDUSD
+2025-11-07 22:31:42,368 - INFO - ==================================================
+2025-11-07 22:31:42,370 - INFO - Found 10 recent trades for NZDUSD
+2025-11-07 22:31:42,370 - ERROR - MT5 connector not available
+2025-11-07 22:31:42,370 - INFO - MT5 market data unavailable, generating synthetic data for NZDUSD
+2025-11-07 22:31:42,372 - INFO - Generated 721 synthetic H1 bars for NZDUSD
+2025-11-07 22:31:42,372 - INFO - Using 10 trades for full retraining
+2025-11-07 22:31:42,372 - INFO - Retraining model for NZDUSD with 10 trades...
+2025-11-07 22:31:42,533 - INFO - Model for NZDUSD - Train accuracy: 0.998, Test accuracy: 0.603
+2025-11-07 22:31:42,547 - INFO - Trained and saved model for NZDUSD
+2025-11-07 22:31:42,548 - INFO - 
+==================================================
+2025-11-07 22:31:42,548 - INFO - Retraining model for USDCAD
+2025-11-07 22:31:42,548 - INFO - ==================================================
+2025-11-07 22:31:42,549 - INFO - Found 15 recent trades for USDCAD
+2025-11-07 22:31:42,549 - ERROR - MT5 connector not available
+2025-11-07 22:31:42,549 - INFO - MT5 market data unavailable, generating synthetic data for USDCAD
+2025-11-07 22:31:42,551 - INFO - Generated 721 synthetic H1 bars for USDCAD
+2025-11-07 22:31:42,551 - INFO - Using 15 trades for full retraining
+2025-11-07 22:31:42,552 - INFO - Retraining model for USDCAD with 15 trades...
+2025-11-07 22:31:42,710 - INFO - Model for USDCAD - Train accuracy: 0.994, Test accuracy: 0.542
+2025-11-07 22:31:42,724 - INFO - Trained and saved model for USDCAD
+2025-11-07 22:31:42,725 - INFO - 
+==================================================
+2025-11-07 22:31:42,725 - INFO - Retraining model for USDCHF
+2025-11-07 22:31:42,725 - INFO - ==================================================
+2025-11-07 22:31:42,726 - INFO - Found 14 recent trades for USDCHF
+2025-11-07 22:31:42,726 - ERROR - MT5 connector not available
+2025-11-07 22:31:42,727 - INFO - MT5 market data unavailable, generating synthetic data for USDCHF
+2025-11-07 22:31:42,729 - INFO - Generated 721 synthetic H1 bars for USDCHF
+2025-11-07 22:31:42,729 - INFO - Using 14 trades for full retraining
+2025-11-07 22:31:42,729 - INFO - Retraining model for USDCHF with 14 trades...
+2025-11-07 22:31:42,885 - INFO - Model for USDCHF - Train accuracy: 0.990, Test accuracy: 0.527
+2025-11-07 22:31:42,900 - INFO - Trained and saved model for USDCHF
+2025-11-07 22:31:42,901 - INFO - 
+==================================================
+2025-11-07 22:31:42,901 - INFO - Retraining model for USDJPY
+2025-11-07 22:31:42,901 - INFO - ==================================================
+2025-11-07 22:31:42,902 - INFO - Found 15 recent trades for USDJPY
+2025-11-07 22:31:42,902 - ERROR - MT5 connector not available
+2025-11-07 22:31:42,903 - INFO - MT5 market data unavailable, generating synthetic data for USDJPY
+2025-11-07 22:31:42,905 - INFO - Generated 721 synthetic H1 bars for USDJPY
+2025-11-07 22:31:42,905 - INFO - Using 15 trades for full retraining
+2025-11-07 22:31:42,905 - INFO - Retraining model for USDJPY with 15 trades...
+2025-11-07 22:31:43,060 - INFO - Model for USDJPY - Train accuracy: 0.996, Test accuracy: 0.496
+2025-11-07 22:31:43,075 - INFO - Trained and saved model for USDJPY
+2025-11-07 22:31:43,076 - INFO - 
+==================================================
+2025-11-07 22:31:43,076 - INFO - Retraining model for XAGUSD
+2025-11-07 22:31:43,076 - INFO - ==================================================
+2025-11-07 22:31:43,077 - INFO - Found 7 recent trades for XAGUSD
+2025-11-07 22:31:43,077 - ERROR - MT5 connector not available
+2025-11-07 22:31:43,078 - INFO - MT5 market data unavailable, generating synthetic data for XAGUSD
+2025-11-07 22:31:43,080 - INFO - Generated 721 synthetic H1 bars for XAGUSD
+2025-11-07 22:31:43,080 - INFO - Using 7 trades for full retraining
+2025-11-07 22:31:43,080 - INFO - Retraining model for XAGUSD with 7 trades...
+2025-11-07 22:31:43,237 - INFO - Model for XAGUSD - Train accuracy: 0.996, Test accuracy: 0.466
+2025-11-07 22:31:43,251 - INFO - Trained and saved model for XAGUSD
+2025-11-07 22:31:43,252 - INFO - 
+==================================================
+2025-11-07 22:31:43,252 - INFO - Retraining model for XAUUSD
+2025-11-07 22:31:43,252 - INFO - ==================================================
+2025-11-07 22:31:43,254 - INFO - Found 63 recent trades for XAUUSD
+2025-11-07 22:31:43,254 - ERROR - MT5 connector not available
+2025-11-07 22:31:43,254 - INFO - MT5 market data unavailable, generating synthetic data for XAUUSD
+2025-11-07 22:31:43,256 - INFO - Generated 721 synthetic H1 bars for XAUUSD
+2025-11-07 22:31:43,256 - INFO - Using 63 trades for full retraining
+2025-11-07 22:31:43,256 - INFO - Retraining model for XAUUSD with 63 trades...
+2025-11-07 22:31:43,416 - INFO - Model for XAUUSD - Train accuracy: 0.992, Test accuracy: 0.443
+2025-11-07 22:31:43,431 - INFO - Trained and saved model for XAUUSD
+2025-11-07 22:31:43,432 - INFO - 
+============================================================
+2025-11-07 22:31:43,432 - INFO - RETRAINING SUMMARY
+2025-11-07 22:31:43,432 - INFO - ============================================================
+2025-11-07 22:31:43,432 - INFO - Total symbols: 30
+2025-11-07 22:31:43,432 - INFO - Successful retrains: 30
+2025-11-07 22:31:43,432 - INFO - Failed retrains: 0
+2025-11-07 22:31:43,432 - INFO - Success rate: 100.0%
+2025-11-07 22:31:43,433 - INFO - Models have been updated with recent trading data.
+2025-11-07 22:31:43,433 - INFO - ============================================================

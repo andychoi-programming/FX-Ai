@@ -5,7 +5,7 @@ Monitors positions and alerts when SL/TP values change unexpectedly
 import MetaTrader5 as mt5
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, List
 
 logger = logging.getLogger(__name__)

@@ -6,7 +6,7 @@ FX-Ai is a comprehensive machine learning-based forex trading system that combin
 
 **Version:** 3.0  
 **Date:** November 6, 2025  
-**Status:**  OPERATIONAL - System running normally
+**Status:** OPERATIONAL - System running normally
 
 ---
 
@@ -32,7 +32,7 @@ python performance_dashboard.py --continuous
 
 ```bash
 # Using batch file (Windows)
-.\live_trading\emergency_stop.bat
+python live_trading/emergency_stop.bat
 
 # Or run directly
 python live_trading/emergency_stop.py
@@ -49,6 +49,7 @@ python live_trading/emergency_stop.py
 - **Real-time Trading**: Automated position management with advanced risk controls
 - **Multi-Timeframe Support**: Optimized parameters for M1, M5, M15, H1, D1, W1, MN1
 - **Risk Management**: Dynamic position sizing, daily loss limits, trade frequency controls
+- **Fundamental Monitoring**: Real-time news and economic event monitoring during active trades
 - **Performance Monitoring**: Real-time dashboard with system health and P&L tracking
 - **Market Analysis**: Technical, fundamental, and sentiment analysis integration
 
@@ -69,6 +70,13 @@ python live_trading/emergency_stop.py
 - **Default SL/TP:** 20/40 pips
 - **Max Spread:** 3.0 pips
 - **Lot Size Range:** 0.01 - 1.0 lots
+
+### Fundamental Monitoring Settings
+
+- **Check Interval:** Every 5 minutes (configurable)
+- **High Impact Exit:** Exit positions within 15 minutes of contradicting news
+- **SL Tightening:** Tighten stops for upcoming high-impact events (within 30 minutes)
+- **Profit Locking:** Lock in profits during volatile news events
 
 ### Trading Hours
 
@@ -94,13 +102,13 @@ The `performance_dashboard.py` provides real-time monitoring:
 ### Sample Output
 
 ```text
- FX-AI PERFORMANCE DASHBOARD
- SYSTEM STATUS: HEALTHY
- TRADING STATUS: Trading Allowed
- ACCOUNT INFO: Balance $10,000 | Equity $10,250
- OPEN POSITIONS: 3 positions | Unrealized P&L +$250
- RECENT PERFORMANCE: 180 trades | Win Rate 65.2%
-  RISK METRICS: Drawdown 0.5% | Risk Level: LOW
+FX-AI PERFORMANCE DASHBOARD
+SYSTEM STATUS: HEALTHY
+TRADING STATUS: Trading Allowed
+ACCOUNT INFO: Balance $10,000 | Equity $10,250
+OPEN POSITIONS: 3 positions | Unrealized P&L +$250
+RECENT PERFORMANCE: 180 trades | Win Rate 65.2%
+RISK METRICS: Drawdown 0.5% | Risk Level: LOW
 ```
 
 ---
@@ -109,32 +117,33 @@ The `performance_dashboard.py` provides real-time monitoring:
 
 ```text
 FX-Ai/
- main.py                          # Main application entry point
- performance_dashboard.py         # Real-time monitoring dashboard
- requirements.txt                 # Python dependencies
- config/
-    config.json                  # System configuration
- ai/                             # Machine Learning components
-    ml_predictor.py             # ML model predictions
-    adaptive_learning_manager.py # Model adaptation system
-    reinforcement_learning_agent.py # RL optimization
- core/                           # Core trading components
-    trading_engine.py           # Main trading logic
-    risk_manager.py             # Risk management system
-    mt5_connector.py            # MT5 integration
- live_trading/                   # Live trading components
-    dynamic_parameter_manager.py # Parameter optimization
-    FX-Ai_Start.bat            # Windows startup script
-    emergency_stop.py           # Emergency shutdown
- utils/                          # Utility modules
-    logger.py                   # Logging system
-    time_manager.py             # Time management
-    config_loader.py            # Configuration loading
- analysis/                       # Market analysis
- data/                           # Data management
- models/                         # Trained ML models
- logs/                           # Application logs
- .env                            # Environment variables (credentials)
+├── main.py                          # Main application entry point
+├── performance_dashboard.py         # Real-time monitoring dashboard
+├── requirements.txt                 # Python dependencies
+├── config/
+│   └── config.json                  # System configuration
+├── ai/                              # Machine Learning components
+│   ├── ml_predictor.py              # ML model predictions
+│   ├── adaptive_learning_manager.py # Model adaptation system
+│   └── reinforcement_learning_agent.py # RL optimization
+├── core/                            # Core trading components
+│   ├── trading_engine.py            # Main trading logic
+│   ├── risk_manager.py              # Risk management system
+│   └── mt5_connector.py             # MT5 integration
+├── live_trading/                    # Live trading components
+│   ├── fundamental_monitor.py       # Real-time fundamental monitoring
+│   ├── dynamic_parameter_manager.py # Parameter optimization
+│   ├── FX-Ai_Start.bat              # Windows startup script
+│   └── emergency_stop.py            # Emergency shutdown
+├── utils/                           # Utility modules
+│   ├── logger.py                    # Logging system
+│   ├── time_manager.py              # Time management
+│   └── config_loader.py             # Configuration loading
+├── analysis/                        # Market analysis
+├── data/                            # Data management
+├── models/                          # Trained ML models
+├── logs/                            # Application logs
+└── .env                             # Environment variables (credentials)
 ```
 
 ---
@@ -160,8 +169,12 @@ FX-Ai/
 
    ```bash
    python -m venv venv
-   venv\Scripts\activate  # Windows
-   # source venv/bin/activate  # Linux/Mac
+   
+   # Windows
+   venv\Scripts\activate
+   
+   # Linux/Mac
+   source venv/bin/activate
    ```
 
 3. **Install Dependencies**
@@ -173,8 +186,11 @@ FX-Ai/
 4. **Configure Environment**
 
    ```bash
-   # Copy environment template
+   # Windows: Copy environment template
    copy .env.example .env
+   
+   # Linux/Mac: Copy environment template
+   cp .env.example .env
 
    # Edit .env with your MT5 credentials
    # MT5_LOGIN=your_login
@@ -201,16 +217,26 @@ FX-Ai/
 
 ### Automated Training
 
-The system includes automated model training for new symbols:
+The system includes automated model training for new symbols. Training data (X_train, y_train) is automatically prepared from historical market data:
 
 ```python
 from ai.ml_predictor import MLPredictor
+import pandas as pd
 
 # Initialize predictor
 predictor = MLPredictor(config)
 
+# Load historical data
+historical_data = pd.read_csv('data/EURUSD_H1.csv')
+
+# Prepare features and labels (done automatically by the system)
+X_train, y_train = predictor.prepare_training_data(historical_data)
+
 # Train model for specific symbol and timeframe
 predictor.train_symbol_model('EURUSD', 'H1', X_train, y_train)
+
+# Or use the automatic training method
+predictor._train_model('EURUSD', historical_data, 'H1')
 ```
 
 ### Model Features
@@ -237,6 +263,57 @@ predictor.train_symbol_model('EURUSD', 'H1', X_train, y_train)
 - **Emergency Stop**: Immediate shutdown of all trading
 - **Circuit Breakers**: Automatic pause during high volatility
 - **Manual Override**: Administrative controls for intervention
+
+---
+
+## Fundamental Monitoring
+
+### Overview
+
+The **FundamentalMonitor** provides real-time fundamental monitoring during active trades, automatically protecting capital or locking in profits based on breaking news and economic events.
+
+### Key Features
+
+- **Real-time News Monitoring**: Checks for breaking news every 5 minutes
+- **Economic Event Detection**: Monitors high-impact economic releases
+- **Automatic Risk Management**: Takes protective actions based on event severity
+- **Position Protection**: Exits positions, tightens stops, or locks profits
+
+### Actions Taken
+
+#### EXIT Position
+
+- When high-impact news contradicts your position (within 15 minutes)
+- Example: Long EUR/USD during negative US employment data
+
+#### TIGHTEN Stop Loss
+
+- When high-impact news is upcoming (within 30 minutes)
+- Moves SL closer to entry (50% of current distance by default)
+
+#### LOCK PROFITS
+
+- When high-impact news detected and position is profitable
+- Moves SL to breakeven + 20% buffer to protect gains
+
+#### Fundamental Monitor Configuration
+
+```json
+"fundamental_monitor": {
+  "enabled": true,
+  "check_interval_seconds": 300,
+  "high_impact_exit_threshold": 15,
+  "sl_tighten_threshold": 30,
+  "sl_tighten_percentage": 0.5
+}
+```
+
+### Benefits
+
+- **Disaster Prevention**: Avoids large losses from surprise announcements
+- **Profit Protection**: Locks in gains before volatile events
+- **24/7 Monitoring**: Automatic monitoring without manual intervention
+- **Adaptive Risk Management**: Dynamic SL/TP based on market events
 
 ---
 
@@ -295,6 +372,15 @@ predictor.train_symbol_model('EURUSD', 'H1', X_train, y_train)
 # Review risk management settings
 ```
 
+#### Fundamental Monitor Not Working
+
+```bash
+# Check fundamental_monitor.enabled = true in config.json
+# Verify fundamental_monitor.py is integrated in main.py
+# Check logs for monitoring activity
+# Test with python test_fundamental_monitor.py
+```
+
 #### Performance Issues
 
 ```bash
@@ -323,9 +409,9 @@ predictor.train_symbol_model('EURUSD', 'H1', X_train, y_train)
 
 ### Risk Warnings
 
-- **Past Performance  Future Results**
+- **Past Performance Does Not Guarantee Future Results**
 - **Forex Trading Involves Risk of Loss**
-- **Never Risk More Than You Can Afford**
+- **Never Risk More Than You Can Afford to Lose**
 - **Always Test on Demo Account First**
 
 ---

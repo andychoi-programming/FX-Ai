@@ -5,7 +5,7 @@ Detects different market conditions to adapt trading strategies
 """
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
 import logging

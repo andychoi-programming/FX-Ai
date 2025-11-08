@@ -51,13 +51,11 @@
     "max_daily_loss": 500.0,
     "enable_news_filter": true,
     "enable_session_filter": true,
-    "day_trading_only": true,
+    "day_trading_only": false,
     "close_before_weekend": true,
     "close_on_shutdown": true,
     "prevent_multiple_positions_per_symbol": true,
-    "close_hour": 22,
-    "close_minute": 30,
-    "_comment_rules": "===== TRADING RULES - ALL RULES IN ONE PLACE ====="
+    "_comment_rules": "===== TRADING RULES - AI-DRIVEN TIMING ====="
   },
   "trading_rules": {
     "_description": "Consolidated trading rules for easy management",
@@ -69,12 +67,15 @@
       "_comment": "One trade per symbol per day rule enforced by RiskManager"
     },
     "time_restrictions": {
-      "day_trading_only": true,
-      "close_hour": 22,
-      "close_minute": 30,
+      "day_trading_only": false,
       "close_before_weekend": true,
       "close_on_shutdown": true,
-      "_comment": "All positions closed at 22:30 MT5 server time"
+      "trading_days_only": [0, 1, 2, 3, 4],
+      "avoid_market_open_close": true,
+      "market_open_buffer_hours": 1,
+      "market_close_buffer_hours": 2,
+      "min_session_overlap": 2,
+      "_comment": "AI-driven timing: Let the system learn optimal entry/exit times, Mon-Fri only, avoid volatile periods"
     },
     "risk_limits": {
       "risk_per_trade": 50.0,
@@ -140,8 +141,16 @@
     },
     "session_filter": {
       "enabled": true,
-      "preferred_sessions": ["london", "newyork", "overlap"],
-      "_comment": "Trade during liquid market sessions"
+      "preferred_sessions": [
+        "london",
+        "newyork", 
+        "overlap"
+      ],
+      "require_overlap": true,
+      "min_overlap_hours": 2,
+      "avoid_thin_liquidity": true,
+      "high_impact_news_buffer": 60,
+      "_comment": "Require minimum 2-hour session overlap, avoid thin liquidity periods, 60min news buffer"
     }
   },
   "risk_management": {
@@ -583,6 +592,20 @@
       "max_consecutive_failures": 5
     }
   },
+  "continuous_learning": {
+    "enabled": true,
+    "learning_only_mode": true,
+    "monitor_market_conditions": true,
+    "update_technical_indicators": true,
+    "adaptive_parameter_tuning": true,
+    "sentiment_analysis_update": true,
+    "pattern_recognition_learning": true,
+    "risk_model_calibration": true,
+    "backtesting_during_downtime": false,
+    "learning_frequency_minutes": 15,
+    "max_learning_resources": 0.3,
+    "_comment": "Enable continuous learning even when not trading - monitor markets, update models, improve algorithms"
+  },
   "notifications": {
     "enabled": false,
     "email": "",
@@ -595,7 +618,7 @@
   "logging": {
     "level": "INFO",
     "console_level": "WARNING",
-    "file": "logs/FX-Ai",
+    "file": "D:/FX-Ai-Data/logs/FX-Ai",
     "rotation_type": "time",
     "file_rotation": true,
     "max_file_size": 10485760,
@@ -605,5 +628,13 @@
     "log_performance": true,
     "log_calculations": false,
     "_comment": "level: DEBUG/INFO/WARNING/ERROR, console_level for terminal output"
+  },
+  "fundamental_monitor": {
+    "enabled": true,
+    "check_interval_seconds": 300,
+    "high_impact_exit_threshold": 15,
+    "sl_tighten_threshold": 30,
+    "sl_tighten_percentage": 0.5,
+    "_comment": "Monitor fundamentals every 5 minutes. Exit if high-impact news within 15 mins, tighten SL if within 30 mins"
   }
 }

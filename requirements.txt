@@ -43,7 +43,6 @@ python-dotenv>=1.0.0
 pyyaml>=6.0.0
 colorama>=0.4.6
 psutil>=5.9.0
-schedule==1.2.0
 
 # Database (optional)
 sqlalchemy>=2.0.0

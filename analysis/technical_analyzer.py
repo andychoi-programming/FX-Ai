@@ -6,8 +6,7 @@ Performs technical analysis on price data and generates trading signals
 import logging
 import pandas as pd
 import numpy as np
-from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict
 
 try:
     import talib

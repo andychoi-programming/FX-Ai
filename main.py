@@ -88,6 +88,12 @@ class FXAiApplication:
         self.learning_enabled = self.config.get(
             'ml', {}).get('adaptive_learning', True)
 
+        # Trading parameters
+        self.magic_number = self.config.get('trading', {}).get('magic_number', 123456)
+
+        # Background tasks
+        self.fundamental_monitor_task = None
+
         # Performance tracking
         self.session_stats = {
             'start_time': datetime.now(),
@@ -106,8 +112,6 @@ class FXAiApplication:
     async def validate_configuration(self):
         """Validate critical configuration before trading starts"""
         from utils.exceptions import ConfigurationError, MissingParametersError
-        import os
-        import json
 
         self.logger.info("Validating system configuration...")
 
@@ -299,6 +303,9 @@ class FXAiApplication:
         self.logger.info("Starting adaptive trading loop...")
         self.running = True
 
+        # Start fundamental monitor background task
+        self.fundamental_monitor_task = asyncio.create_task(self.fundamental_monitor_loop())
+
         loop_count = 0
 
         while self.running:
@@ -387,8 +394,26 @@ class FXAiApplication:
                         # Apply regime adaptation if available
                         if self.market_regime_detector and hasattr(self.adaptive_learning, 'get_regime_adapted_parameters'):
                             self.logger.debug(f"{symbol}: Applying regime adaptation...")
+
+                            # Get current market regime
+                            market_regime = 'ranging'  # default
+                            if bars_dict.get(symbol, {}).get('H1') is not None:
+                                historical_data = bars_dict[symbol]['H1']
+                                if len(historical_data) >= 30:
+                                    regime_analysis = self.market_regime_detector.analyze_regime(symbol, historical_data)
+                                    market_regime = regime_analysis.primary_regime.value
+
+                            # Get portfolio risk metrics for risk-aware tuning
+                            portfolio_metrics = {}
+                            if self.advanced_risk_metrics:
+                                try:
+                                    portfolio_metrics = self.advanced_risk_metrics.assess_portfolio_risk()
+                                except Exception as e:
+                                    self.logger.debug(f"Could not get portfolio metrics: {e}")
+
+                            # Apply regime and risk-aware adaptation
                             adaptive_params = self.adaptive_learning.get_regime_adapted_parameters(
-                                symbol, adaptive_params)
+                                symbol, market_regime, portfolio_metrics)
                             self.logger.debug(f"{symbol}: Regime adaptation applied")
                     else:
                         # Adjusted weights for testing (more weight to
@@ -920,23 +945,22 @@ class FXAiApplication:
 
                 for signal in signals:
                     # Validate signal has required trading parameters
-                    print(f"Processing signal for {signal['symbol']}: action={signal['action']}", flush=True)
-                    # self.logger.info(
-                    #     f"Processing signal for {signal['symbol']}: "
-                    #     f"action={signal['action']}, "
-                    #     f"strength={signal.get('strength', 0):.3f}, "
-                    #     f"entry={signal.get('entry_price', 'None')}, "
-                    #     f"stop={signal.get('stop_loss', 'None')}, "
-                    #     f"tp={signal.get('take_profit', 'None')}")
+                    self.logger.debug(
+                        f"Processing signal for {signal['symbol']}: "
+                        f"action={signal['action']}, "
+                        f"strength={signal.get('strength', 0):.3f}, "
+                        f"entry={signal.get('entry_price', 'None')}, "
+                        f"stop={signal.get('stop_loss', 'None')}, "
+                        f"tp={signal.get('take_profit', 'None')}"
+                    )
                     if not signal.get(
                             'entry_price') or not signal.get('stop_loss'):
-                        print(f"Skipping signal for {signal['symbol']} - missing entry/stop loss data", flush=True)
-                        # self.logger.warning(
-                        #     f"Skipping signal for {signal['symbol']} - "
-                        #     f"missing entry/stop loss data "
-                        #     f"(entry: {signal.get('entry_price', 'None')}, "
-                        #     f"stop: {signal.get('stop_loss', 'None')})"
-                        # )
+                        self.logger.warning(
+                            f"Skipping signal for {signal['symbol']} - "
+                            f"missing entry/stop loss data "
+                            f"(entry: {signal.get('entry_price', 'None')}, "
+                            f"stop: {signal.get('stop_loss', 'None')})"
+                        )
                         continue
 
                     # Update risk metrics before checking limits
@@ -994,7 +1018,7 @@ class FXAiApplication:
                                         )
 
                             except Exception as e:
-                                print(f"Advanced risk assessment failed for {signal['symbol']}: {e}", flush=True)
+                                self.logger.error(f"Advanced risk assessment failed for {signal['symbol']}: {e}")
 
                         # Check free margin percentage
                         account_info = mt5.account_info()  # type: ignore
@@ -1104,7 +1128,7 @@ class FXAiApplication:
                         except Exception as e:
                             response_time = time_module.time() - start_time
                             trade_result = {'success': False, 'error': str(e)}
-                            print(f"Trade execution failed for {signal['symbol']}: {e}", flush=True)
+                            self.logger.error(f"Trade execution failed for {signal['symbol']}: {e}")
 
                         if trade_result.get('success', False):
                             self.session_stats['total_trades'] += 1
@@ -1297,6 +1321,30 @@ class FXAiApplication:
                         # Record for learning
                         if self.adaptive_learning:
                             self.adaptive_learning.record_trade(trade_data)
+
+                        # ===== ANALYZER ACCURACY EVALUATION =====
+                        if self.reinforcement_agent and hasattr(self.reinforcement_agent, 'record_trade_with_analyzer_evaluation'):
+                            try:
+                                # Prepare trade outcome data for analyzer evaluation
+                                trade_outcome = {
+                                    'symbol': trade_data['symbol'],
+                                    'profit_pct': profit_pct,
+                                    'entry_signals': {
+                                        'technical_score': trade_data.get('technical_score', 0.5),
+                                        'fundamental_score': 0.5,  # Placeholder - could be enhanced
+                                        'sentiment_score': trade_data.get('sentiment_score', 0.5),
+                                        'signal_strength': trade_data.get('signal_strength', 0.5)
+                                    }
+                                }
+
+                                # Record trade with analyzer evaluation
+                                self.reinforcement_agent.record_trade_with_analyzer_evaluation(
+                                    trade_outcome, self.adaptive_learning)
+
+                                self.logger.debug(f"Analyzer evaluation completed for {trade_data['symbol']}")
+
+                            except Exception as e:
+                                self.logger.warning(f"Failed to evaluate analyzer accuracy: {e}")
 
                         # ===== REINFORCEMENT LEARNING UPDATE =====
                         if self.reinforcement_agent and self.reinforcement_agent.enabled:
@@ -1491,6 +1539,22 @@ class FXAiApplication:
         self.logger.info("Shutting down FX-Ai...")
         self.running = False
 
+        # Cancel fundamental monitor task
+        if self.fundamental_monitor_task and not self.fundamental_monitor_task.done():
+            self.logger.info("Cancelling fundamental monitor task...")
+            self.fundamental_monitor_task.cancel()
+            try:
+                # Wait for task to cancel (with timeout)
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # If loop is running, we can't wait here, just cancel
+                    pass
+                else:
+                    # If loop is not running, we can wait briefly
+                    loop.run_until_complete(asyncio.wait_for(self.fundamental_monitor_task, timeout=5.0))
+            except Exception as e:
+                self.logger.debug(f"Error waiting for fundamental monitor cancellation: {e}")
+
         # Print session summary
         self.print_session_summary()
 
@@ -1591,6 +1655,55 @@ class FXAiApplication:
         finally:
             self.shutdown()
 
+    async def fundamental_monitor_loop(self):
+        """Background fundamental monitor that checks for breaking news every 5 minutes"""
+        self.logger.info("Fundamental Monitor started - checking for breaking news every 5 minutes")
+
+        while self.running:
+            try:
+                # Wait 5 minutes
+                await asyncio.sleep(300)
+
+                if not self.running:
+                    break
+
+                self.logger.info("Fundamental Monitor: Checking for breaking news...")
+
+                # Get all active positions
+                active_positions = []
+                symbols = self.config.get('trading', {}).get('symbols', [])
+
+                for symbol in symbols:
+                    try:
+                        positions = mt5.positions_get(symbol=symbol)
+                        if positions:
+                            for position in positions:
+                                if hasattr(position, 'magic') and position.magic == self.magic_number:
+                                    active_positions.append(position)
+                    except Exception as e:
+                        self.logger.debug(f"Error checking positions for {symbol}: {e}")
+
+                if not active_positions:
+                    self.logger.debug("Fundamental Monitor: No active positions to monitor")
+                    continue
+
+                self.logger.info(f"Fundamental Monitor: Monitoring {len(active_positions)} active positions")
+
+                # Check each position for fundamental updates
+                for position in active_positions:
+                    try:
+                        await self.trading_engine.check_fundamental_updates_during_trade(position)  # type: ignore
+                    except Exception as e:
+                        self.logger.error(f"Error in fundamental check for {position.symbol}: {e}")
+
+                self.logger.info("Fundamental Monitor: Check completed")
+
+            except Exception as e:
+                self.logger.error(f"Error in fundamental monitor loop: {e}")
+                await asyncio.sleep(60)  # Wait 1 minute before retrying
+
+        self.logger.info("Fundamental Monitor stopped")
+
 
 def main():
     """Main entry point with crash protection"""
@@ -1617,7 +1730,6 @@ def main():
 
         # Also write to separate crash log
         try:
-            import os
             os.makedirs("logs", exist_ok=True)
             with open("logs/crash_log.txt", "a", encoding="utf-8") as f:
                 from datetime import datetime
@@ -1632,7 +1744,6 @@ def main():
 
         # Exit with error code so watchdog knows it crashed
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

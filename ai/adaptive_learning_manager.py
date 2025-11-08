@@ -111,7 +111,7 @@ except ImportError:
                     elif job['type'] == 'daily':
                         job['next_run'] = job['next_run'] + 24 * 3600
 
-from typing import Optional
+from typing import Optional, Dict
 import pandas as pd
 import numpy as np
 from collections import deque
@@ -230,6 +230,15 @@ class AdaptiveLearningManager:
 
         # Schedule periodic tasks
         self.schedule_tasks()
+
+        # Start the continuous learning thread
+        self.learning_thread = threading.Thread(
+            target=self.run_continuous_learning,
+            daemon=True,
+            name="ContinuousLearning"
+        )
+        self.learning_thread.start()
+        logger.info("Continuous learning thread started")
 
         # Initialize database for trade and performance tracking
         self.init_database()
@@ -543,6 +552,36 @@ class AdaptiveLearningManager:
                 trade_count INTEGER NOT NULL DEFAULT 0,
                 last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(symbol, trade_date)
+            )
+        ''')
+
+        # Regime parameter optimization table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS regime_parameter_optimization (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT,
+                regime_type TEXT,
+                parameter_name TEXT,
+                optimal_value REAL,
+                performance_score REAL,
+                total_trades INTEGER,
+                last_updated DATETIME,
+                confidence_score REAL,
+                UNIQUE(symbol, regime_type, parameter_name)
+            )
+        ''')
+
+        # Analyzer accuracy tracking table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS analyzer_accuracy_tracking (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME,
+                symbol TEXT,
+                analyzer_type TEXT,
+                accuracy_score REAL,
+                total_evaluations INTEGER,
+                market_regime TEXT,
+                last_updated DATETIME
             )
         ''')
 
@@ -1275,6 +1314,342 @@ class AdaptiveLearningManager:
         params['risk_multiplier'] = 1.0  # Always fixed at 1.0
         return params
 
+    def get_regime_adapted_parameters(self, symbol: str, base_params: dict) -> dict:
+        """Adapt parameters based on current market regime"""
+        try:
+            if not self.regime_enabled or not hasattr(self, 'market_regime_detector'):
+                return base_params
+
+            # Get current regime for the symbol
+            historical_data = self._get_recent_bars_for_regime(symbol)
+            if historical_data is None or len(historical_data) < 30:
+                return base_params
+
+            regime_analysis = self.market_regime_detector.analyze_regime(symbol, historical_data)
+            regime_type = regime_analysis.primary_regime.value
+
+            # Get regime-specific parameters from database
+            regime_params = self._get_optimal_params_for_regime(symbol, regime_type)
+
+            # Merge with base parameters (regime params take precedence)
+            adapted_params = base_params.copy()
+            adapted_params.update(regime_params)
+
+            logger.debug(f"Applied {regime_type} regime adaptation for {symbol}")
+            return adapted_params
+
+        except Exception as e:
+            logger.warning(f"Error getting regime-adapted parameters for {symbol}: {e}")
+            return base_params
+
+    def _get_recent_bars_for_regime(self, symbol: str, bars: int = 50) -> Optional[pd.DataFrame]:
+        """Get recent bars for regime analysis"""
+        try:
+            if self.mt5 is None:
+                return None
+
+            # Get H1 data for regime analysis
+            rates = self.mt5.get_historical_data(
+                symbol=symbol,
+                timeframe=mt5.TIMEFRAME_H1,
+                start_date=None,  # Recent data
+                count=bars
+            )
+
+            if rates is not None and len(rates) > 0:
+                df = pd.DataFrame(rates)
+                df['timestamp'] = pd.to_datetime(df['time'], unit='s')
+                df.set_index('timestamp', inplace=True)
+                return df
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error getting bars for regime analysis: {e}")
+            return None
+
+    def _get_optimal_params_for_regime(self, symbol: str, regime: str) -> dict:
+        """Get optimal parameters for a specific market regime"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Query regime-specific parameters
+            cursor.execute('''
+                SELECT parameter_name, optimal_value
+                FROM regime_parameter_optimization
+                WHERE symbol = ? AND regime_type = ?
+                ORDER BY last_updated DESC
+                LIMIT 50
+            ''', (symbol, regime))
+
+            regime_params = {}
+            rows = cursor.fetchall()
+
+            for row in rows:
+                param_name, optimal_value = row
+                regime_params[param_name] = optimal_value
+
+            conn.close()
+
+            # If no regime-specific params, return defaults
+            if not regime_params:
+                regime_params = self._get_default_regime_params(regime)
+
+            return regime_params
+
+        except Exception as e:
+            logger.error(f"Error getting regime parameters: {e}")
+            return {}
+
+    def _get_default_regime_params(self, regime: str) -> dict:
+        """Get default parameters for different market regimes"""
+        defaults = {
+            'trending': {
+                'use_trend_indicators': True,
+                'use_oscillators': False,
+                'ema_weight': 0.8,
+                'macd_weight': 0.7,
+                'rsi_weight': 0.2,
+                'support_resistance_weight': 0.3,
+                'min_signal_strength': 0.65,
+                'stop_loss_atr_multiplier': 2.5,
+                'take_profit_atr_multiplier': 5.0,
+                'trailing_stop_enabled': True
+            },
+            'ranging': {
+                'use_trend_indicators': False,
+                'use_oscillators': True,
+                'ema_weight': 0.3,
+                'macd_weight': 0.2,
+                'rsi_weight': 0.9,
+                'support_resistance_weight': 0.8,
+                'min_signal_strength': 0.55,
+                'stop_loss_atr_multiplier': 2.0,
+                'take_profit_atr_multiplier': 3.0,
+                'trailing_stop_enabled': False
+            },
+            'high_volatility': {
+                'use_trend_indicators': True,
+                'use_oscillators': False,
+                'ema_weight': 0.6,
+                'macd_weight': 0.5,
+                'rsi_weight': 0.4,
+                'support_resistance_weight': 0.2,
+                'min_signal_strength': 0.7,
+                'stop_loss_atr_multiplier': 3.0,
+                'take_profit_atr_multiplier': 4.0,
+                'trailing_stop_enabled': True,
+                'max_holding_hours': 2.0
+            },
+            'low_volatility': {
+                'use_trend_indicators': False,
+                'use_oscillators': True,
+                'ema_weight': 0.4,
+                'macd_weight': 0.3,
+                'rsi_weight': 0.8,
+                'support_resistance_weight': 0.6,
+                'min_signal_strength': 0.5,
+                'stop_loss_atr_multiplier': 1.5,
+                'take_profit_atr_multiplier': 4.0,
+                'trailing_stop_enabled': False,
+                'max_holding_hours': 8.0
+            }
+        }
+
+        return defaults.get(regime, {})
+
+    def record_analyzer_accuracy(self, symbol: str, analyzer_type: str, accuracy_score: float, market_regime: str = None):
+        """Record analyzer accuracy for performance tracking"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Insert or update analyzer accuracy
+            cursor.execute('''
+                INSERT INTO analyzer_accuracy_tracking
+                (timestamp, symbol, analyzer_type, accuracy_score, total_evaluations, market_regime, last_updated)
+                VALUES (?, ?, ?, ?, 1, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(symbol, analyzer_type) DO UPDATE SET
+                    accuracy_score = (accuracy_score * total_evaluations + ?) / (total_evaluations + 1),
+                    total_evaluations = total_evaluations + 1,
+                    market_regime = ?,
+                    last_updated = CURRENT_TIMESTAMP
+            ''', (
+                datetime.now(),
+                symbol,
+                analyzer_type,
+                accuracy_score,
+                market_regime or 'unknown',
+                accuracy_score,
+                market_regime or 'unknown'
+            ))
+
+            conn.commit()
+            conn.close()
+
+            logger.debug(f"Recorded {analyzer_type} accuracy for {symbol}: {accuracy_score:.3f}")
+
+        except Exception as e:
+            logger.error(f"Error recording analyzer accuracy: {e}")
+
+    def adjust_weights_from_accuracy(self, accuracy_scores: dict):
+        """Adjust analyzer weights based on accuracy scores"""
+        try:
+            # Map analyzer types to signal weights
+            weight_mapping = {
+                'technical': 'technical_score',
+                'fundamental': 'fundamental_score',
+                'sentiment': 'sentiment_score'
+            }
+
+            for analyzer_type, accuracy in accuracy_scores.items():
+                if analyzer_type in weight_mapping:
+                    weight_key = weight_mapping[analyzer_type]
+
+                    if weight_key in self.signal_weights:
+                        current_weight = self.signal_weights[weight_key]
+
+                        # Adjust weight based on accuracy (more accurate = higher weight)
+                        # Scale accuracy to weight adjustment factor
+                        adjustment_factor = 0.95 + (accuracy * 0.1)  # 0.95 to 1.05 range
+
+                        new_weight = current_weight * adjustment_factor
+
+                        # Keep weights within reasonable bounds
+                        new_weight = max(0.05, min(0.5, new_weight))
+
+                        self.signal_weights[weight_key] = new_weight
+
+                        logger.info(f"Adjusted {weight_key} weight: {current_weight:.3f} -> {new_weight:.3f} (accuracy: {accuracy:.3f})")
+
+            # Normalize weights to sum to 1.0
+            total_weight = sum(self.signal_weights.values())
+            if total_weight > 0:
+                for key in self.signal_weights:
+                    self.signal_weights[key] /= total_weight
+
+            # Save updated weights
+            self.save_signal_weights()
+
+        except Exception as e:
+            logger.error(f"Error adjusting weights from accuracy: {e}")
+
+    def optimize_regime_parameters(self, symbol: str, regime: str, performance_data: dict):
+        """Optimize parameters for a specific market regime"""
+        try:
+            # Parameters to optimize per regime
+            regime_param_ranges = {
+                'trending': {
+                    'ema_weight': (0.6, 0.9),
+                    'macd_weight': (0.5, 0.8),
+                    'rsi_weight': (0.1, 0.3),
+                    'min_signal_strength': (0.6, 0.75),
+                    'stop_loss_atr_multiplier': (2.0, 3.0),
+                    'take_profit_atr_multiplier': (4.0, 6.0)
+                },
+                'ranging': {
+                    'ema_weight': (0.2, 0.4),
+                    'macd_weight': (0.1, 0.3),
+                    'rsi_weight': (0.7, 0.95),
+                    'support_resistance_weight': (0.6, 0.9),
+                    'min_signal_strength': (0.5, 0.65),
+                    'stop_loss_atr_multiplier': (1.5, 2.5),
+                    'take_profit_atr_multiplier': (2.5, 4.0)
+                },
+                'high_volatility': {
+                    'min_signal_strength': (0.65, 0.8),
+                    'stop_loss_atr_multiplier': (2.5, 3.5),
+                    'take_profit_atr_multiplier': (3.0, 5.0),
+                    'max_holding_hours': (1.0, 3.0)
+                },
+                'low_volatility': {
+                    'min_signal_strength': (0.45, 0.6),
+                    'stop_loss_atr_multiplier': (1.0, 2.0),
+                    'take_profit_atr_multiplier': (3.0, 5.0),
+                    'max_holding_hours': (6.0, 12.0)
+                }
+            }
+
+            if regime not in regime_param_ranges:
+                return
+
+            param_ranges = regime_param_ranges[regime]
+            best_params = {}
+            best_score = 0
+
+            # Simple grid search for regime-specific parameters
+            for param_name, (min_val, max_val) in param_ranges.items():
+                # Test 3 values per parameter
+                test_values = [min_val, (min_val + max_val) / 2, max_val]
+
+                for test_value in test_values:
+                    # Calculate performance score for this parameter value
+                    score = self._calculate_regime_param_score(symbol, regime, param_name, test_value, performance_data)
+
+                    if score > best_score:
+                        best_params[param_name] = test_value
+                        best_score = score
+
+            # Save optimal parameters to database
+            self._save_regime_parameters(symbol, regime, best_params, best_score)
+
+            logger.info(f"Optimized {len(best_params)} parameters for {symbol} in {regime} regime")
+
+        except Exception as e:
+            logger.error(f"Error optimizing regime parameters: {e}")
+
+    def _calculate_regime_param_score(self, symbol: str, regime: str, param_name: str, param_value: float, performance_data: dict) -> float:
+        """Calculate performance score for a regime parameter value"""
+        try:
+            # Simple scoring based on win rate and profit factor
+            # In a real implementation, this would run backtests
+            base_score = performance_data.get('win_rate', 0.5) * performance_data.get('profit_factor', 1.0)
+
+            # Parameter-specific adjustments
+            if param_name == 'min_signal_strength':
+                # Higher signal strength generally better but may reduce trade frequency
+                if param_value > 0.7:
+                    base_score *= 0.9  # Penalty for too restrictive
+                elif param_value < 0.5:
+                    base_score *= 0.8  # Penalty for too permissive
+            elif 'atr_multiplier' in param_name:
+                # ATR multipliers should be reasonable
+                if param_value > 4.0 or param_value < 1.0:
+                    base_score *= 0.7  # Penalty for extreme values
+
+            return base_score
+
+        except Exception:
+            return 0.0
+
+    def _save_regime_parameters(self, symbol: str, regime: str, params: dict, performance_score: float):
+        """Save optimized regime parameters to database"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            for param_name, param_value in params.items():
+                cursor.execute('''
+                    INSERT OR REPLACE INTO regime_parameter_optimization
+                    (symbol, regime_type, parameter_name, optimal_value, performance_score, total_trades, last_updated, confidence_score)
+                    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+                ''', (
+                    symbol,
+                    regime,
+                    param_name,
+                    param_value,
+                    performance_score,
+                    1,  # Placeholder for total trades
+                    performance_score  # Use as confidence score for now
+                ))
+
+            conn.commit()
+            conn.close()
+
+        except Exception as e:
+            logger.error(f"Error saving regime parameters: {e}")
+
     def prepare_backtest_data(self) -> Optional[pd.DataFrame]:
         """Prepare data for backtesting"""
         try:
@@ -1356,6 +1731,29 @@ class AdaptiveLearningManager:
         # Merge market data with trade outcomes
         # Add labels based on successful trades
         return market_data
+
+    def prepare_market_only_training_data(self, market_data: pd.DataFrame) -> Optional[pd.DataFrame]:
+        """Prepare training data using only market data when no trades are available"""
+        try:
+            if market_data is None or len(market_data) < 50:
+                return None
+
+            # Create synthetic targets based on price movements
+            # Target = 1 if next close > current close (upward movement)
+            market_data = market_data.copy()
+            market_data['target'] = (market_data['close'].shift(-1) > market_data['close']).astype(int)
+
+            # Remove last row since it has NaN target
+            market_data = market_data.dropna()
+
+            if len(market_data) < 20:
+                return None
+
+            return market_data
+
+        except Exception as e:
+            self.logger.error(f"Error preparing market-only training data: {e}")
+            return None
 
     def validate_new_model(self, symbol: str, metrics: dict) -> bool:
         """Validate new model meets minimum performance criteria"""
@@ -1808,9 +2206,15 @@ class AdaptiveLearningManager:
 
     def get_performance_summary(self) -> dict:
         """Get performance summary with current weights and parameters"""
+        # Ensure performance metrics are up to date
+        if not hasattr(self, 'performance_metrics') or not self.performance_metrics:
+            self.evaluate_performance()
+
         return {
             'signal_weights': self.get_current_weights(),
-            'adaptive_params': self.get_adaptive_parameters()
+            'adaptive_params': self.get_adaptive_parameters(),
+            'performance_metrics': self.performance_metrics if hasattr(self, 'performance_metrics') else {},
+            'total_trades': len(self.trade_history) if hasattr(self, 'trade_history') else 0
         }
 
     # ===== NEW LEARNING METHODS =====
@@ -3608,3 +4012,427 @@ class AdaptiveLearningManager:
 
         except Exception as e:
             logger.error(f"Error storing adjustment learning: {e}")
+
+    def get_regime_adapted_parameters(self, symbol: str, market_regime: str,
+                                     portfolio_metrics: Dict = None) -> Dict:
+        """
+        Get analyzer parameters optimized for current market regime
+
+        Args:
+            symbol: Trading symbol
+            market_regime: Current market regime ('trending', 'ranging', 'volatile', 'calm')
+            portfolio_metrics: Current portfolio risk metrics (optional)
+
+        Returns:
+            dict: Regime-adapted analyzer parameters
+        """
+        try:
+            # Get base parameters
+            base_params = self.adaptive_params.copy()
+
+            # Load regime-specific optimizations from database
+            regime_params = self._load_regime_parameters(symbol, market_regime)
+
+            # Apply regime-specific adjustments
+            adapted_params = base_params.copy()
+            adapted_params.update(regime_params)
+
+            # Apply risk-aware adjustments if portfolio metrics provided
+            if portfolio_metrics and hasattr(self, 'risk_manager') and self.risk_manager:
+                risk_adjustments = self.risk_manager.get_risk_adjusted_analyzer_params(portfolio_metrics)
+                adapted_params.update(risk_adjustments)
+
+            # Apply market regime specific logic
+            if market_regime == 'trending':
+                # In trending markets, be more aggressive with signals
+                adapted_params.update({
+                    'min_signal_strength': max(0.5, adapted_params.get('min_signal_strength', 0.6) - 0.1),
+                    'technical_confirmation_required': False,
+                    'trend_following_bias': 1.2,  # Favor trend-following indicators
+                    'max_holding_minutes': int(adapted_params.get('max_holding_minutes', 480) * 1.5),  # Allow longer holds
+                    'stop_loss_atr_multiplier': adapted_params.get('stop_loss_atr_multiplier', 2.0) * 0.8,  # Tighter stops
+                    'take_profit_atr_multiplier': adapted_params.get('take_profit_atr_multiplier', 6.0) * 1.2,  # Wider targets
+                })
+
+            elif market_regime == 'ranging':
+                # In ranging markets, be more conservative and focus on mean reversion
+                adapted_params.update({
+                    'min_signal_strength': min(0.8, adapted_params.get('min_signal_strength', 0.6) + 0.1),
+                    'technical_confirmation_required': True,
+                    'mean_reversion_bias': 1.3,  # Favor mean-reversion indicators
+                    'max_holding_minutes': int(adapted_params.get('max_holding_minutes', 480) * 0.7),  # Shorter holds
+                    'stop_loss_atr_multiplier': adapted_params.get('stop_loss_atr_multiplier', 2.0) * 1.2,  # Wider stops
+                    'take_profit_atr_multiplier': adapted_params.get('take_profit_atr_multiplier', 6.0) * 0.8,  # Narrower targets
+                })
+
+            elif market_regime == 'volatile':
+                # In volatile markets, increase risk management
+                adapted_params.update({
+                    'min_signal_strength': min(0.75, adapted_params.get('min_signal_strength', 0.6) + 0.1),
+                    'technical_confirmation_required': True,
+                    'fundamental_veto_enabled': True,
+                    'max_concurrent_positions': max(1, adapted_params.get('max_concurrent_positions', 5) - 2),
+                    'risk_multiplier_cap': adapted_params.get('risk_multiplier_cap', 1.0) * 0.7,
+                    'volatility_filter_enabled': True,
+                })
+
+            elif market_regime == 'calm':
+                # In calm markets, can be more aggressive
+                adapted_params.update({
+                    'min_signal_strength': max(0.5, adapted_params.get('min_signal_strength', 0.6) - 0.1),
+                    'technical_confirmation_required': False,
+                    'max_concurrent_positions': adapted_params.get('max_concurrent_positions', 5) + 1,
+                    'risk_multiplier_cap': adapted_params.get('risk_multiplier_cap', 1.0) * 1.2,
+                    'scalping_enabled': True,
+                })
+
+            # Get ML predictor feature importance feedback
+            if self.ml_predictor and hasattr(self.ml_predictor, 'get_feature_importance_feedback'):
+                try:
+                    feature_feedback = self.ml_predictor.get_feature_importance_feedback(symbol)
+                    ml_params = self.ml_predictor.suggest_technical_parameters(feature_feedback)
+                    adapted_params.update(ml_params)
+                except Exception as e:
+                    logger.warning(f"Could not get ML feature feedback: {e}")
+
+            logger.debug(f"Regime-adapted parameters for {symbol} in {market_regime} regime: "
+                        f"signal_strength={adapted_params.get('min_signal_strength', 'N/A')}, "
+                        f"confirmation={adapted_params.get('technical_confirmation_required', 'N/A')}")
+
+            return adapted_params
+
+        except Exception as e:
+            logger.error(f"Error getting regime-adapted parameters: {e}")
+            return self.adaptive_params.copy()
+
+    def _load_regime_parameters(self, symbol: str, regime: str) -> Dict:
+        """
+        Load regime-specific parameter optimizations from database
+
+        Args:
+            symbol: Trading symbol
+            regime: Market regime type
+
+        Returns:
+            dict: Regime-specific parameters
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT parameter_name, optimal_value, confidence_score
+                FROM regime_parameter_optimization
+                WHERE symbol = ? AND regime_type = ?
+                ORDER BY last_updated DESC
+            ''', (symbol, regime))
+
+            regime_params = {}
+            for row in cursor.fetchall():
+                param_name, optimal_value, confidence = row
+                if confidence > 0.6:  # Only use high-confidence optimizations
+                    regime_params[param_name] = optimal_value
+
+            conn.close()
+
+            if regime_params:
+                logger.info(f"Loaded {len(regime_params)} regime parameters for {symbol} in {regime} regime")
+
+            return regime_params
+
+        except Exception as e:
+            logger.error(f"Error loading regime parameters: {e}")
+            return {}
+
+    def record_regime_performance(self, symbol: str, regime: str, performance_metrics: Dict):
+        """
+        Record performance metrics for a specific market regime
+
+        Args:
+            symbol: Trading symbol
+            regime: Market regime type
+            performance_metrics: Performance metrics for this regime
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                INSERT OR REPLACE INTO regime_parameter_optimization
+                (symbol, regime_type, parameter_name, optimal_value, performance_score,
+                 total_trades, last_updated, confidence_score)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                symbol,
+                regime,
+                'regime_performance_summary',
+                performance_metrics.get('win_rate', 0),
+                performance_metrics.get('sharpe_ratio', 0),
+                performance_metrics.get('total_trades', 0),
+                datetime.now(),
+                performance_metrics.get('confidence', 0.5)
+            ))
+
+            conn.commit()
+            conn.close()
+
+            logger.debug(f"Recorded regime performance for {symbol} in {regime} regime")
+
+        except Exception as e:
+            logger.error(f"Error recording regime performance: {e}")
+
+    def optimize_regime_parameters(self, symbol: str, regime: str, historical_data: pd.DataFrame):
+        """
+        Optimize analyzer parameters specifically for a market regime
+
+        Args:
+            symbol: Trading symbol
+            regime: Market regime type
+            historical_data: Historical market data for this regime
+        """
+        try:
+            if len(historical_data) < 50:
+                logger.warning(f"Insufficient data for regime optimization: {len(historical_data)} samples")
+                return
+
+            # Define parameter ranges for optimization based on regime
+            if regime == 'trending':
+                param_ranges = {
+                    'min_signal_strength': (0.4, 0.7),
+                    'stop_loss_atr_multiplier': (1.5, 2.5),
+                    'take_profit_atr_multiplier': (4.0, 8.0),
+                    'max_holding_minutes': (300, 720),  # 5-12 hours
+                }
+            elif regime == 'ranging':
+                param_ranges = {
+                    'min_signal_strength': (0.6, 0.8),
+                    'stop_loss_atr_multiplier': (2.0, 3.0),
+                    'take_profit_atr_multiplier': (3.0, 5.0),
+                    'max_holding_minutes': (60, 240),  # 1-4 hours
+                }
+            elif regime == 'volatile':
+                param_ranges = {
+                    'min_signal_strength': (0.65, 0.85),
+                    'stop_loss_atr_multiplier': (2.5, 4.0),
+                    'take_profit_atr_multiplier': (2.0, 4.0),
+                    'max_holding_minutes': (30, 120),  # 30min-2hours
+                }
+            else:  # calm
+                param_ranges = {
+                    'min_signal_strength': (0.45, 0.65),
+                    'stop_loss_atr_multiplier': (1.0, 2.0),
+                    'take_profit_atr_multiplier': (5.0, 10.0),
+                    'max_holding_minutes': (15, 60),  # 15min-1hour
+                }
+
+            # Get current parameters as baseline
+            current_params = self.get_regime_adapted_parameters(symbol, regime)
+            best_params = current_params.copy()
+            best_score = self._evaluate_regime_performance(historical_data, current_params)
+
+            # Grid search optimization
+            optimization_attempts = 0
+            max_attempts = 20
+
+            for param_name, (min_val, max_val) in param_ranges.items():
+                if optimization_attempts >= max_attempts:
+                    break
+
+                test_values = np.linspace(min_val, max_val, 5)
+
+                for test_value in test_values:
+                    if optimization_attempts >= max_attempts:
+                        break
+
+                    test_params = best_params.copy()
+                    test_params[param_name] = test_value
+
+                    score = self._evaluate_regime_performance(historical_data, test_params)
+                    optimization_attempts += 1
+
+                    if score > best_score:
+                        old_value = best_params[param_name]
+                        best_params[param_name] = test_value
+                        best_score = score
+
+                        # Record optimization
+                        self._record_regime_parameter_optimization(
+                            symbol, regime, param_name, old_value, test_value, score)
+
+                        logger.info(f"Optimized {param_name} for {regime} regime: "
+                                  f"{old_value:.2f} -> {test_value:.2f} (score: {score:.4f})")
+
+            # Apply optimized parameters
+            self._apply_regime_parameters(symbol, regime, best_params)
+
+        except Exception as e:
+            logger.error(f"Error optimizing regime parameters: {e}")
+
+    def _evaluate_regime_performance(self, historical_data: pd.DataFrame, params: Dict) -> float:
+        """
+        Evaluate parameter performance on historical regime data
+
+        Args:
+            historical_data: Historical market data
+            params: Parameters to evaluate
+
+        Returns:
+            float: Performance score
+        """
+        try:
+            # Simple simulation-based evaluation
+            capital = 10000
+            position_size = 0.02  # 2% per trade
+            wins = 0
+            total_trades = 0
+            returns = []
+
+            for i in range(20, len(historical_data) - 1):  # Skip first 20 for indicators
+                row = historical_data.iloc[i]
+                prev_row = historical_data.iloc[i-1]
+
+                # Generate simple signal based on parameters
+                rsi = row.get('rsi', 50)
+                signal_strength = params.get('min_signal_strength', 0.6)
+
+                # Buy signal
+                if (rsi < params.get('rsi_oversold', 30) and
+                    row['close'] > prev_row['close'] and
+                    abs(row['close'] - prev_row['close']) / prev_row['close'] > signal_strength):
+
+                    entry_price = row['close']
+                    atr = row.get('atr', entry_price * 0.01)
+
+                    sl_mult = params.get('stop_loss_atr_multiplier', 2.0)
+                    tp_mult = params.get('take_profit_atr_multiplier', 6.0)
+
+                    stop_loss = entry_price - (atr * sl_mult)
+                    take_profit = entry_price + (atr * tp_mult)
+
+                    # Simulate trade outcome
+                    next_row = historical_data.iloc[i+1]
+                    exit_price = next_row['close']
+
+                    if exit_price >= take_profit:
+                        profit_pct = (take_profit - entry_price) / entry_price
+                        wins += 1
+                    elif exit_price <= stop_loss:
+                        profit_pct = (stop_loss - entry_price) / entry_price
+                    else:
+                        profit_pct = (exit_price - entry_price) / entry_price
+
+                    returns.append(profit_pct)
+                    total_trades += 1
+
+                # Sell signal (similar logic)
+                elif (rsi > params.get('rsi_overbought', 70) and
+                      row['close'] < prev_row['close'] and
+                      abs(row['close'] - prev_row['close']) / prev_row['close'] > signal_strength):
+
+                    entry_price = row['close']
+                    atr = row.get('atr', entry_price * 0.01)
+
+                    sl_mult = params.get('stop_loss_atr_multiplier', 2.0)
+                    tp_mult = params.get('take_profit_atr_multiplier', 6.0)
+
+                    stop_loss = entry_price + (atr * sl_mult)
+                    take_profit = entry_price - (atr * tp_mult)
+
+                    next_row = historical_data.iloc[i+1]
+                    exit_price = next_row['close']
+
+                    if exit_price <= take_profit:
+                        profit_pct = (entry_price - take_profit) / entry_price
+                        wins += 1
+                    elif exit_price >= stop_loss:
+                        profit_pct = (entry_price - stop_loss) / entry_price
+                    else:
+                        profit_pct = (entry_price - exit_price) / entry_price
+
+                    returns.append(profit_pct)
+                    total_trades += 1
+
+            if total_trades < 5:
+                return 0.0
+
+            # Calculate performance metrics
+            win_rate = wins / total_trades
+            avg_return = np.mean(returns) if returns else 0
+            volatility = np.std(returns) if returns else 1
+
+            # Sharpe-like ratio (simplified)
+            sharpe = avg_return / volatility if volatility > 0 else 0
+
+            # Combined score
+            score = (win_rate * 0.4 + sharpe * 0.4 + min(avg_return * 100, 5) * 0.2)
+
+            return max(score, 0)
+
+        except Exception as e:
+            logger.error(f"Error evaluating regime performance: {e}")
+            return 0.0
+
+    def _record_regime_parameter_optimization(self, symbol: str, regime: str,
+                                             param_name: str, old_value: float,
+                                             new_value: float, performance_score: float):
+        """
+        Record regime parameter optimization in database
+
+        Args:
+            symbol: Trading symbol
+            regime: Market regime
+            param_name: Parameter name
+            old_value: Old parameter value
+            new_value: New parameter value
+            performance_score: Performance score achieved
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                INSERT OR REPLACE INTO regime_parameter_optimization
+                (symbol, regime_type, parameter_name, optimal_value, performance_score,
+                 total_trades, last_updated, confidence_score)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                symbol,
+                regime,
+                param_name,
+                new_value,
+                performance_score,
+                100,  # Placeholder for total trades
+                datetime.now(),
+                0.8  # High confidence for optimized parameters
+            ))
+
+            conn.commit()
+            conn.close()
+
+        except Exception as e:
+            logger.error(f"Error recording regime parameter optimization: {e}")
+
+    def _apply_regime_parameters(self, symbol: str, regime: str, parameters: Dict):
+        """
+        Apply optimized regime parameters
+
+        Args:
+            symbol: Trading symbol
+            regime: Market regime
+            parameters: Optimized parameters
+        """
+        try:
+            # Store in regime history for future use
+            if symbol not in self.regime_performance:
+                self.regime_performance[symbol] = {}
+
+            self.regime_performance[symbol][regime] = {
+                'parameters': parameters,
+                'last_updated': datetime.now(),
+                'performance_score': 0.8  # Placeholder
+            }
+
+            logger.info(f"Applied optimized parameters for {symbol} in {regime} regime")
+
+        except Exception as e:
+            logger.error(f"Error applying regime parameters: {e}")

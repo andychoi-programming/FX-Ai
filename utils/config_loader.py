@@ -6,8 +6,7 @@ Handles loading and validation of configuration files
 import json
 import os
 import logging
-from typing import Dict, Any, Optional
-from pathlib import Path
+from typing import Dict, Any
 from dotenv import load_dotenv
 
 class ConfigLoader:

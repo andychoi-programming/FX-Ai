@@ -111,26 +111,30 @@ class TimeManager:
 
     def should_close_positions(self) -> Tuple[bool, str]:
         """
-        Check if all positions should be closed (daily closure).
+        Check if all positions should be closed.
+        Now AI-driven: only close before weekends and on shutdown, let AI learn optimal daily timing.
 
         Returns:
             Tuple[bool, str]: (should_close, reason)
         """
         current_time = self.get_current_time()
-        current_time_only = current_time.time()
         current_date = current_time.date()
 
-        # Only close once per day
+        # Only close once per day (for weekend closure)
         if self._last_closure_date == current_date:
-            return False, "Already closed positions today"
+            return False, "Already processed daily closure"
 
-        # Check if it's time to close (past 22:30 MT5 time)
-        if current_time_only >= self.MT5_CLOSE_TIME:
+        # Check if it's Friday after 22:00 (close before weekend)
+        if self._is_friday_evening_close():
             self._last_closure_date = current_date
-            close_time_str = f"{self.MT5_CLOSE_TIME.hour:02d}:{self.MT5_CLOSE_TIME.minute:02d}"
-            return True, f"Past daily close time ({close_time_str} MT5 time)"
+            return True, "Friday evening - closing before weekend"
 
-        return False, "Not yet time to close positions"
+        # Check if system is shutting down (this would be set externally)
+        # For now, only close on weekends
+        if self._is_weekend(current_time.date()):
+            return True, "Weekend - forex markets closed"
+
+        return False, "AI-driven timing: no forced daily closure"
 
     def _is_weekend(self, date) -> bool:
         """
@@ -181,6 +185,20 @@ class TimeManager:
         except Exception as e:
             logger.warning(f"Error checking forex market hours: {e}")
             return True  # Default to allowing trading if check fails
+
+    def _is_friday_evening_close(self) -> bool:
+        """
+        Check if it's Friday evening and time to close before weekend.
+
+        Returns:
+            bool: True if should close for weekend
+        """
+        try:
+            now_est = datetime.now(self.EST)
+            return now_est.weekday() == 4 and now_est.hour >= 22  # Friday and past 22:00 EST
+        except Exception as e:
+            logger.warning(f"Error checking Friday evening close: {e}")
+            return False
 
     def is_forex_weekend(self) -> bool:
         """

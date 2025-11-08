@@ -5,14 +5,12 @@ Analyzes market sentiment from news, social media, and retail positioning
 
 import logging
 import re
-import pandas as pd
 import numpy as np
 from datetime import datetime
 from typing import Dict, List, Optional
 from textblob import TextBlob
 
 try:
-    from textblob import TextBlob
     TEXTBLOB_AVAILABLE = True
 except ImportError:
     TEXTBLOB_AVAILABLE = False

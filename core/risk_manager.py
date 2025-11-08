@@ -7,7 +7,7 @@ import logging
 import MetaTrader5 as mt5  # type: ignore
 import sqlite3
 import os
-from datetime import datetime, timezone, UTC
+from datetime import datetime, UTC
 from typing import Dict, Optional, Tuple
 
 # Set up logger
@@ -56,9 +56,15 @@ class RiskManager:
         # Daily trade tracking per symbol (ONE TRADE PER SYMBOL PER DAY)
         self.daily_trades_per_symbol = {}  # symbol -> {'date': 'YYYY-MM-DD', 'count': N}
         
+        # Daily loss reset tracking
+        self.last_reset_date = None  # Track when daily loss was last reset
+        
         # Load persistent daily trade counts if database path provided
         if self.db_path:
             self._load_daily_trade_counts()
+        
+        # Check and reset daily loss if it's a new day
+        self._check_and_reset_daily_loss()
         
         logger.info(f"Risk Manager initialized with ${self.risk_per_trade} risk per trade, max_positions={self.max_positions}")
         logger.info(f"Daily trade limit: {self.max_trades_per_symbol_per_day} trade per symbol per day")
@@ -78,8 +84,13 @@ class RiskManager:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            # Get today's date in YYYY-MM-DD format (using local time as fallback)
-            today = datetime.now().strftime('%Y-%m-%d')
+            # Get today's date using MT5 server time (consistent with trading logic)
+            current_date, current_timestamp, success = self._get_mt5_server_date_reliable()
+            if not success:
+                logger.warning("Cannot get MT5 server time for loading daily counts - using local time as fallback")
+                today = datetime.now().strftime('%Y-%m-%d')
+            else:
+                today = current_date
             
             # Load today's daily trade counts
             cursor.execute('''
@@ -91,11 +102,15 @@ class RiskManager:
             loaded_count = 0
             for row in cursor.fetchall():
                 symbol, trade_date, count = row
-                self.daily_trades_per_symbol[symbol] = {'date': trade_date, 'count': count}
+                self.daily_trades_per_symbol[symbol] = {
+                    'date': trade_date, 
+                    'count': count,
+                    'timestamp': current_timestamp if success else None
+                }
                 loaded_count += 1
             
             conn.close()
-            logger.info(f"Loaded {loaded_count} persistent daily trade counts from database")
+            logger.info(f"Loaded {loaded_count} persistent daily trade counts from database for {today}")
             
         except Exception as e:
             logger.error(f"Error loading daily trade counts from database: {e}")
@@ -452,12 +467,53 @@ class RiskManager:
             self.daily_loss += abs(profit)
             logger.info(f"Daily loss updated: ${self.daily_loss:.2f}")
     
+    def _check_and_reset_daily_loss(self):
+        """
+        Check if it's a new trading day and reset daily loss if needed.
+        Uses MT5 server time for consistent daily resets across restarts.
+        """
+        try:
+            current_date, current_timestamp, success = self._get_mt5_server_date_reliable()
+            
+            if not success:
+                logger.warning("Cannot get MT5 server time for daily loss reset check - using local time as fallback")
+                from datetime import datetime
+                current_date = datetime.now().strftime('%Y-%m-%d')
+                current_timestamp = None
+            
+            # Check if we need to reset (first run or new day)
+            if self.last_reset_date is None or self.last_reset_date != current_date:
+                # Reset daily loss for new day
+                old_loss = self.daily_loss
+                self.daily_loss = 0.0
+                self.last_reset_date = current_date
+                
+                if old_loss > 0:
+                    logger.info(
+                        f"NEW TRADING DAY DETECTED - Daily loss reset\n"
+                        f"  Previous day loss: ${old_loss:.2f}\n"
+                        f"  New day: {current_date}\n"
+                        f"  MT5 Timestamp: {current_timestamp}\n"
+                        f"  Daily loss reset to $0.00"
+                    )
+                else:
+                    logger.info(f"Daily loss initialized for new trading day: {current_date}")
+                    
+        except Exception as e:
+            logger.error(f"Error checking daily loss reset: {e}")
+    
     def reset_daily_stats(self):
         """Reset daily statistics"""
+        # Get current date for reset tracking
+        current_date, _, success = self._get_mt5_server_date_reliable()
+        if not success:
+            current_date = datetime.now().strftime('%Y-%m-%d')
+        
         self.daily_loss = 0.0
+        self.last_reset_date = current_date
         self.open_positions.clear()
         self.daily_trades_per_symbol.clear()  # Reset daily trade counter
-        logger.info("Daily stats reset (including per-symbol trade counters)")
+        logger.info(f"Daily stats manually reset for {current_date} (including per-symbol trade counters)")
     
     def _get_mt5_server_date_reliable(self) -> tuple:
         """
@@ -471,7 +527,7 @@ class RiskManager:
         try:
             # Method 1: Direct mt5.time_current() - MOST RELIABLE
             if hasattr(mt5, 'time_current'):
-                server_timestamp = mt5.time_current()
+                server_timestamp = mt5.time_current()  # type: ignore
                 if server_timestamp and server_timestamp > 0:
                     server_time_utc = datetime.fromtimestamp(server_timestamp, tz=UTC)
                     date_str = server_time_utc.strftime('%Y-%m-%d')
@@ -479,7 +535,7 @@ class RiskManager:
                     return (date_str, server_timestamp, True)
             
             # Method 2: Get tick time from EURUSD (reliable major pair)
-            tick = mt5.symbol_info_tick('EURUSD')
+            tick = mt5.symbol_info_tick('EURUSD')  # type: ignore
             if tick and hasattr(tick, 'time') and tick.time > 0:
                 server_time_utc = datetime.fromtimestamp(tick.time, tz=UTC)
                 date_str = server_time_utc.strftime('%Y-%m-%d')
@@ -498,7 +554,17 @@ class RiskManager:
         """
         Check if symbol has already been traded today (MT5 server time)
         FIXED: Now uses consistent MT5 time source with NO fallbacks to local time
+        Also checks for existing open positions
         """
+        # First check if there are any open positions for this symbol
+        try:
+            positions = mt5.positions_get(symbol=symbol)  # type: ignore
+            if positions and len(positions) > 0:
+                logger.info(f"{symbol}: Has {len(positions)} open position(s) - considering as traded today")
+                return True
+        except Exception as e:
+            logger.warning(f"Error checking positions for {symbol}: {e}")
+        
         current_date, current_timestamp, success = self._get_mt5_server_date_reliable()
         
         if not success:
@@ -571,11 +637,11 @@ class RiskManager:
         self.daily_trades_per_symbol[symbol]['timestamp'] = current_timestamp
         
         logger.warning(
-            f"{symbol}: ★★★ TRADE RECORDED ★★★\n"
+            f"{symbol}: TRADE RECORDED\n"
             f"  MT5 Date: {current_date}\n"
             f"  MT5 Timestamp: {current_timestamp} ({datetime.fromtimestamp(current_timestamp, tz=UTC)})\n"
             f"  Trades Today: {self.daily_trades_per_symbol[symbol]['count']}/{self.max_trades_per_symbol_per_day}\n"
-            f"  ⚠️  NO MORE TRADES ALLOWED TODAY FOR {symbol}"
+            f"  NO MORE TRADES ALLOWED TODAY FOR {symbol}"
         )
         
         # Save to database for persistence
@@ -583,7 +649,9 @@ class RiskManager:
 
     def can_trade(self, symbol: str) -> bool:
         """Quick check if trading is allowed"""
-        from datetime import datetime
+        
+        # Check and reset daily loss if it's a new trading day
+        self._check_and_reset_daily_loss()
         
         logger.debug(f"Checking if can trade {symbol}: daily_loss={self.daily_loss}, max_daily_loss={self.max_daily_loss}")
         

@@ -9,8 +9,8 @@ import time
 import threading
 import socket
 import struct
-from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict, Tuple
+from datetime import datetime, timezone
+from typing import Optional, Dict
 import pytz
 
 logger = logging.getLogger(__name__)

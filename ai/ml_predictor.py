@@ -6,15 +6,13 @@ Machine learning models for price prediction and signal generation
 import logging
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple, Union
+from datetime import datetime
+from typing import Dict, Optional, Union
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 import joblib
 import os
-from .market_regime_detector import MarketRegimeDetector
-from .reinforcement_learning_agent import RLAgent
 
 class MLPredictor:
     """Machine learning predictor for trading signals"""
@@ -515,6 +513,185 @@ class MLPredictor:
 
         except Exception as e:
             self.logger.error(f"Error training model for {symbol}: {e}")
+
+    def get_feature_importance_feedback(self, symbol: str, timeframe: str = 'H1') -> Dict:
+        """
+        Analyze which features are most predictive for the ML model
+
+        Args:
+            symbol: Trading symbol
+            timeframe: Timeframe for analysis
+
+        Returns:
+            dict: Feature importance analysis
+        """
+        try:
+            model_key = f"{symbol}_{timeframe}"
+            if model_key not in self.models:
+                self.logger.warning(f"No trained model found for {symbol} {timeframe}")
+                return {}
+
+            model = self.models[model_key]
+
+            # Get feature importance if the model supports it
+            if hasattr(model, 'feature_importances_'):
+                # For tree-based models (Random Forest, Gradient Boosting)
+                feature_importances = model.feature_importances_
+
+                # Map feature indices to names (simplified mapping)
+                feature_names = self._get_feature_names()
+
+                # Create importance dictionary
+                importance_dict = {}
+                for i, importance in enumerate(feature_importances):
+                    if i < len(feature_names):
+                        feature_name = feature_names[i]
+                        importance_dict[feature_name] = float(importance)
+
+                # Categorize by analyzer type
+                technical_features = {}
+                fundamental_features = {}
+                sentiment_features = {}
+
+                for feature, importance in importance_dict.items():
+                    if any(tech in feature.lower() for tech in ['rsi', 'macd', 'bb', 'ema', 'vwap', 'sma', 'stoch']):
+                        technical_features[feature] = importance
+                    elif any(fund in feature.lower() for fund in ['rate', 'gdp', 'cpi', 'employment']):
+                        fundamental_features[feature] = importance
+                    elif any(sent in feature.lower() for sent in ['sentiment', 'news', 'social']):
+                        sentiment_features[feature] = importance
+
+                return {
+                    'technical_features': technical_features,
+                    'fundamental_features': fundamental_features,
+                    'sentiment_features': sentiment_features,
+                    'overall_importance': importance_dict,
+                    'top_features': sorted(importance_dict.items(), key=lambda x: x[1], reverse=True)[:10]
+                }
+
+            elif hasattr(model, 'coef_'):
+                # For linear models
+                coefficients = model.coef_[0] if len(model.coef_.shape) > 1 else model.coef_
+                feature_names = self._get_feature_names()
+
+                importance_dict = {}
+                for i, coef in enumerate(coefficients):
+                    if i < len(feature_names):
+                        importance_dict[feature_names[i]] = abs(float(coef))
+
+                return {
+                    'feature_coefficients': importance_dict,
+                    'top_features': sorted(importance_dict.items(), key=lambda x: x[1], reverse=True)[:10]
+                }
+
+            else:
+                self.logger.warning(f"Model type {type(model)} doesn't support feature importance analysis")
+                return {}
+
+        except Exception as e:
+            self.logger.error(f"Error getting feature importance for {symbol}: {e}")
+            return {}
+
+    def suggest_technical_parameters(self, importance_data: Dict, timeframe: str = 'H1') -> Dict:
+        """
+        Suggest optimal technical indicator parameters based on ML model performance
+
+        Args:
+            importance_data: Feature importance data from get_feature_importance_feedback
+            timeframe: Timeframe for analysis
+
+        Returns:
+            dict: Suggested parameter adjustments
+        """
+        try:
+            if not importance_data or 'technical_features' not in importance_data:
+                return {}
+
+            technical_importance = importance_data['technical_features']
+
+            suggestions = {}
+
+            # Analyze RSI importance
+            rsi_features = {k: v for k, v in technical_importance.items() if 'rsi' in k.lower()}
+            if rsi_features:
+                avg_rsi_importance = sum(rsi_features.values()) / len(rsi_features)
+                if avg_rsi_importance > 0.1:  # High importance
+                    suggestions['rsi_period'] = 12  # Shorter period for more responsive RSI
+                    suggestions['rsi_overbought'] = 72  # Adjust thresholds
+                    suggestions['rsi_oversold'] = 28
+                elif avg_rsi_importance < 0.05:  # Low importance
+                    suggestions['rsi_weight'] = 0.3  # Reduce weight in signal combination
+
+            # Analyze EMA importance
+            ema_features = {k: v for k, v in technical_importance.items() if 'ema' in k.lower()}
+            if ema_features:
+                avg_ema_importance = sum(ema_features.values()) / len(ema_features)
+                if avg_ema_importance > 0.08:
+                    suggestions['ema_fast_period'] = 9   # Shorter for trending markets
+                    suggestions['ema_slow_period'] = 21
+                else:
+                    suggestions['ema_weight'] = 0.4  # Moderate weight
+
+            # Analyze MACD importance
+            macd_features = {k: v for k, v in technical_importance.items() if 'macd' in k.lower()}
+            if macd_features:
+                avg_macd_importance = sum(macd_features.values()) / len(macd_features)
+                if avg_macd_importance > 0.08:
+                    suggestions['macd_fast'] = 12
+                    suggestions['macd_slow'] = 26
+                    suggestions['macd_signal'] = 9
+                else:
+                    suggestions['macd_weight'] = 0.4
+
+            # Analyze Bollinger Bands importance
+            bb_features = {k: v for k, v in technical_importance.items() if 'bb' in k.lower()}
+            if bb_features:
+                avg_bb_importance = sum(bb_features.values()) / len(bb_features)
+                if avg_bb_importance > 0.07:
+                    suggestions['bb_period'] = 20
+                    suggestions['bb_std_dev'] = 2.0
+                else:
+                    suggestions['bb_weight'] = 0.3
+
+            return suggestions
+
+        except Exception as e:
+            self.logger.error(f"Error suggesting technical parameters: {e}")
+            return {}
+
+    def _get_feature_names(self) -> list:
+        """
+        Get the list of feature names used by the model
+
+        Returns:
+            list: Feature names
+        """
+        # This should match the feature engineering in _prepare_features
+        base_features = []
+
+        # Price-based features (50 periods)
+        for i in range(50):
+            base_features.extend([
+                f'close_{i}',
+                f'high_{i}',
+                f'low_{i}',
+                f'volume_{i}'
+            ])
+
+        # Technical indicators
+        for indicator in self.technical_indicators:
+            for period in self.lookback_periods:
+                base_features.append(f'{indicator}_{period}')
+
+        # Add fundamental and sentiment features if available
+        base_features.extend([
+            'interest_rate_diff',
+            'gdp_growth',
+            'news_sentiment',
+            'social_sentiment'
+        ])
+
+        return base_features
 
     def get_model_performance(self, symbol: str) -> Dict:
         """

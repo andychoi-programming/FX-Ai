@@ -86,18 +86,18 @@ def emergency_close_all():
                 result = mt5.order_send(request)  # type: ignore
                 
                 if result.retcode == mt5.TRADE_RETCODE_DONE:
-                    print(f"  ✓ Successfully closed (P/L: ${position.profit:.2f})")
+                    print(f"  [SUCCESS] Successfully closed (P/L: ${position.profit:.2f})")
                     success_count += 1
                     closed = True
                     break
                 elif result.retcode != 10030:  # Not "unsupported filling mode"
-                    print(f"  ✗ Failed to close: {result.comment} (Code: {result.retcode})")
+                    print(f"  [FAILED] Failed to close: {result.comment} (Code: {result.retcode})")
                     fail_count += 1
                     closed = True
                     break
             
             if not closed:
-                print(f"  ✗ Failed to close: All filling modes rejected")
+                print(f"  [FAILED] Failed to close: All filling modes rejected")
                 fail_count += 1
         
         print()

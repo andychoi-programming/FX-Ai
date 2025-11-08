@@ -7,10 +7,8 @@ import logging
 import numpy as np
 import pandas as pd
 import random
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple, Union
+from typing import Dict, Tuple
 from collections import defaultdict
-import json
 import os
 import pickle
 from enum import Enum
@@ -409,6 +407,84 @@ class RLAgent:
                 'q_values': {},
                 'state': None
             }
+
+    def evaluate_analyzer_accuracy(self, trade_outcome: dict) -> dict:
+        """Evaluate how accurate each analyzer was for this trade"""
+        try:
+            entry_signals = trade_outcome.get('entry_signals', {})
+            actual_result = trade_outcome.get('profit_pct', 0)
+
+            accuracy_scores = {}
+
+            # Technical Analysis Accuracy
+            technical_score = entry_signals.get('technical_score', 0.5)
+            technical_correct = (
+                (technical_score > 0.6 and actual_result > 0) or
+                (technical_score < 0.4 and actual_result < 0)
+            )
+            accuracy_scores['technical'] = 1.0 if technical_correct else 0.0
+
+            # Fundamental Analysis Accuracy
+            fundamental_score = entry_signals.get('fundamental_score', 0.5)
+            fundamental_correct = (
+                (fundamental_score > 0.6 and actual_result > 0) or
+                (fundamental_score < 0.4 and actual_result < 0)
+            )
+            accuracy_scores['fundamental'] = 1.0 if fundamental_correct else 0.0
+
+            # Sentiment Analysis Accuracy
+            sentiment_score = entry_signals.get('sentiment_score', 0.5)
+            sentiment_correct = (
+                (sentiment_score > 0.6 and actual_result > 0) or
+                (sentiment_score < 0.4 and actual_result < 0)
+            )
+            accuracy_scores['sentiment'] = 1.0 if sentiment_correct else 0.0
+
+            self.logger.debug(f"Analyzer accuracy evaluation: {accuracy_scores}")
+            return accuracy_scores
+
+        except Exception as e:
+            self.logger.error(f"Error evaluating analyzer accuracy: {e}")
+            return {'technical': 0.5, 'fundamental': 0.5, 'sentiment': 0.5}
+
+    def record_trade_with_analyzer_evaluation(self, trade_outcome: dict, adaptive_learning_manager=None):
+        """Record trade and evaluate analyzer accuracy for feedback"""
+        try:
+            # Evaluate analyzer accuracy
+            accuracy_scores = self.evaluate_analyzer_accuracy(trade_outcome)
+
+            # Record accuracy in adaptive learning manager if available
+            if adaptive_learning_manager:
+                symbol = trade_outcome.get('symbol', 'unknown')
+
+                # Get current market regime if available
+                market_regime = 'unknown'
+                if hasattr(adaptive_learning_manager, 'market_regime_detector'):
+                    try:
+                        # Get recent bars for regime analysis
+                        historical_data = adaptive_learning_manager._get_recent_bars_for_regime(symbol)
+                        if historical_data is not None:
+                            regime_analysis = adaptive_learning_manager.market_regime_detector.analyze_regime(symbol, historical_data)
+                            market_regime = regime_analysis.primary_regime.value
+                    except Exception as e:
+                        self.logger.debug(f"Could not determine market regime: {e}")
+
+                # Record accuracy for each analyzer
+                for analyzer_type, accuracy in accuracy_scores.items():
+                    adaptive_learning_manager.record_analyzer_accuracy(
+                        symbol=symbol,
+                        analyzer_type=analyzer_type,
+                        accuracy_score=accuracy,
+                        market_regime=market_regime
+                    )
+
+                # Adjust weights based on accuracy
+                adaptive_learning_manager.adjust_weights_from_accuracy(accuracy_scores)
+
+            self.logger.debug(f"Recorded analyzer evaluation for trade: {trade_outcome.get('symbol', 'unknown')}")
+
+        except Exception as e:
+            self.logger.error(f"Error recording trade with analyzer evaluation: {e}")
 
     def save_model(self):
         """Save RL model to disk"""

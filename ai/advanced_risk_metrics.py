@@ -5,8 +5,7 @@ Implements comprehensive risk analysis beyond basic ATR-based SL/TP
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple, Any
-from datetime import datetime, timedelta
+from typing import Dict, Optional, Tuple, Any
 import logging
 from scipy import stats
 from scipy.optimize import minimize
@@ -486,6 +485,245 @@ class AdvancedRiskMetrics:
         except Exception as e:
             self.logger.error(f"Error assessing portfolio risk: {e}")
             return {}
+
+    def get_risk_adjusted_analyzer_params(self, portfolio_metrics: Dict) -> Dict:
+        """
+        Suggest analyzer conservatism based on current risk exposure
+
+        Args:
+            portfolio_metrics: Current portfolio risk metrics
+
+        Returns:
+            dict: Risk-adjusted analyzer parameters
+        """
+        try:
+            current_var = portfolio_metrics.get('portfolio_var_95', 0.02)
+            max_var = self.max_portfolio_var
+            risk_ratio = current_var / max_var
+
+            # Base parameters (moderate risk)
+            base_params = {
+                'min_signal_strength': 0.6,
+                'technical_confirmation_required': False,
+                'fundamental_veto_enabled': False,
+                'sentiment_threshold': 0.6,
+                'max_concurrent_positions': 5,
+                'risk_multiplier_cap': 1.0,
+                'signal_filter_strictness': 'normal'
+            }
+
+            # Adjust based on risk ratio
+            if risk_ratio > 0.8:  # High risk - be very conservative
+                adjusted_params = {
+                    'min_signal_strength': 0.75,  # Require stronger signals
+                    'technical_confirmation_required': True,  # Need technical confirmation
+                    'fundamental_veto_enabled': True,  # Allow fundamental veto
+                    'sentiment_threshold': 0.7,  # Higher sentiment threshold
+                    'max_concurrent_positions': 2,  # Reduce position limit
+                    'risk_multiplier_cap': 0.7,  # Reduce risk multiplier
+                    'signal_filter_strictness': 'strict',  # Stricter filtering
+                    'high_risk_mode': True
+                }
+                self.logger.warning(f"High risk detected (VaR ratio: {risk_ratio:.2f}) - enabling conservative analyzer mode")
+
+            elif risk_ratio > 0.6:  # Medium-high risk - be conservative
+                adjusted_params = {
+                    'min_signal_strength': 0.68,
+                    'technical_confirmation_required': True,
+                    'fundamental_veto_enabled': False,
+                    'sentiment_threshold': 0.65,
+                    'max_concurrent_positions': 3,
+                    'risk_multiplier_cap': 0.85,
+                    'signal_filter_strictness': 'moderate',
+                    'high_risk_mode': False
+                }
+                self.logger.info(f"Medium-high risk detected (VaR ratio: {risk_ratio:.2f}) - moderate conservative adjustments")
+
+            elif risk_ratio < 0.3:  # Low risk - can be more aggressive
+                adjusted_params = {
+                    'min_signal_strength': 0.55,
+                    'technical_confirmation_required': False,
+                    'fundamental_veto_enabled': False,
+                    'sentiment_threshold': 0.55,
+                    'max_concurrent_positions': 7,
+                    'risk_multiplier_cap': 1.2,
+                    'signal_filter_strictness': 'relaxed',
+                    'high_risk_mode': False
+                }
+                self.logger.info(f"Low risk detected (VaR ratio: {risk_ratio:.2f}) - enabling aggressive analyzer mode")
+
+            else:  # Normal risk - use base parameters
+                adjusted_params = base_params.copy()
+                self.logger.debug(f"Normal risk level (VaR ratio: {risk_ratio:.2f}) - using standard parameters")
+
+            # Additional adjustments based on drawdown
+            current_drawdown = portfolio_metrics.get('current_drawdown', 0)
+            if current_drawdown > 0.05:  # 5% drawdown
+                adjusted_params['min_signal_strength'] = min(adjusted_params['min_signal_strength'] + 0.05, 0.8)
+                adjusted_params['sentiment_threshold'] = min(adjusted_params['sentiment_threshold'] + 0.05, 0.75)
+                adjusted_params['drawdown_protection'] = True
+                self.logger.warning(f"Drawdown protection activated ({current_drawdown:.1%}) - increasing signal requirements")
+
+            # Additional adjustments based on Sharpe ratio
+            sharpe_ratio = portfolio_metrics.get('sharpe_ratio', 0.5)
+            if sharpe_ratio < 0.3:  # Poor risk-adjusted returns
+                adjusted_params['technical_confirmation_required'] = True
+                adjusted_params['sharpe_filter_enabled'] = True
+                self.logger.warning(f"Poor Sharpe ratio ({sharpe_ratio:.2f}) - enabling additional technical confirmation")
+
+            return adjusted_params
+
+        except Exception as e:
+            self.logger.error(f"Error calculating risk-adjusted analyzer params: {e}")
+            # Return safe defaults
+            return {
+                'min_signal_strength': 0.7,
+                'technical_confirmation_required': True,
+                'fundamental_veto_enabled': True,
+                'sentiment_threshold': 0.7,
+                'max_concurrent_positions': 3,
+                'risk_multiplier_cap': 0.8,
+                'signal_filter_strictness': 'strict',
+                'fallback_mode': True
+            }
+
+    def get_dynamic_risk_limits(self, symbol: str, account_balance: float,
+                               market_volatility: float, portfolio_correlation: float) -> Dict[str, float]:
+        """
+        Get dynamic risk limits adjusted for current market conditions
+
+        Args:
+            symbol: Trading symbol
+            account_balance: Account balance
+            market_volatility: Current market volatility (0-1 scale)
+            portfolio_correlation: Average correlation with portfolio
+
+        Returns:
+            dict: Dynamic risk limits
+        """
+        try:
+            # Get base limits
+            base_limits = self.get_risk_limits(symbol, account_balance)
+
+            # Adjust for market volatility
+            volatility_multiplier = 1.0
+            if market_volatility > 0.7:  # High volatility
+                volatility_multiplier = 0.6  # Reduce risk
+            elif market_volatility < 0.3:  # Low volatility
+                volatility_multiplier = 1.3  # Can take more risk
+
+            # Adjust for portfolio correlation
+            correlation_multiplier = 1.0
+            if portfolio_correlation > 0.6:  # High correlation
+                correlation_multiplier = 0.7  # Reduce risk to avoid concentration
+            elif portfolio_correlation < 0.2:  # Low correlation
+                correlation_multiplier = 1.2  # Can take more risk
+
+            # Apply adjustments
+            dynamic_limits = {}
+            for limit_name, base_value in base_limits.items():
+                adjustment = volatility_multiplier * correlation_multiplier
+                dynamic_limits[limit_name] = base_value * adjustment
+
+                # Ensure reasonable bounds
+                if 'max_risk' in limit_name:
+                    dynamic_limits[limit_name] = max(dynamic_limits[limit_name], account_balance * 0.005)  # Min 0.5%
+                    dynamic_limits[limit_name] = min(dynamic_limits[limit_name], account_balance * 0.05)  # Max 5%
+                elif 'min_sharpe' in limit_name:
+                    dynamic_limits[limit_name] = max(dynamic_limits[limit_name], 0.2)  # Min acceptable Sharpe
+
+            dynamic_limits['volatility_multiplier'] = volatility_multiplier
+            dynamic_limits['correlation_multiplier'] = correlation_multiplier
+            dynamic_limits['overall_adjustment'] = volatility_multiplier * correlation_multiplier
+
+            self.logger.debug(f"Dynamic risk limits for {symbol}: volatility_mult={volatility_multiplier:.2f}, "
+                            f"correlation_mult={correlation_multiplier:.2f}, overall={dynamic_limits['overall_adjustment']:.2f}")
+
+            return dynamic_limits
+
+        except Exception as e:
+            self.logger.error(f"Error calculating dynamic risk limits: {e}")
+            return self.get_risk_limits(symbol, account_balance)
+
+    def assess_market_risk_environment(self, market_data: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
+        """
+        Assess overall market risk environment
+
+        Args:
+            market_data: Dictionary of symbol dataframes
+
+        Returns:
+            dict: Market risk assessment
+        """
+        try:
+            risk_assessment = {
+                'overall_volatility': 0.0,
+                'market_correlation': 0.0,
+                'risk_regime': 'normal',
+                'recommended_conservatism': 'normal',
+                'volatility_percentile': 0.0,
+                'correlation_percentile': 0.0
+            }
+
+            if not market_data:
+                return risk_assessment
+
+            # Calculate average volatility across symbols
+            volatilities = []
+            returns_list = []
+
+            for symbol, df in market_data.items():
+                if len(df) > 20:
+                    # Calculate recent volatility (20-period)
+                    returns = df['close'].pct_change().dropna()
+                    if len(returns) >= 20:
+                        vol = returns.tail(20).std() * np.sqrt(252)  # Annualized
+                        volatilities.append(vol)
+                        returns_list.append(returns.tail(20))
+
+            if volatilities:
+                risk_assessment['overall_volatility'] = np.mean(volatilities)
+
+                # Calculate market correlation
+                if len(returns_list) > 1:
+                    corr_matrix = np.corrcoef(returns_list)
+                    # Average correlation (excluding diagonal)
+                    n = len(corr_matrix)
+                    avg_corr = (np.sum(corr_matrix) - n) / (n * (n - 1))
+                    risk_assessment['market_correlation'] = avg_corr
+
+            # Determine risk regime
+            vol_percentile = stats.percentileofscore([0.1, 0.2, 0.3, 0.4, 0.5], risk_assessment['overall_volatility'])
+            corr_percentile = stats.percentileofscore([0.2, 0.4, 0.6, 0.8, 1.0], risk_assessment['market_correlation'])
+
+            risk_assessment['volatility_percentile'] = vol_percentile / 100
+            risk_assessment['correlation_percentile'] = corr_percentile / 100
+
+            # Determine risk regime and recommendations
+            if risk_assessment['volatility_percentile'] > 0.8 or risk_assessment['correlation_percentile'] > 0.8:
+                risk_assessment['risk_regime'] = 'high_risk'
+                risk_assessment['recommended_conservatism'] = 'high'
+            elif risk_assessment['volatility_percentile'] < 0.3 and risk_assessment['correlation_percentile'] < 0.3:
+                risk_assessment['risk_regime'] = 'low_risk'
+                risk_assessment['recommended_conservatism'] = 'low'
+            else:
+                risk_assessment['risk_regime'] = 'normal'
+                risk_assessment['recommended_conservatism'] = 'normal'
+
+            self.logger.info(f"Market risk assessment: regime={risk_assessment['risk_regime']}, "
+                           f"volatility={risk_assessment['overall_volatility']:.3f}, "
+                           f"correlation={risk_assessment['market_correlation']:.2f}")
+
+            return risk_assessment
+
+        except Exception as e:
+            self.logger.error(f"Error assessing market risk environment: {e}")
+            return {
+                'overall_volatility': 0.5,
+                'market_correlation': 0.5,
+                'risk_regime': 'normal',
+                'recommended_conservatism': 'normal'
+            }
 
     def get_risk_limits(self, symbol: str, account_balance: float) -> Dict[str, float]:
         """

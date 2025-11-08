@@ -1,81 +1,22 @@
-﻿{
-    "python.defaultInterpreterPath": "C:\\\\Users\\\\andyc\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python312\\\\python.exe",
-    "python.analysis.memory.keepLibraryAst": false,
-    "python.analysis.memory.keepLibraryLocalVariables": false,
-    "python.analysis.nodeExecutable": "node",
-    "python.analysis.downloadChannel": "off",
-    "python.analysis.typeCheckingMode": "basic",
-    "python.analysis.autoImportCompletions": false,
-    "python.analysis.indexing": false,
-    "python.analysis.packageIndexDepths": [
-        {
-            "name": "numpy",
-            "depth": 2
-        },
-        {
-            "name": "pandas",
-            "depth": 2
-        },
-        {
-            "name": "matplotlib",
-            "depth": 1
-        }
-    ],
-    "python.analysis.exclude": [
-        "**/node_modules",
-        "**/__pycache__",
-        "**/.pytest_cache"
-    ],
-    "files.exclude": {
-        "**/node_modules": true,
-        "**/__pycache__": true,
-        "**/.pytest_cache": true
-    },
-    "search.exclude": {
-        "**/node_modules": true,
-        "**/__pycache__": true,
-        "**/.pytest_cache": true
-    },
-    "files.watcherExclude": {
-        "**/node_modules/**": true,
-        "**/__pycache__/**": true,
-        "**/.pytest_cache/**": true,
-        "**/.git/**": true
-    },
-    "typescript.preferences.includePackageJsonAutoImports": "off",
-    "javascript.preferences.includePackageJsonAutoImports": "off",
-    "typescript.suggest.autoImports": false,
-    "javascript.suggest.autoImports": false,
-    "editor.largeFileOptimizations": true,
-    "editor.minimap.enabled": false,
-    "editor.renderWhitespace": "none",
-    "editor.overviewRulerLanes": 0,
-    "editor.hideCursorInOverviewRuler": true,
-    "editor.scrollBeyondLastLine": false,
-    "workbench.editor.enablePreview": false,
-    "workbench.editor.showTabs": "single",
-    "workbench.tree.renderIndentGuides": "none",
-    "breadcrumbs.enabled": false,
-    "outline.showProperties": false,
-    "outline.showConstants": false,
-    "outline.showVariables": false,
-    "outline.showMethods": false,
-    "outline.showConstructors": false,
-    "outline.showFields": false,
-    "outline.showEvents": false,
-    "outline.showOperators": false,
-    "outline.showEnums": false,
-    "outline.showEnumMembers": false,
-    "outline.showStructs": false,
-    "outline.showInterfaces": false,
-    "outline.showTypeParameters": false,
-    "outline.showModules": false,
-    "outline.showFunctions": false,
-    "outline.showClasses": false,
-    "problems.showCurrentInStatus": false,
-    "editor.gotoLocation.multipleDefinitions": "goto",
-    "editor.gotoLocation.multipleImplementations": "goto",
-    "editor.gotoLocation.multipleReferences": "goto",
-    "editor.gotoLocation.multipleTypeDefinitions": "goto",
-    "editor.gotoLocation.multipleDeclarations": "goto"
+{
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/venv/**": true,
+    "**/__pycache__/**": true,
+    "**/*.db": true,
+    "**/*.log": true,
+    "**/logs/**": true,
+    "D:/FX-Ai-logs/**": true
+  },
+  "search.exclude": {
+    "**/venv": true,
+    "**/__pycache__": true,
+    "**/*.db": true,
+    "**/logs": true
+  },
+  "python.analysis.indexing": false,
+  "python.analysis.diagnosticMode": "openFilesOnly",
+  "python.analysis.typeCheckingMode": "off",
+  "git.autorefresh": false,
+  "git.autofetch": false
 }
