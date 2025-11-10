@@ -126,7 +126,7 @@ class MT5TimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
         try:
             # Try ClockSynchronizer first (preferred method)
             if self.clock_sync:
-                server_time = self.clock_sync.get_server_time()
+                server_time = self.clock_sync.get_synced_time()
                 if server_time:
                     return server_time
 
@@ -188,10 +188,18 @@ class MT5TimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
             # Extract base name (remove current date suffix)
             base_name = self.baseFilename
             if base_name.endswith('.log'):
-                # Find the last underscore to remove date part
-                last_underscore = base_name.rfind('_')
-                if last_underscore > 0:
-                    base_name = base_name[:last_underscore]
+                # Remove the date suffix pattern _YYYY_MM_DD.log
+                # Look for the pattern _dddd_dd_dd.log at the end
+                import re
+                # Match _YYYY_MM_DD.log at the end of filename
+                date_pattern = re.compile(r'_\d{4}_\d{2}_\d{2}\.log$')
+                match = date_pattern.search(base_name)
+                if match:
+                    # Remove the date suffix
+                    base_name = base_name[:match.start()]
+                else:
+                    # Fallback: remove .log extension if no date pattern found
+                    base_name = base_name[:-4]
             
             # Create new filename with next day's date
             new_filename = base_name + date_suffix
@@ -310,7 +318,7 @@ def setup_logger(name: str = 'FX-Ai', level: str = 'INFO',
                     # Get current MT5 server date for filename
                     try:
                         if clock_sync:
-                            current_mt5_time = clock_sync.get_server_time()
+                            current_mt5_time = clock_sync.get_synced_time()
                         elif mt5_connector:
                             current_mt5_time = mt5_connector.get_server_time()
                         else:

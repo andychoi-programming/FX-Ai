@@ -2,17 +2,31 @@
   "files.watcherExclude": {
     "**/.git/objects/**": true,
     "**/venv/**": true,
+    "**/.venv/**": true,
+    "**/env/**": true,
     "**/__pycache__/**": true,
+    "**/Lib/site-packages/**": true,
+    "**/.git/**": true,
+    "**/node_modules/**": true,
     "**/*.db": true,
     "**/*.log": true,
+    "**/*.pyc": true,
     "**/logs/**": true,
     "D:/FX-Ai-logs/**": true
   },
   "search.exclude": {
     "**/venv": true,
+    "**/.venv": true,
+    "**/env": true,
     "**/__pycache__": true,
+    "**/Lib/site-packages": true,
     "**/*.db": true,
+    "**/*.pyc": true,
     "**/logs": true
+  },
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true
   },
   "python.analysis.indexing": false,
   "python.analysis.diagnosticMode": "openFilesOnly",

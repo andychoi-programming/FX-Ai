@@ -230,6 +230,40 @@
       "increase_stops_threshold": 3.0
     }
   },
+  "correlation": {
+    "enabled": true,
+    "strong_threshold": 0.7,
+    "moderate_threshold": 0.4,
+    "max_correlated_positions": 2,
+    "size_multiplier": 0.6,
+    "require_confirmation": false,
+    "enable_dynamic_monitoring": true,
+    "correlation_change_threshold": 0.2,
+    "monitoring_interval_minutes": 5,
+    "learning_enabled": true,
+    "correlation_exit_threshold": 0.8,
+    "correlation_entry_threshold": 0.3,
+    "adaptive_thresholds": true,
+    "known_relationships": {
+      "positive_strong": [
+        ["EURUSD", "GBPUSD"],
+        ["EURUSD", "EURGBP"],
+        ["EURUSD", "EURJPY"],
+        ["EURUSD", "EURCHF"],
+        ["GBPUSD", "GBPJPY"],
+        ["GBPUSD", "GBPCHF"],
+        ["AUDUSD", "NZDUSD"],
+        ["AUDUSD", "AUDNZD"]
+      ],
+      "negative_strong": [
+        ["USDCHF", "EURUSD"],
+        ["EURJPY", "USDJPY"],
+        ["USDCHF", "GBPUSD"],
+        ["USDJPY", "GBPUSD"]
+      ]
+    },
+    "_comment": "Advanced correlation-aware trading: dynamic monitoring, learning-based decisions, allows correlated pairs to trade simultaneously"
+  },
   "indicators": {
     "vwap_period": 20,
     "ema_period": 20,

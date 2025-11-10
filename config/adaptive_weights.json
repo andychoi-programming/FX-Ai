@@ -1,0 +1,23 @@
+{
+  "signal_weights": {
+    "ml_prediction": 0.30927835051546393,
+    "technical_score": 0.24484536082474226,
+    "sentiment_score": 0.1958762886597938,
+    "fundamental_score": 0.14690721649484534,
+    "support_resistance": 0.10309278350515465
+  },
+  "adaptive_params": {
+    "rsi_oversold": 30,
+    "rsi_overbought": 70,
+    "min_signal_strength": 0.6,
+    "max_correlation": 0.8,
+    "risk_multiplier": 0.95,
+    "trailing_stop_distance": 20,
+    "stop_loss_atr_multiplier": 2.0,
+    "take_profit_atr_multiplier": 6.0,
+    "max_holding_minutes": 480,
+    "min_holding_minutes": 15,
+    "optimal_holding_hours": 4.0
+  },
+  "last_update": "2025-11-09T19:48:07.979464"
+}

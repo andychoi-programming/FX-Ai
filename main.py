@@ -12,6 +12,7 @@ from ai.adaptive_learning_manager import AdaptiveLearningManager
 from ai.market_regime_detector import MarketRegimeDetector
 from ai.reinforcement_learning_agent import RLAgent
 from ai.advanced_risk_metrics import AdvancedRiskMetrics
+from ai.correlation_manager import CorrelationManager
 from ai.ml_predictor import MLPredictor
 from live_trading.dynamic_parameter_manager import DynamicParameterManager
 from analysis.sentiment_analyzer import SentimentAnalyzer
@@ -29,6 +30,7 @@ import threading
 import json
 import signal
 from datetime import datetime, time
+from typing import Dict
 import asyncio
 import pandas as pd
 import sys
@@ -81,6 +83,7 @@ class FXAiApplication:
         self.market_regime_detector = None
         self.reinforcement_agent = None
         self.advanced_risk_metrics = None
+        self.correlation_manager = None
         self.param_manager = None
 
         # Control flags
@@ -278,6 +281,10 @@ class FXAiApplication:
             # Advanced Risk Metrics
             self.logger.info("Initializing Advanced Risk Metrics...")
             self.advanced_risk_metrics = AdvancedRiskMetrics(self.config)
+
+            # Correlation Manager
+            self.logger.info("Initializing Correlation Manager...")
+            self.correlation_manager = CorrelationManager(self.config)
 
             # Trading Engine
             self.logger.info("Initializing trading engine...")
@@ -966,6 +973,65 @@ class FXAiApplication:
                     # Update risk metrics before checking limits
                     # Note: New RiskManager doesn't have update_metrics method
 
+                    # ===== DYNAMIC CORRELATION ANALYSIS =====
+                    if self.correlation_manager:
+                        try:
+                            # Get currently open positions for correlation check
+                            open_positions = []
+                            if self.mt5:
+                                positions = self.mt5.get_positions()
+                                open_positions = [pos['symbol'] for pos in positions] if positions else []
+
+                            # Update correlation manager with current positions
+                            self.correlation_manager.update_open_positions(open_positions)
+
+                            # Get market conditions for sophisticated correlation analysis
+                            market_conditions = {}
+                            if hasattr(self, 'market_regime_detector') and self.market_regime_detector:
+                                try:
+                                    # Get current market conditions
+                                    volatility = self.market_regime_detector.get_current_volatility()
+                                    trend_strength = self.market_regime_detector.get_trend_strength()
+                                    market_conditions = {
+                                        'volatility': volatility,
+                                        'trend_strength': trend_strength
+                                    }
+                                except Exception:
+                                    pass
+
+                            # Check if correlated trading is allowed
+                            correlation_allowed = True
+                            correlation_reason = "Correlation analysis passed"
+
+                            if open_positions:
+                                # For each open position, check if we should allow correlated trading
+                                for open_symbol in open_positions:
+                                    allowed, reason = self.correlation_manager.should_allow_correlated_trading(
+                                        signal['symbol'], open_symbol, market_conditions
+                                    )
+                                    if not allowed:
+                                        correlation_allowed = False
+                                        correlation_reason = reason
+                                        break
+
+                            if not correlation_allowed:
+                                self.logger.warning(
+                                    f"Correlation analysis blocked {signal['symbol']}: {correlation_reason}")
+                                continue
+
+                            # Get correlation-adjusted position size
+                            base_position_size = signal.get('position_size', 0.01)
+                            adjusted_size = self.correlation_manager.get_correlation_adjusted_size(
+                                signal['symbol'], base_position_size, open_positions)
+
+                            if adjusted_size != base_position_size:
+                                signal['position_size'] = adjusted_size
+                                self.logger.info(
+                                    f"Adjusted position size for {signal['symbol']} from {base_position_size} to {adjusted_size} due to correlation")
+
+                        except Exception as e:
+                            self.logger.error(f"Correlation analysis failed for {signal['symbol']}: {e}")
+
                     # Check risk limits with adaptive multiplier
                     risk_check = self.risk_manager.can_trade(signal['symbol'])  # type: ignore
                     self.logger.info(
@@ -1207,6 +1273,18 @@ class FXAiApplication:
                 # 5. Monitor and update positions
                 for symbol in symbols:
                     await self.trading_engine.manage_positions(symbol)  # type: ignore
+
+                    # NEW: Monitor correlation changes for open positions
+                    if self.correlation_manager and hasattr(self.correlation_manager, 'monitor_correlation_changes'):
+                        try:
+                            correlation_action = self.correlation_manager.monitor_correlation_changes(symbol)
+                            if correlation_action.get('action') != 'none':
+                                self.logger.info(f"Correlation action for {symbol}: {correlation_action}")
+
+                                # Execute correlation-based actions
+                                await self._handle_correlation_action(symbol, correlation_action)
+                        except Exception as e:
+                            self.logger.error(f"Error monitoring correlations for {symbol}: {e}")
 
                 # 6. Check for model retraining trigger (every hour)
                 # Every hour (assuming 10s loop)
@@ -1483,6 +1561,77 @@ class FXAiApplication:
         except Exception as e:
             self.logger.error(f"Error monitoring trade {ticket}: {e}")
 
+    async def _handle_correlation_action(self, symbol: str, correlation_action: Dict):
+        """
+        Handle correlation-based trading actions
+
+        Args:
+            symbol: Base symbol
+            correlation_action: Action recommended by correlation manager
+        """
+        try:
+            action_type = correlation_action.get('action')
+
+            if action_type == 'exit_recommended':
+                # Consider closing the position due to high correlation
+                confidence = correlation_action.get('confidence', 0.5)
+                correlation = correlation_action.get('correlation', 0)
+                correlated_symbol = correlation_action.get('correlated_symbol', '')
+
+                if confidence > 0.7:  # High confidence
+                    self.logger.info(f"High-confidence correlation exit: Closing {symbol} due to {correlation:.2f} correlation with {correlated_symbol}")
+                    # Get position and close it
+                    positions = self.mt5.get_positions() if self.mt5 else []
+                    for position in positions:
+                        if position.get('symbol') == symbol:
+                            close_result = await self.trading_engine.close_position(position)  # type: ignore
+                            if close_result:
+                                self.logger.info(f"Successfully closed {symbol} based on correlation analysis")
+                            break
+                else:
+                    self.logger.info(f"Correlation exit suggested for {symbol} (confidence: {confidence:.2f}) - monitoring continues")
+
+            elif action_type == 'entry_recommended':
+                # Consider opening a correlated position
+                confidence = correlation_action.get('confidence', 0.5)
+                new_symbol = correlation_action.get('symbol', '')
+                base_symbol = correlation_action.get('base_symbol', '')
+
+                if confidence > 0.7 and new_symbol:  # High confidence
+                    self.logger.info(f"High-confidence correlation entry: Opening {new_symbol} based on low correlation with {base_symbol}")
+
+                    # Check if we can trade this symbol
+                    if self.risk_manager and self.risk_manager.can_trade(new_symbol)[0]:
+                        # Generate a small position for the correlated pair
+                        signal = {
+                            'symbol': new_symbol,
+                            'action': 'BUY',  # Default to buy, could be enhanced
+                            'entry_price': None,  # Will be set by trading engine
+                            'position_size': 0.01,  # Small position
+                            'stop_loss': None,
+                            'take_profit': None
+                        }
+
+                        # Execute the trade
+                        trade_result = await self.trading_engine.execute_trade(signal)  # type: ignore
+                        if trade_result:
+                            self.logger.info(f"Successfully opened {new_symbol} based on correlation analysis")
+                        else:
+                            self.logger.warning(f"Failed to open {new_symbol} position")
+                    else:
+                        self.logger.info(f"Cannot open {new_symbol} - risk limits exceeded")
+                else:
+                    self.logger.info(f"Correlation entry suggested for {new_symbol} (confidence: {confidence:.2f}) - monitoring continues")
+
+            elif action_type == 'exit_consideration':
+                # Log correlation increase for monitoring
+                correlation = correlation_action.get('correlation', 0)
+                correlated_symbol = correlation_action.get('correlated_symbol', '')
+                self.logger.info(f"Correlation monitoring: {symbol} correlation with {correlated_symbol} is now {correlation:.2f}")
+
+        except Exception as e:
+            self.logger.error(f"Error handling correlation action for {symbol}: {e}")
+
     async def check_day_trading_closure(self):
         """Check if positions should be closed for day trading - uses MT5 server time"""
         try:
@@ -1747,3 +1896,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    

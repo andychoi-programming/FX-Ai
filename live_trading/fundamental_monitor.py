@@ -94,7 +94,7 @@ class FundamentalMonitor:
         while self.running:
             try:
                 # Get all open positions
-                positions = mt5.positions_get()
+                positions = mt5.positions_get()  # type: ignore
 
                 if positions:
                     for position in positions:
@@ -275,7 +275,7 @@ class FundamentalMonitor:
                 quote_currency = 'USD'
 
             # Get current profit status
-            current_price = mt5.symbol_info_tick(symbol).bid if position.type == mt5.ORDER_TYPE_BUY else mt5.symbol_info_tick(symbol).ask
+            current_price = mt5.symbol_info_tick(symbol).bid if position.type == mt5.ORDER_TYPE_BUY else mt5.symbol_info_tick(symbol).ask  # type: ignore
             entry_price = position.price_open
 
             if position.type == mt5.ORDER_TYPE_BUY:
@@ -284,7 +284,7 @@ class FundamentalMonitor:
                 profit_pips = (entry_price - current_price)
 
             # Convert to pips
-            symbol_info = mt5.symbol_info(symbol)
+            symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info:
                 if 'JPY' in symbol:
                     profit_pips = profit_pips * 100
@@ -470,7 +470,7 @@ class FundamentalMonitor:
                 return
 
             # Get current price
-            tick = mt5.symbol_info_tick(symbol)
+            tick = mt5.symbol_info_tick(symbol)  # type: ignore
             if not tick:
                 logger.error(f"Cannot get price for {symbol}")
                 return
@@ -490,7 +490,7 @@ class FundamentalMonitor:
                 new_sl = entry_price + tightened_distance
 
             # Ensure new SL meets broker minimums
-            symbol_info = mt5.symbol_info(symbol)
+            symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info:
                 min_stop_distance = symbol_info.trade_stops_level * symbol_info.point
 
@@ -526,7 +526,7 @@ class FundamentalMonitor:
                     "magic": self.trading_engine.magic_number
                 }
 
-                result = mt5.order_send(request)
+                result = mt5.order_send(request)  # type: ignore
                 if result.retcode == mt5.TRADE_RETCODE_DONE:
                     logger.info(f"[SUCCESS] SL tightened successfully for {symbol}")
                 else:
@@ -550,7 +550,7 @@ class FundamentalMonitor:
             entry_price = position.price_open
 
             # Get current price
-            tick = mt5.symbol_info_tick(symbol)
+            tick = mt5.symbol_info_tick(symbol)  # type: ignore
             if not tick:
                 return
 
