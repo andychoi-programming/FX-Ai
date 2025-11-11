@@ -8,6 +8,7 @@ import json
 import logging
 import threading
 import time
+import re
 from datetime import datetime, timedelta
 
 # Import schedule library
@@ -218,15 +219,21 @@ class AdaptiveLearningManager:
             'max_drawdown_weight': 0.2
         })
 
-        # Market regime configuration
-        regime_config = config.get('adaptive_learning', {}).get('market_regime', {})
-        self.regime_enabled = regime_config.get('enabled', True)
-        self.regime_adaptation_strength = regime_config.get('adaptation_strength', 0.3)
-        self.regime_history_length = regime_config.get('history_length', 100)
+        # Log learning configuration
+        log_learning_config = config.get('adaptive_learning', {}).get('log_learning', {})
+        self.log_learning_enabled = log_learning_config.get('enabled', True)
+        self.log_directory = log_learning_config.get('log_directory', 'd:\\FX-Ai-Data\\logs')
+        self.auto_learn_from_logs = log_learning_config.get('auto_learn_from_logs', True)
+        self.last_processed_log_date = log_learning_config.get('last_processed_log_date', None)
 
         # Regime data storage
         self.regime_history = {}  # symbol -> list of regime analyses
         self.regime_performance = {}  # (symbol, regime) -> performance metrics
+
+        # Market regime configuration
+        regime_config = config.get('adaptive_learning', {}).get('market_regime', {})
+        self.regime_enabled = regime_config.get('enabled', True)
+        self.regime_history_length = regime_config.get('history_length', 100)
 
         # Schedule periodic tasks
         self.schedule_tasks()
@@ -585,6 +592,53 @@ class AdaptiveLearningManager:
             )
         ''')
 
+        # Forced closure analysis table for learning from time-based exits
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS forced_closure_analysis (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME,
+                symbol TEXT,
+                duration_minutes INTEGER,
+                profit_pct REAL,
+                closure_reason TEXT,
+                count INTEGER DEFAULT 1,
+                last_updated DATETIME,
+                UNIQUE(symbol, duration_minutes)
+            )
+        ''')
+
+        # Add new columns to trades table if they don't exist (for backward compatibility)
+        try:
+            cursor.execute("ALTER TABLE trades ADD COLUMN closure_reason TEXT")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
+        try:
+            cursor.execute("ALTER TABLE trades ADD COLUMN forced_closure BOOLEAN DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
+        # Add new columns to symbol_holding_times table for forced closure analysis
+        try:
+            cursor.execute("ALTER TABLE symbol_holding_times ADD COLUMN natural_trades INTEGER")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
+        try:
+            cursor.execute("ALTER TABLE symbol_holding_times ADD COLUMN forced_trades INTEGER")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
+        try:
+            cursor.execute("ALTER TABLE symbol_holding_times ADD COLUMN forced_closure_rate_best_bucket REAL")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
+        try:
+            cursor.execute("ALTER TABLE symbol_holding_times ADD COLUMN forced_closure_rates TEXT")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
         conn.commit()
         conn.close()
 
@@ -732,12 +786,471 @@ class AdaptiveLearningManager:
             conn.commit()
             conn.close()
 
+            # Analyze timing patterns for natural trades (not SL/TP or forced closure)
+            self.analyze_trade_timing_patterns(trade_data)
+
             # Trigger immediate learning if significant event
             if abs(trade_data['profit_pct']) > 5:  # Large win/loss
                 self.trigger_immediate_learning(trade_data)
 
         except Exception as e:
             logger.error(f"Error recording trade: {e}")
+
+    def _get_symbol_from_ticket(self, ticket: int) -> str:
+        """Get symbol from MT5 position ticket"""
+        try:
+            if self.mt5_connector:
+                # Try to get position info from MT5
+                positions = self.mt5_connector.get_positions()
+                if positions:
+                    for pos in positions:
+                        if hasattr(pos, 'ticket') and pos.ticket == ticket:
+                            return pos.symbol
+                        elif hasattr(pos, 'ticket') and str(pos.ticket) == str(ticket):
+                            return pos.symbol
+
+                # Try history deals
+                deals = self.mt5_connector.get_history_deals()
+                if deals:
+                    for deal in deals:
+                        if hasattr(deal, 'ticket') and deal.ticket == ticket:
+                            return deal.symbol
+                        elif hasattr(deal, 'ticket') and str(deal.ticket) == str(ticket):
+                            return deal.symbol
+
+            # Fallback: try to infer from recent trades in database
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT symbol FROM trades 
+                WHERE ticket = ? 
+                ORDER BY timestamp DESC 
+                LIMIT 1
+            ''', (ticket,))
+            result = cursor.fetchone()
+            conn.close()
+            
+            if result:
+                return result[0]
+                
+        except Exception as e:
+            logger.debug(f"Error getting symbol for ticket {ticket}: {e}")
+            
+        # Final fallback
+        return "EURUSD"  # Default symbol
+
+    def record_trade_closure(self, ticket: int, reason: str, entry_price: float, exit_price: float, symbol: str = None):
+        """Record a trade closure for learning purposes (used for time-based and forced closures)"""
+        try:
+            # Calculate profit/loss
+            profit = exit_price - entry_price
+            profit_pct = (profit / entry_price) * 100 if entry_price != 0 else 0
+
+            # Get current time for duration calculation
+            current_time = datetime.now()
+
+            # Use provided symbol or try to get from ticket
+            trade_symbol = symbol if symbol else self._get_symbol_from_ticket(ticket)
+
+            # Create trade data for learning
+            trade_data = {
+                'timestamp': current_time.isoformat(),
+                'symbol': trade_symbol,
+                'direction': 'BUY' if exit_price > entry_price else 'SELL',  # Approximate
+                'entry_price': entry_price,
+                'exit_price': exit_price,
+                'volume': 0.1,  # Default volume, could be enhanced
+                'profit': profit,
+                'profit_pct': profit_pct,
+                'signal_strength': 0.5,  # Neutral signal strength for forced closures
+                'ml_score': 0.5,
+                'technical_score': 0.5,
+                'sentiment_score': 0.5,
+                'duration_minutes': 240,  # Default to 4 hours for time-based closures
+                'model_version': 'time_based_closure',
+                'closure_reason': reason,
+                'forced_closure': True
+            }
+
+            # Store in database
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                INSERT INTO trades (
+                    timestamp, symbol, direction, entry_price, exit_price,
+                    volume, profit, profit_pct, signal_strength,
+                    ml_score, technical_score, sentiment_score,
+                    duration_minutes, model_version, closure_reason, forced_closure
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                trade_data['timestamp'],
+                trade_data['symbol'],
+                trade_data['direction'],
+                trade_data['entry_price'],
+                trade_data['exit_price'],
+                trade_data['volume'],
+                trade_data['profit'],
+                trade_data['profit_pct'],
+                trade_data.get('signal_strength', 0),
+                trade_data.get('ml_score', 0),
+                trade_data.get('technical_score', 0),
+                trade_data.get('sentiment_score', 0),
+                trade_data.get('duration_minutes', 0),
+                trade_data.get('model_version', 'v1'),
+                trade_data.get('closure_reason', ''),
+                trade_data.get('forced_closure', False)
+            ))
+
+            conn.commit()
+            conn.close()
+
+            # Analyze holding performance for this forced closure
+            self.analyze_forced_closure_timing(trade_data)
+
+            logger.debug(f"Recorded forced trade closure for ticket {ticket}: {reason}")
+
+        except Exception as e:
+            logger.error(f"Error recording trade closure for ticket {ticket}: {e}")
+
+    def _get_symbol_from_ticket(self, ticket: int) -> str:
+        """Get symbol from ticket number (simplified implementation)"""
+        # This is a simplified implementation - in a real system you'd query MT5 or maintain a mapping
+        # For now, return a default or try to infer from recent trades
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Try to find recent trades with similar ticket numbers or patterns
+            # This is a fallback - ideally we'd have a ticket->symbol mapping
+            cursor.execute('''
+                SELECT symbol FROM trades
+                ORDER BY timestamp DESC
+                LIMIT 10
+            ''')
+
+            recent_symbols = [row[0] for row in cursor.fetchall()]
+            conn.close()
+
+            # Return the most common recent symbol as fallback
+            if recent_symbols:
+                return max(set(recent_symbols), key=recent_symbols.count)
+
+            return "EURUSD"  # Ultimate fallback
+
+        except Exception:
+            return "EURUSD"
+
+    def analyze_forced_closure_timing(self, trade_data: dict):
+        """Analyze timing patterns for forced closures to improve holding time optimization"""
+        try:
+            # For forced closures, we analyze the duration to understand if our time limits are appropriate
+            duration_minutes = trade_data.get('duration_minutes', 0)
+            profit_pct = trade_data.get('profit_pct', 0)
+            reason = trade_data.get('closure_reason', '')
+
+            # Store forced closure analysis
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                INSERT INTO forced_closure_analysis
+                (timestamp, symbol, duration_minutes, profit_pct, closure_reason)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(symbol, duration_minutes)
+                DO UPDATE SET
+                    profit_pct = (profit_pct + excluded.profit_pct) / 2,
+                    count = count + 1,
+                    last_updated = excluded.timestamp
+            ''', (
+                trade_data['timestamp'],
+                trade_data['symbol'],
+                duration_minutes,
+                profit_pct,
+                reason
+            ))
+
+            conn.commit()
+            conn.close()
+
+            # If this was a time-based closure with profit, consider adjusting optimal times
+            if 'time' in reason.lower() and profit_pct > 0:
+                self.evaluate_time_based_closure_effectiveness(trade_data)
+
+        except Exception as e:
+            logger.error(f"Error analyzing forced closure timing: {e}")
+
+    def evaluate_time_based_closure_effectiveness(self, trade_data: dict):
+        """Evaluate if time-based closures are happening too early or too late"""
+        try:
+            symbol = trade_data['symbol']
+            duration_minutes = trade_data['duration_minutes']
+            profit_pct = trade_data['profit_pct']
+
+            # Get current optimal holding time for this symbol
+            current_optimal = self.get_symbol_optimal_holding_time(symbol)
+
+            if current_optimal.get('found', False):
+                optimal_hours = current_optimal['optimal_holding_hours']
+                optimal_minutes = optimal_hours * 60
+
+                # If we closed early but had profit, consider extending optimal time
+                if duration_minutes < optimal_minutes and profit_pct > 2:  # Had >2% profit
+                    logger.info(f"Time-based closure for {symbol} may be too early. "
+                              f"Closed at {duration_minutes}min with {profit_pct:.2f}% profit, "
+                              f"optimal is {optimal_minutes}min. Consider increasing optimal holding time.")
+
+                # If we hit max time with significant profit, consider increasing max time
+                elif duration_minutes >= 480 and profit_pct > 5:  # 8 hours with >5% profit
+                    logger.info(f"Max holding time may be too short for {symbol}. "
+                              f"Closed at {duration_minutes}min with {profit_pct:.2f}% profit.")
+
+        except Exception as e:
+            logger.error(f"Error evaluating time-based closure effectiveness: {e}")
+
+    def analyze_trade_timing_patterns(self, trade_data: dict):
+        """
+        Analyze timing patterns for trades that close naturally (not SL/TP).
+        Learns optimal entry and exit timing when stop loss and take profit are not reached.
+        """
+        try:
+            # Determine if this was a natural trade closure
+            # Natural trades are those that didn't hit SL/TP and weren't forced closed by time limits
+            is_natural_closure = self._is_natural_trade_closure(trade_data)
+            
+            if not is_natural_closure:
+                return  # Skip timing analysis for forced closures
+
+            # Extract timing information
+            entry_timestamp = trade_data['timestamp']
+            if isinstance(entry_timestamp, str):
+                entry_time = datetime.fromisoformat(entry_timestamp.replace('Z', '+00:00'))
+            else:
+                entry_time = entry_timestamp
+
+            exit_time = datetime.now()  # Approximate exit time
+            duration_minutes = trade_data.get('duration_minutes', 0)
+            
+            # Calculate exit time more accurately
+            if duration_minutes > 0:
+                exit_time = entry_time + timedelta(minutes=duration_minutes)
+            
+            # Extract timing features
+            hour_of_day = entry_time.hour  # 0-23
+            day_of_week = entry_time.weekday()  # 0-6 (Monday-Sunday)
+            
+            # Get market conditions at entry (if available)
+            market_volatility = trade_data.get('volatility', 0.001)  # ATR-based
+            spread_pips = trade_data.get('spread_pips', 0.1)  # Spread at entry
+            
+            # Trade outcome
+            profit_pct = trade_data.get('profit_pct', 0)
+            is_profitable = profit_pct > 0
+            
+            # Store timing analysis in database
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Check if entry timing record exists
+            cursor.execute('''
+                SELECT total_trades, profitable_trades, avg_profit 
+                FROM entry_timing_analysis 
+                WHERE symbol = ? AND hour_of_day = ? AND day_of_week = ?
+            ''', (trade_data['symbol'], hour_of_day, day_of_week))
+            
+            existing_record = cursor.fetchone()
+            
+            if existing_record:
+                # Update existing record
+                total_trades, profitable_trades, avg_profit = existing_record
+                new_total_trades = total_trades + 1
+                new_profitable_trades = profitable_trades + (1 if is_profitable else 0)
+                new_avg_profit = ((avg_profit * total_trades) + profit_pct) / new_total_trades
+                new_win_rate = new_profitable_trades / new_total_trades
+                
+                cursor.execute('''
+                    UPDATE entry_timing_analysis 
+                    SET total_trades = ?, profitable_trades = ?, avg_profit = ?, 
+                        win_rate = ?, market_volatility = ?, spread_pips = ?, last_updated = ?
+                    WHERE symbol = ? AND hour_of_day = ? AND day_of_week = ?
+                ''', (
+                    new_total_trades, new_profitable_trades, new_avg_profit, new_win_rate,
+                    market_volatility, spread_pips, datetime.now(),
+                    trade_data['symbol'], hour_of_day, day_of_week
+                ))
+            else:
+                # Insert new record
+                cursor.execute('''
+                    INSERT INTO entry_timing_analysis 
+                    (symbol, hour_of_day, day_of_week, market_volatility, spread_pips, 
+                     total_trades, profitable_trades, avg_profit, win_rate, last_updated)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    trade_data['symbol'], hour_of_day, day_of_week, market_volatility, spread_pips,
+                    1, 1 if is_profitable else 0, profit_pct, 1.0 if is_profitable else 0.0, datetime.now()
+                ))
+            
+            # Also analyze exit timing patterns
+            exit_hour = exit_time.hour
+            exit_day_of_week = exit_time.weekday()
+            
+            # Store exit timing analysis (similar structure but for exit patterns)
+            cursor.execute('''
+                SELECT total_trades, profitable_trades, avg_profit 
+                FROM entry_timing_analysis 
+                WHERE symbol = ? AND hour_of_day = ? AND day_of_week = ?
+            ''', (trade_data['symbol'], exit_hour, exit_day_of_week))
+            
+            exit_record = cursor.fetchone()
+            
+            if exit_record:
+                # Update exit timing record
+                total_trades, profitable_trades, avg_profit = exit_record
+                new_total_trades = total_trades + 1
+                new_profitable_trades = profitable_trades + (1 if is_profitable else 0)
+                new_avg_profit = ((avg_profit * total_trades) + profit_pct) / new_total_trades
+                new_win_rate = new_profitable_trades / new_total_trades
+                
+                cursor.execute('''
+                    UPDATE entry_timing_analysis 
+                    SET total_trades = ?, profitable_trades = ?, avg_profit = ?, 
+                        win_rate = ?, last_updated = ?
+                    WHERE symbol = ? AND hour_of_day = ? AND day_of_week = ?
+                ''', (
+                    new_total_trades, new_profitable_trades, new_avg_profit, new_win_rate, datetime.now(),
+                    trade_data['symbol'], exit_hour, exit_day_of_week
+                ))
+            else:
+                # Insert new exit timing record
+                cursor.execute('''
+                    INSERT INTO entry_timing_analysis 
+                    (symbol, hour_of_day, day_of_week, total_trades, profitable_trades, 
+                     avg_profit, win_rate, last_updated)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    trade_data['symbol'], exit_hour, exit_day_of_week, 
+                    1, 1 if is_profitable else 0, profit_pct, 1.0 if is_profitable else 0.0, datetime.now()
+                ))
+            
+            conn.commit()
+            conn.close()
+            
+            logger.debug(f"Analyzed timing patterns for {trade_data['symbol']} natural trade: "
+                        f"entry_hour={hour_of_day}, exit_hour={exit_hour}, profitable={is_profitable}")
+            
+        except Exception as e:
+            logger.error(f"Error analyzing trade timing patterns: {e}")
+
+    def _is_natural_trade_closure(self, trade_data: dict) -> bool:
+        """
+        Determine if a trade closed naturally (not by SL/TP or forced time closure).
+        
+        Returns True if the trade closed due to market movement without hitting predefined limits.
+        """
+        try:
+            # Check if trade was forced closed by time limits
+            # This would be indicated by specific closure reasons in the trade data
+            closure_reason = trade_data.get('closure_reason', 'natural_exit')
+            
+            if closure_reason in ['market_close_buffer', 'weekend_closure', 'max_time', 'optimal_time']:
+                return False  # Forced closure
+            
+            # Check if trade hit stop loss or take profit
+            # This is harder to determine without exact SL/TP levels, but we can use heuristics
+            
+            # For now, assume trades that close with moderate profit/loss are natural
+            # Trades with extreme losses might have hit SL, extreme gains might have hit TP
+            profit_pct = abs(trade_data.get('profit_pct', 0))
+            
+            # If profit/loss is extremely high, likely hit SL/TP
+            if profit_pct > 2.0:  # More than 2% gain/loss likely hit TP/SL
+                return False
+            
+            # If duration is very short (< 5 minutes), might be noise, not natural
+            duration_minutes = trade_data.get('duration_minutes', 0)
+            if duration_minutes < 5:
+                return False
+            
+            return True  # Assume natural closure
+            
+        except Exception as e:
+            logger.error(f"Error determining natural trade closure: {e}")
+            return False
+
+    def get_optimal_entry_timing(self, symbol: str) -> dict:
+        """
+        Get optimal entry timing recommendations for a symbol based on historical analysis.
+        
+        Returns:
+            dict: Timing recommendations with confidence scores
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Get current time
+            now = datetime.now()
+            current_hour = now.hour
+            current_day = now.weekday()
+            
+            # Find best entry hours for this symbol
+            cursor.execute('''
+                SELECT hour_of_day, day_of_week, win_rate, avg_profit, total_trades
+                FROM entry_timing_analysis 
+                WHERE symbol = ? AND total_trades >= 5
+                ORDER BY win_rate DESC, avg_profit DESC
+                LIMIT 5
+            ''', (symbol,))
+            
+            best_timings = cursor.fetchall()
+            
+            # Get current timing performance
+            cursor.execute('''
+                SELECT win_rate, avg_profit, total_trades
+                FROM entry_timing_analysis 
+                WHERE symbol = ? AND hour_of_day = ? AND day_of_week = ?
+            ''', (symbol, current_hour, current_day))
+            
+            current_timing = cursor.fetchone()
+            
+            conn.close()
+            
+            # Calculate timing score
+            timing_score = 0.5  # Neutral default
+            
+            if current_timing and current_timing[2] >= 5:  # At least 5 trades
+                current_win_rate = current_timing[0]
+                current_avg_profit = current_timing[1]
+                
+                # Compare to best timings
+                if best_timings:
+                    best_win_rate = best_timings[0][2]  # Best win rate
+                    best_avg_profit = best_timings[0][3]  # Best avg profit
+                    
+                    # Calculate relative performance
+                    win_rate_score = min(current_win_rate / best_win_rate, 1.0) if best_win_rate > 0 else 0.5
+                    profit_score = min(abs(current_avg_profit) / abs(best_avg_profit), 1.0) if best_avg_profit != 0 else 0.5
+                    
+                    timing_score = (win_rate_score + profit_score) / 2
+                else:
+                    # No historical data, use current performance
+                    timing_score = min(current_win_rate, 1.0)
+            
+            return {
+                'timing_score': timing_score,
+                'current_hour': current_hour,
+                'current_day': current_day,
+                'recommended': timing_score > 0.6,  # Recommend if score > 60%
+                'confidence': min(current_timing[2] / 20, 1.0) if current_timing else 0.0
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting optimal entry timing: {e}")
+            return {
+                'timing_score': 0.5,
+                'recommended': True,  # Default to allowing trades
+                'confidence': 0.0
+            }
 
     def retrain_models(self):
         """Periodically retrain ML models with recent data"""
@@ -1914,14 +2427,15 @@ class AdaptiveLearningManager:
 
     def analyze_symbol_holding_performance(
             self, symbol: str, min_trades: int = 20) -> Optional[dict]:
-        """Analyze trade performance by holding duration"""
+        """Analyze trade performance by holding duration, including forced closures"""
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            # Get trades for this symbol
+            # Get all trades for this symbol (both natural and forced closures)
             cursor.execute('''
-                SELECT duration_minutes, profit_pct
+                SELECT duration_minutes, profit_pct, 
+                       CASE WHEN forced_closure = 1 THEN 1 ELSE 0 END as is_forced
                 FROM trades
                 WHERE symbol = ? AND profit_pct IS NOT NULL
                 ORDER BY timestamp DESC
@@ -1934,58 +2448,92 @@ class AdaptiveLearningManager:
             if len(trades) < min_trades:
                 return None
 
+            # Separate natural and forced closures for analysis
+            natural_trades = [(dur, profit) for dur, profit, forced in trades if forced == 0]
+            forced_trades = [(dur, profit) for dur, profit, forced in trades if forced == 1]
+
             # Group trades by duration buckets (in hours)
             duration_buckets = {
                 '0-1h': [], '1-2h': [], '2-3h': [], '3-4h': [], '4-6h': [],
                 '6-8h': [], '8-12h': [], '12-24h': [], '24h+': []
             }
 
-            for duration_min, profit_pct in trades:
+            forced_buckets = {
+                '0-1h': [], '1-2h': [], '2-3h': [], '3-4h': [], '4-6h': [],
+                '6-8h': [], '8-12h': [], '12-24h': [], '24h+': []
+            }
+
+            # Process all trades for main analysis
+            for duration_min, profit_pct, is_forced in trades:
                 duration_hours = duration_min / 60.0
 
                 if duration_hours < 1:
                     duration_buckets['0-1h'].append(profit_pct)
+                    if is_forced:
+                        forced_buckets['0-1h'].append(profit_pct)
                 elif duration_hours < 2:
                     duration_buckets['1-2h'].append(profit_pct)
+                    if is_forced:
+                        forced_buckets['1-2h'].append(profit_pct)
                 elif duration_hours < 3:
                     duration_buckets['2-3h'].append(profit_pct)
+                    if is_forced:
+                        forced_buckets['2-3h'].append(profit_pct)
                 elif duration_hours < 4:
                     duration_buckets['3-4h'].append(profit_pct)
+                    if is_forced:
+                        forced_buckets['3-4h'].append(profit_pct)
                 elif duration_hours < 6:
                     duration_buckets['4-6h'].append(profit_pct)
+                    if is_forced:
+                        forced_buckets['4-6h'].append(profit_pct)
                 elif duration_hours < 8:
                     duration_buckets['6-8h'].append(profit_pct)
+                    if is_forced:
+                        forced_buckets['6-8h'].append(profit_pct)
                 elif duration_hours < 12:
                     duration_buckets['8-12h'].append(profit_pct)
+                    if is_forced:
+                        forced_buckets['8-12h'].append(profit_pct)
                 elif duration_hours < 24:
                     duration_buckets['12-24h'].append(profit_pct)
+                    if is_forced:
+                        forced_buckets['12-24h'].append(profit_pct)
                 else:
                     duration_buckets['24h+'].append(profit_pct)
+                    if is_forced:
+                        forced_buckets['24h+'].append(profit_pct)
 
-            # Calculate average profit for each bucket (only if bucket has
-            # enough trades)
+            # Calculate average profit for each bucket (only if bucket has enough trades)
             avg_profit_by_duration = {}
             for bucket, profits in duration_buckets.items():
                 if len(profits) >= 5:  # Minimum 5 trades per bucket
-                    avg_profit_by_duration[bucket] = sum(
-                        profits) / len(profits)
+                    avg_profit_by_duration[bucket] = sum(profits) / len(profits)
+
+            # Calculate forced closure rates by bucket
+            forced_closure_rates = {}
+            for bucket in duration_buckets.keys():
+                total_trades = len(duration_buckets[bucket])
+                forced_count = len(forced_buckets[bucket])
+                if total_trades >= 5:
+                    forced_closure_rates[bucket] = forced_count / total_trades
 
             return {
                 'symbol': symbol,
                 'total_trades': len(trades),
+                'natural_trades': len(natural_trades),
+                'forced_trades': len(forced_trades),
                 'avg_profit_by_duration': avg_profit_by_duration,
-                'best_bucket': max(
-                    avg_profit_by_duration.items(),
-                    key=lambda x: x[1]) if avg_profit_by_duration else None}
+                'forced_closure_rates': forced_closure_rates,
+                'best_bucket': max(avg_profit_by_duration.items(), key=lambda x: x[1]) if avg_profit_by_duration else None
+            }
 
         except Exception as e:
-            logger.error(
-                f"Error analyzing symbol holding performance "
-                f"for {symbol}: {e}")
+            logger.error(f"Error analyzing symbol holding performance for {symbol}: {e}")
             return None
 
     def calculate_optimal_holding_times(self, symbol: str) -> Optional[dict]:
-        """Calculate optimal holding times for a specific symbol"""
+        """Calculate optimal holding times for a specific symbol, considering forced closures"""
         try:
             analysis = self.analyze_symbol_holding_performance(symbol)
             if not analysis or not analysis['best_bucket']:
@@ -1993,6 +2541,7 @@ class AdaptiveLearningManager:
 
             best_bucket = analysis['best_bucket'][0]
             best_avg_profit = analysis['best_bucket'][1]
+            forced_rates = analysis.get('forced_closure_rates', {})
 
             # Convert bucket to optimal holding hours
             bucket_ranges = {
@@ -2008,16 +2557,40 @@ class AdaptiveLearningManager:
             }
 
             if best_bucket in bucket_ranges:
-                optimal_hours, max_minutes, min_minutes = \
-                    bucket_ranges[best_bucket]
+                optimal_hours, max_minutes, min_minutes = bucket_ranges[best_bucket]
 
-                # Calculate confidence score based on profit difference and
-                # sample size
+                # Adjust optimal times based on forced closure analysis
+                # If forced closure rate in best bucket is high (>30%), consider extending time
+                best_bucket_forced_rate = forced_rates.get(best_bucket, 0)
+                if best_bucket_forced_rate > 0.3 and best_avg_profit > 0.1:  # High forced rate but good profits
+                    # Extend optimal time by 25% to capture more profit potential
+                    optimal_hours *= 1.25
+                    max_minutes = min(max_minutes * 1.25, 480)  # Cap at 8 hours
+                    logger.info(f"Extending optimal holding time for {symbol} due to high forced closure rate ({best_bucket_forced_rate:.1%}) with good profits")
+
+                # If forced closures in earlier buckets have good profits, consider shortening time
+                early_buckets = ['0-1h', '1-2h', '2-3h']
+                high_profit_forced_closures = 0
+                for bucket in early_buckets:
+                    if bucket in forced_rates and forced_rates[bucket] > 0.2:
+                        bucket_profits = analysis['avg_profit_by_duration'].get(bucket, 0)
+                        if bucket_profits > 0.05:  # Good profits in early forced closures
+                            high_profit_forced_closures += 1
+
+                if high_profit_forced_closures >= 2:
+                    # Shorten optimal time since good profits are being cut off early
+                    optimal_hours *= 0.8
+                    min_minutes = max(min_minutes * 0.8, 15)  # Minimum 15 minutes
+                    logger.info(f"Shortening optimal holding time for {symbol} due to profitable early forced closures")
+
+                # Calculate confidence score based on profit difference and sample size
                 all_profits = list(analysis['avg_profit_by_duration'].values())
                 if len(all_profits) > 1:
                     profit_std = np.std(all_profits)
-                    confidence = min(1.0,
-                                     best_avg_profit / (profit_std + 0.01))
+                    base_confidence = min(1.0, best_avg_profit / (profit_std + 0.01))
+                    # Adjust confidence based on forced closure data availability
+                    forced_closure_ratio = analysis['forced_trades'] / max(analysis['total_trades'], 1)
+                    confidence = base_confidence * (0.8 + 0.2 * forced_closure_ratio)  # Boost confidence with forced closure data
                 else:
                     confidence = 0.5
 
@@ -2029,15 +2602,18 @@ class AdaptiveLearningManager:
                     'best_bucket': best_bucket,
                     'best_avg_profit': best_avg_profit,
                     'total_trades': analysis['total_trades'],
+                    'natural_trades': analysis['natural_trades'],
+                    'forced_trades': analysis['forced_trades'],
+                    'forced_closure_rate_best_bucket': best_bucket_forced_rate,
                     'confidence_score': confidence,
-                    'avg_profit_by_duration': json.dumps(
-                        analysis['avg_profit_by_duration'])}
+                    'avg_profit_by_duration': json.dumps(analysis['avg_profit_by_duration']),
+                    'forced_closure_rates': json.dumps(forced_rates)
+                }
 
             return None
 
         except Exception as e:
-            logger.error(
-                f"Error calculating optimal holding times for {symbol}: {e}")
+            logger.error(f"Error calculating optimal holding times for {symbol}: {e}")
             return None
 
     def update_symbol_holding_times(self, symbol: str):
@@ -2054,10 +2630,10 @@ class AdaptiveLearningManager:
             cursor.execute('''
                 INSERT OR REPLACE INTO symbol_holding_times
                 (symbol, optimal_holding_hours, max_holding_minutes,
-                 min_holding_minutes,
-                 avg_profit_by_duration, total_trades, last_updated,
-                 confidence_score)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                 min_holding_minutes, avg_profit_by_duration, total_trades,
+                 last_updated, confidence_score, natural_trades, forced_trades,
+                 forced_closure_rate_best_bucket, forced_closure_rates)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 optimal_times['symbol'],
                 optimal_times['optimal_holding_hours'],
@@ -2066,7 +2642,11 @@ class AdaptiveLearningManager:
                 optimal_times['avg_profit_by_duration'],
                 optimal_times['total_trades'],
                 datetime.now(),
-                optimal_times['confidence_score']
+                optimal_times['confidence_score'],
+                optimal_times.get('natural_trades'),
+                optimal_times.get('forced_trades'),
+                optimal_times.get('forced_closure_rate_best_bucket'),
+                optimal_times.get('forced_closure_rates')
             ))
 
             conn.commit()
@@ -4436,3 +5016,256 @@ class AdaptiveLearningManager:
 
         except Exception as e:
             logger.error(f"Error applying regime parameters: {e}")
+
+    def learn_from_logs(self, log_date: str = None):
+        """
+        Learn from trading logs for a specific date or the most recent available
+
+        Args:
+            log_date: Date in YYYY_MM_DD format, or None for auto-detection
+        """
+        try:
+            if not self.log_learning_enabled:
+                logger.info("Log learning is disabled")
+                return
+
+            # Determine which log file to process
+            if log_date is None:
+                log_date = self._get_latest_log_date()
+
+            if log_date is None:
+                logger.info("No log files found for learning")
+                return
+
+            log_file_path = os.path.join(self.log_directory, f'FX-Ai_{log_date}.log')
+
+            if not os.path.exists(log_file_path):
+                logger.warning(f"Log file not found: {log_file_path}")
+                print(f"ERROR: Log file not found: {log_file_path}")
+                return
+
+            logger.info(f"Learning from log file: {log_file_path}")
+            print(f"Processing log file: {log_file_path}")
+
+            # Parse and learn from the log
+            trades_learned = self._parse_and_learn_from_log(log_file_path, log_date)
+
+            if trades_learned > 0:
+                logger.info(f"Successfully learned from {trades_learned} trades in {log_date} log")
+                print(f"Successfully learned from {trades_learned} trades in {log_date} log")
+                self.last_processed_log_date = log_date
+                self._save_log_learning_state()
+            else:
+                logger.info(f"No new trades found in {log_date} log")
+                print(f"WARNING: No trades found in {log_date} log")
+
+        except Exception as e:
+            logger.error(f"Error learning from logs: {e}")
+
+    def _get_latest_log_date(self) -> str:
+        """Get the date of the most recent log file"""
+        try:
+            if not os.path.exists(self.log_directory):
+                return None
+
+            log_files = [f for f in os.listdir(self.log_directory)
+                        if f.startswith('FX-Ai_') and f.endswith('.log')]
+
+            if not log_files:
+                return None
+
+            # Extract dates and find the latest
+            dates = []
+            for log_file in log_files:
+                try:
+                    date_str = log_file.replace('FX-Ai_', '').replace('.log', '')
+                    # Convert YYYY_MM_DD to datetime for comparison
+                    year, month, day = map(int, date_str.split('_'))
+                    dates.append((datetime(year, month, day), date_str))
+                except ValueError:
+                    continue
+
+            if dates:
+                latest_date = max(dates, key=lambda x: x[0])
+                return latest_date[1]
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error finding latest log date: {e}")
+            return None
+
+    def _parse_and_learn_from_log(self, log_file_path: str, log_date: str) -> int:
+        """
+        Parse log file and learn from trade data
+
+        Args:
+            log_file_path: Path to the log file
+            log_date: Date string for the log
+
+        Returns:
+            int: Number of trades learned from
+        """
+        trades_learned = 0
+        lines_checked = 0
+
+        try:
+            with open(log_file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                for line in f:
+                    lines_checked += 1
+                    trade_data = self._parse_trade_line(line.strip(), log_date)
+                    if trade_data:
+                        print(f"Found trade: {trade_data['symbol']} {trade_data['profit_pct']:.2f}% ({trade_data['duration_minutes']} min)")
+                        self._learn_from_parsed_trade(trade_data)
+                        trades_learned += 1
+                    
+                    # Show progress and sample lines for debugging
+                    if lines_checked <= 20:
+                        # Show more sample lines to understand the format
+                        if 'trade' in line.lower() or 'position' in line.lower() or 'profit' in line.lower() or 'loss' in line.lower():
+                            print(f"Trade-related line {lines_checked}: {line.strip()}")
+                        elif lines_checked <= 10:
+                            print(f"Sample line {lines_checked}: {line.strip()[:120]}...")
+                    elif lines_checked % 100000 == 0:
+                        print(f"Processed {lines_checked} lines, found {trades_learned} trades so far...")
+
+        except Exception as e:
+            logger.error(f"Error parsing log file {log_file_path}: {e}")
+            print(f"ERROR: Error parsing log file: {e}")
+
+        print(f"Total lines checked: {lines_checked}, Trades found: {trades_learned}")
+        return trades_learned
+
+    def _parse_trade_line(self, line: str, log_date: str) -> dict:
+        """
+        Parse a single log line for trade completion data
+
+        Args:
+            line: Log line to parse
+            log_date: Date string for the log
+
+        Returns:
+            dict: Parsed trade data or None if not a trade line
+        """
+        try:
+            # Look for trade completion messages
+            if 'Trade completed -' not in line:
+                return None
+
+            # Extract timestamp from log line (format: "2025-11-10 14:30:25,123 - INFO - Trade completed - EURUSD: WIN 2.45% Duration: 45 minutes")
+            timestamp_match = re.search(r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})', line)
+            if not timestamp_match:
+                return None
+
+            timestamp_str = timestamp_match.group(1)
+            timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+
+            # Extract trade data using regex
+            trade_pattern = r'Trade completed - (\w+): (WIN|LOSS) ([+-]?\d+\.\d+)% Duration: (\d+) minutes'
+            match = re.search(trade_pattern, line)
+
+            if not match:
+                return None
+
+            symbol, outcome, profit_pct_str, duration_str = match.groups()
+
+            # Parse data
+            profit_pct = float(profit_pct_str)
+            duration_minutes = int(duration_str)
+
+            # Determine direction and prices (estimated)
+            # This is a simplification - in a real system you'd want more detailed parsing
+            direction = 'BUY' if profit_pct > 0 else 'SELL'  # Simplified assumption
+            entry_price = 1.0  # Placeholder - would need more parsing for real prices
+            exit_price = entry_price * (1 + profit_pct / 100) if direction == 'BUY' else entry_price * (1 - profit_pct / 100)
+
+            trade_data = {
+                'timestamp': timestamp,
+                'symbol': symbol,
+                'direction': direction,
+                'entry_price': entry_price,
+                'exit_price': exit_price,
+                'profit': profit_pct,  # Database expects 'profit' field
+                'profit_pct': profit_pct,
+                'duration_minutes': duration_minutes,
+                'volume': 0.01,  # Default lot size
+                'signal_strength': 0.7,  # Default
+                'ml_score': 0.6,  # Default
+                'technical_score': 0.8,  # Default
+                'sentiment_score': 0.5,  # Default
+                'model_version': 'log_imported'
+            }
+
+            return trade_data
+
+        except Exception as e:
+            logger.debug(f"Error parsing trade line: {e}")
+            return None
+
+    def _learn_from_parsed_trade(self, trade_data: dict):
+        """Learn from a parsed trade by recording it in the database"""
+        try:
+            # Record the trade in the database for learning
+            self.record_trade(trade_data)
+
+            # Trigger immediate learning adjustments
+            self.trigger_immediate_learning(trade_data)
+
+            logger.debug(f"Learned from parsed trade: {trade_data['symbol']} {trade_data['profit_pct']:.2f}%")
+
+        except Exception as e:
+            logger.error(f"Error learning from parsed trade: {e}")
+
+    def _save_log_learning_state(self):
+        """Save the log learning state to config"""
+        try:
+            config_path = 'config/adaptive_weights.json'
+            if os.path.exists(config_path):
+                with open(config_path, 'r') as f:
+                    config_data = json.load(f)
+            else:
+                config_data = {}
+
+            config_data['last_processed_log_date'] = self.last_processed_log_date
+
+            with open(config_path, 'w') as f:
+                json.dump(config_data, f, indent=2, default=str)
+
+        except Exception as e:
+            logger.error(f"Error saving log learning state: {e}")
+
+    def auto_learn_from_previous_day_logs(self):
+        """Automatically learn from the previous trading day's logs based on server time"""
+        try:
+            if not self.auto_learn_from_logs:
+                return
+
+            # Get yesterday's date in server time
+            from datetime import timedelta
+            yesterday = datetime.now() - timedelta(days=1)
+            yesterday_log_date = yesterday.strftime('%Y_%m_%d')
+
+            # Also check today's date in case trading just finished
+            today = datetime.now()
+            today_log_date = today.strftime('%Y_%m_%d')
+
+            # Determine which date to process
+            log_date_to_process = None
+
+            # Check if we should process today's log (if it's after 23:00)
+            if today.hour >= 23 and self.last_processed_log_date != today_log_date:
+                log_date_to_process = today_log_date
+                logger.info(f"Processing today's log after trading hours: {today_log_date}")
+            # Otherwise process yesterday's log if not already processed
+            elif self.last_processed_log_date != yesterday_log_date:
+                log_date_to_process = yesterday_log_date
+                logger.info(f"Processing previous day log: {yesterday_log_date}")
+            else:
+                logger.debug(f"Already processed logs for both today ({today_log_date}) and yesterday ({yesterday_log_date})")
+                return
+
+            if log_date_to_process:
+                self.learn_from_logs(log_date_to_process)
+
+        except Exception as e:
+            logger.error(f"Error in auto log learning: {e}")

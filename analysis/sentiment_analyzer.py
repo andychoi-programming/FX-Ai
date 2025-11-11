@@ -423,10 +423,10 @@ class SentimentAnalyzer:
                 adjustments['tp_pips'] = base_tp_pips * 1.2  # Extend TP by 20%
                 adjustments['reason'] = 'strong_bearish_sentiment'
 
-            # Neutral sentiment: slightly tighten both
+            # Neutral sentiment: slightly tighten both (reduced from 5% to 2%)
             elif 0.4 <= sentiment_score <= 0.6:
-                adjustments['sl_pips'] = base_sl_pips * 0.95  # Tighten SL by 5%
-                adjustments['tp_pips'] = base_tp_pips * 0.95  # Tighten TP by 5%
+                adjustments['sl_pips'] = base_sl_pips * 0.98  # Tighten SL by 2%
+                adjustments['tp_pips'] = base_tp_pips * 0.98  # Tighten TP by 2%
                 adjustments['reason'] = 'neutral_sentiment'
 
             return adjustments

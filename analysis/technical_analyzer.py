@@ -588,12 +588,12 @@ class TechnicalAnalyzer:
             # Check support/resistance proximity
             sr_data = technical_signals.get('support_resistance', {})
             if sr_data.get('near_resistance'):
-                # Near resistance - tighten TP
-                adjustments['tp_pips'] = base_tp_pips * 0.9
+                # Near resistance - slightly tighten TP (reduced from 10% to 3%)
+                adjustments['tp_pips'] = base_tp_pips * 0.97
                 adjustments['reason'] = 'near_resistance'
             elif sr_data.get('near_support'):
-                # Near support - tighten SL
-                adjustments['sl_pips'] = base_sl_pips * 0.9
+                # Near support - slightly tighten SL (reduced from 10% to 3%)
+                adjustments['sl_pips'] = base_sl_pips * 0.97
                 adjustments['reason'] = 'near_support'
 
             return adjustments

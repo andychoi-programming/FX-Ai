@@ -52,6 +52,40 @@ class TradingEngine:
 
         logger.info("Trading Engine initialized with position monitoring")
 
+    def sync_with_mt5_positions(self) -> None:
+        """Sync internal position tracking with existing MT5 positions"""
+        try:
+            # Get all positions from MT5
+            positions = mt5.positions_get()  # type: ignore
+            
+            if positions is None:
+                logger.warning("Failed to get positions from MT5")
+                return
+            
+            synced_count = 0
+            for position in positions:
+                # Only sync positions with our magic number
+                if position.magic == self.magic_number:
+                    # Add to active positions tracking
+                    self.active_positions[position.ticket] = {
+                        'symbol': position.symbol,
+                        'type': 'buy' if position.type == mt5.ORDER_TYPE_BUY else 'sell',
+                        'volume': position.volume,
+                        'entry': position.price_open,
+                        'sl': position.sl,
+                        'tp': position.tp,
+                        'timestamp': datetime.fromtimestamp(position.time)
+                    }
+                    synced_count += 1
+            
+            if synced_count > 0:
+                logger.info(f"Synced {synced_count} existing positions from MT5")
+            else:
+                logger.info("No existing positions found to sync")
+                
+        except Exception as e:
+            logger.error(f"Error syncing with MT5 positions: {e}")
+
     def get_filling_mode(self, symbol):
         """Get the correct filling mode for a symbol"""
         info = mt5.symbol_info(symbol)  # type: ignore
@@ -560,7 +594,7 @@ class TradingEngine:
                 'error': str(e)
             }
 
-    async def manage_positions(self, symbol: str):
+    async def manage_positions(self, symbol: str, time_manager=None, adaptive_learning=None):
         """Manage open positions for a symbol - ASYNC"""
         try:
             positions = mt5.positions_get(symbol=symbol)  # type: ignore
@@ -615,7 +649,7 @@ class TradingEngine:
                         tp_increased = await self.update_take_profit(position)
 
                         # Check for adaptive learning updates to SL/TP
-                        await self.check_adaptive_sl_tp_adjustment(position)
+                        await self.check_adaptive_sl_tp_adjustment(position, adaptive_learning)
 
                         # Only apply breakeven and trailing stops if TP was
                         # increased
@@ -632,18 +666,17 @@ class TradingEngine:
         except Exception as e:
             logger.error(f"Error managing positions: {e}")
 
-    async def check_adaptive_sl_tp_adjustment(self, position):
+    async def check_adaptive_sl_tp_adjustment(self, position, adaptive_learning=None):
         """Check if position SL/TP should be adjusted based on adaptive learning"""
         try:
-            if not hasattr(
-                    self, 'adaptive_learning') or not self.adaptive_learning:  # type: ignore
+            if not adaptive_learning:
                 return
 
             # Convert position time to datetime
             trade_timestamp = datetime.fromtimestamp(position.time)
 
             # Check if there are updated SL/TP parameters for this symbol
-            adjustment_needed = self.adaptive_learning.should_adjust_existing_trade(  # type: ignore
+            adjustment_needed = adaptive_learning.should_adjust_existing_trade(
                 position.symbol, position.sl, position.tp, trade_timestamp)
 
             if not adjustment_needed.get('should_adjust', False):
@@ -1468,12 +1501,17 @@ class TradingEngine:
                 return False
 
             # Determine order type for closing
+            tick = mt5.symbol_info_tick(position.symbol)  # type: ignore
+            if not tick:
+                logger.error(f"Failed to get tick data for {position.symbol} - cannot close position")
+                return False
+                
             if position.type == mt5.ORDER_TYPE_BUY:
                 order_type = mt5.ORDER_TYPE_SELL
-                price = mt5.symbol_info_tick(position.symbol).bid  # type: ignore
+                price = tick.bid
             else:
                 order_type = mt5.ORDER_TYPE_BUY
-                price = mt5.symbol_info_tick(position.symbol).ask  # type: ignore
+                price = tick.ask
 
             # Create close request
             request = {

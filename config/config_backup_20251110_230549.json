@@ -49,7 +49,6 @@
     "min_lot_size": 0.01,
     "max_lot_size": 1.0,
     "max_daily_loss": 500.0,
-    "min_risk_reward_ratio": 1.9,
     "enable_news_filter": true,
     "enable_session_filter": true,
     "day_trading_only": true,
@@ -71,13 +70,7 @@
       "day_trading_only": true,
       "close_before_weekend": true,
       "close_on_shutdown": true,
-      "trading_days_only": [
-        0,
-        1,
-        2,
-        3,
-        4
-      ],
+      "trading_days_only": [0, 1, 2, 3, 4],
       "avoid_market_open_close": true,
       "market_open_buffer_hours": 1,
       "market_close_buffer_hours": 2,
@@ -104,7 +97,7 @@
       "min_signal_strength": 0.4,
       "max_spread": 3.0,
       "min_risk_reward_ratio": 1.9,
-      "require_ml_confirmation": false,
+      "require_ml_confirmation": true,
       "require_technical_confirmation": true,
       "_comment": "Signal must be >0.4 strength, spread <3 pips, RR >2:1"
     },
@@ -150,7 +143,7 @@
       "enabled": true,
       "preferred_sessions": [
         "london",
-        "newyork",
+        "newyork", 
         "overlap"
       ],
       "require_overlap": true,
@@ -253,56 +246,20 @@
     "adaptive_thresholds": true,
     "known_relationships": {
       "positive_strong": [
-        [
-          "EURUSD",
-          "GBPUSD"
-        ],
-        [
-          "EURUSD",
-          "EURGBP"
-        ],
-        [
-          "EURUSD",
-          "EURJPY"
-        ],
-        [
-          "EURUSD",
-          "EURCHF"
-        ],
-        [
-          "GBPUSD",
-          "GBPJPY"
-        ],
-        [
-          "GBPUSD",
-          "GBPCHF"
-        ],
-        [
-          "AUDUSD",
-          "NZDUSD"
-        ],
-        [
-          "AUDUSD",
-          "AUDNZD"
-        ]
+        ["EURUSD", "GBPUSD"],
+        ["EURUSD", "EURGBP"],
+        ["EURUSD", "EURJPY"],
+        ["EURUSD", "EURCHF"],
+        ["GBPUSD", "GBPJPY"],
+        ["GBPUSD", "GBPCHF"],
+        ["AUDUSD", "NZDUSD"],
+        ["AUDUSD", "AUDNZD"]
       ],
       "negative_strong": [
-        [
-          "USDCHF",
-          "EURUSD"
-        ],
-        [
-          "EURJPY",
-          "USDJPY"
-        ],
-        [
-          "USDCHF",
-          "GBPUSD"
-        ],
-        [
-          "USDJPY",
-          "GBPUSD"
-        ]
+        ["USDCHF", "EURUSD"],
+        ["EURJPY", "USDJPY"],
+        ["USDCHF", "GBPUSD"],
+        ["USDJPY", "GBPUSD"]
       ]
     },
     "_comment": "Advanced correlation-aware trading: dynamic monitoring, learning-based decisions, allows correlated pairs to trade simultaneously"
@@ -719,11 +676,5 @@
     "sl_tighten_threshold": 30,
     "sl_tighten_percentage": 0.5,
     "_comment": "Monitor fundamentals every 5 minutes. Exit if high-impact news within 15 mins, tighten SL if within 30 mins"
-  },
-  "_temporary_setting": {
-    "note": "ML confirmation disabled temporarily to allow trading while models rebuild",
-    "date": "2025-11-10T23:06:56.445842",
-    "revert_after": "Models retrained (24-48 hours)",
-    "revert_action": "Set require_ml_confirmation back to true"
   }
 }

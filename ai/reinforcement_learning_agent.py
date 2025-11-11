@@ -290,7 +290,7 @@ class RLAgent:
         action_map = {'hold': 0, 'buy': 1, 'sell': 2, 'close_position': 3}
         return action_map.get(action, 0)
 
-    def calculate_reward(self, entry_price: float, exit_price: float, direction: str, duration_minutes: int) -> float:
+    def calculate_reward(self, entry_price: float, exit_price: float, direction: str, duration_minutes: int, closure_reason: str = 'natural_exit') -> float:
         """
         Calculate reward for a completed trade
 
@@ -299,6 +299,7 @@ class RLAgent:
             exit_price: Exit price
             direction: Trade direction ('BUY' or 'SELL')
             duration_minutes: Trade duration in minutes
+            closure_reason: Reason for trade closure ('natural_exit', 'market_close_buffer', etc.)
 
         Returns:
             float: Reward value
@@ -311,6 +312,23 @@ class RLAgent:
 
         # Base reward from P&L (normalized)
         reward = pnl / entry_price * 100  # Percentage return
+
+        # Adjust reward based on closure reason
+        if closure_reason == 'market_close_buffer':
+            # Forced closure provides learning data about exit timing
+            # Reduce penalty for forced exits since they teach optimal timing
+            if reward < 0:
+                # Less penalty for losses due to forced exit - system learns timing
+                reward *= 0.7  # Reduce loss penalty by 30%
+            else:
+                # Small bonus for profits from forced exits - good timing learning
+                reward *= 1.1  # Increase profit reward by 10%
+        elif closure_reason == 'weekend_closure':
+            # Similar to market close buffer but for weekends
+            if reward < 0:
+                reward *= 0.8  # Reduce loss penalty by 20%
+            else:
+                reward *= 1.05  # Small bonus for weekend closures
 
         # Duration penalty (prefer shorter trades if profitable, longer if losing)
         if reward > 0:

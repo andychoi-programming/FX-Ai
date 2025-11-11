@@ -426,10 +426,10 @@ class FundamentalAnalyzer:
                 quote_rate = rates.get(quote_currency, 0)
                 rate_diff = abs(base_rate - quote_rate)
 
-                # High interest rate differential increases volatility
+                # High interest rate differential increases volatility (reduced adjustments)
                 if rate_diff > 2.0:  # More than 2% difference
-                    adjustments['sl_pips'] = base_sl_pips * 1.2
-                    adjustments['tp_pips'] = base_tp_pips * 1.1  # Slightly increase TP too
+                    adjustments['sl_pips'] = base_sl_pips * 1.1  # Reduced from 20% to 10%
+                    adjustments['tp_pips'] = base_tp_pips * 1.05  # Reduced from 10% to 5%
                     adjustments['reason'] = 'high_rate_volatility'
 
             return adjustments

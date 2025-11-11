@@ -99,18 +99,38 @@ class FXAiApplication:
 
         # Performance tracking
         self.session_stats = {
-            'start_time': datetime.now(),
+            'start_time': self.get_current_mt5_time(),
             'total_trades': 0,
             'winning_trades': 0,
             'losing_trades': 0,
             'total_profit': 0.0,
             'models_retrained': 0,
-            'parameters_optimized': 0
+            'parameters_optimized': 0,
+            'rl_models_saved': 0
         }
 
         # Setup signal handlers
         signal.signal(signal.SIGINT, self.shutdown_handler)
         signal.signal(signal.SIGTERM, self.shutdown_handler)
+
+    def get_current_mt5_time(self) -> datetime:
+        """
+        Get current MT5 server time for consistent timestamping across the system.
+        This ensures all trading decisions and logging use the same time source.
+        
+        Returns:
+            datetime: MT5 server time or local time as fallback
+        """
+        try:
+            if self.mt5:
+                server_time = self.mt5.get_server_time()
+                if server_time:
+                    return server_time
+        except Exception as e:
+            self.logger.warning(f"Failed to get MT5 server time: {e}")
+        
+        # Fallback to local time if MT5 time unavailable
+        return datetime.now()
 
     async def validate_configuration(self):
         """Validate critical configuration before trading starts"""
@@ -235,7 +255,7 @@ class FXAiApplication:
             # Risk Manager
             self.logger.info("Initializing risk manager...")
             db_path = os.path.join('data', 'performance_history.db')
-            self.risk_manager = RiskManager(self.config, db_path=db_path)
+            self.risk_manager = RiskManager(self.config, db_path=db_path, mt5_connector=self.mt5)
 
             # Market Data Manager
             self.logger.info("Initializing market data manager...")
@@ -297,6 +317,10 @@ class FXAiApplication:
                 self.ml_predictor,
                 self.adaptive_learning  # Pass adaptive learning as last positional arg
             )
+
+            # Sync with existing MT5 positions on startup
+            self.logger.info("Syncing with existing MT5 positions...")
+            self.trading_engine.sync_with_mt5_positions()
 
             self.logger.info(" All components initialized successfully")
             return True
@@ -548,8 +572,16 @@ class FXAiApplication:
                         f"Sent:{sentiment_score:.3f})"
                     )
 
-                    # Apply adaptive minimum threshold
-                    min_threshold = 0.4  # Lowered from 0.5 to allow trading during European session
+                    # Apply symbol-specific minimum thresholds to increase trade frequency
+                    # Lower thresholds for forex pairs to allow more trading opportunities
+                    metal_symbols = ['XAU', 'XAG', 'GOLD']
+                    if any(metal in symbol for metal in metal_symbols):
+                        # Keep higher threshold for metals due to higher volatility/risk
+                        min_threshold = 0.5
+                    else:
+                        # Lower threshold for forex pairs to increase trade frequency
+                        min_threshold = 0.3  # Reduced from 0.4 to allow more forex trading
+
                     self.logger.info(
                         f"{symbol}: threshold={min_threshold:.3f}, "
                         f"strength={signal_strength:.3f}")
@@ -731,7 +763,7 @@ class FXAiApplication:
                                 base_tp_distance = atr_value * tp_atr_multiplier
 
                                 # Convert distances back to pips for analyzer input
-                                pip_size = 0.0001 if symbol.endswith(('JPY', 'XAG')) else 0.0001
+                                pip_size = 0.01 if symbol.endswith('JPY') else 0.0001
                                 base_sl_pips = base_sl_distance / pip_size
                                 base_tp_pips = base_tp_distance / pip_size
 
@@ -798,7 +830,7 @@ class FXAiApplication:
                             take_profit_distance = final_tp_pips * pip_size
                         else:
                             # For forex, convert pips back to distance
-                            pip_size = 0.0001 if symbol.endswith(('JPY', 'XAG')) else 0.0001
+                            pip_size = 0.01 if symbol.endswith('JPY') else 0.0001
                             stop_loss_distance = final_sl_pips * pip_size
                             take_profit_distance = final_tp_pips * pip_size
 
@@ -840,10 +872,11 @@ class FXAiApplication:
                             reward_distance = abs(take_profit - entry_price)
                             actual_ratio = reward_distance / risk_distance if risk_distance > 0 else 0
 
-                            if actual_ratio < 2.0:  # Lowered from 2.9 to 2.0 for European session
+                            min_ratio = self.config.get('trading', {}).get('min_risk_reward_ratio', 2.0)
+                            if actual_ratio < min_ratio:
                                 self.logger.info(
                                     f"{symbol} {action} rejected: insufficient " f"reward ratio {
-                                        actual_ratio:.2f}:1 " f"(required: 2.0:1)")
+                                        actual_ratio:.2f}:1 " f"(required: {min_ratio}:1)")
                                 continue  # Skip this trade
 
                             self.logger.info(
@@ -917,7 +950,7 @@ class FXAiApplication:
                         signal['technical_score'] = technical_score
                         signal['sentiment_score'] = sentiment_score
                         signal['rl_decision'] = rl_decision
-                        signal['timestamp'] = datetime.now()
+                        signal['timestamp'] = self.get_current_mt5_time()
                         signal['adaptive_params'] = adaptive_params
 
                         # Add signal to list (freeze fixed by disabling AdaptiveLearningManager database)
@@ -943,6 +976,30 @@ class FXAiApplication:
                     if not is_allowed:
                         self.logger.info(f"Trading halted: {reason}")
                         signals = []  # Clear all signals to prevent trading
+
+                # Check optimal entry timing for generated signals
+                if signals and self.adaptive_learning:
+                    try:
+                        filtered_signals = []
+                        for signal in signals:
+                            timing_analysis = self.adaptive_learning.get_optimal_entry_timing(signal['symbol'])
+                            
+                            # Only allow signals with good timing or low confidence (let it learn)
+                            if timing_analysis['recommended'] or timing_analysis['confidence'] < 0.3:
+                                filtered_signals.append(signal)
+                                self.logger.debug(f"Signal allowed for {signal['symbol']}: "
+                                                f"timing_score={timing_analysis['timing_score']:.2f}, "
+                                                f"confidence={timing_analysis['confidence']:.2f}")
+                            else:
+                                self.logger.info(f"Signal filtered for {signal['symbol']} due to poor timing: "
+                                               f"timing_score={timing_analysis['timing_score']:.2f}")
+                        
+                        signals = filtered_signals
+                        self.logger.info(f"Timing analysis filtered signals: {len(signals)} remaining")
+                        
+                    except Exception as e:
+                        self.logger.warning(f"Error in timing analysis: {e}")
+                        # Continue with original signals if timing analysis fails
 
                 # 4. Execute trades with risk management
                 if signals:
@@ -1203,6 +1260,9 @@ class FXAiApplication:
                             self.risk_manager.record_trade(signal['symbol'])  # type: ignore
                             self.logger.info(f"{signal['symbol']}: Trade executed and recorded - no more trades allowed today")
 
+                            # Log active positions after successful trade
+                            await self._log_active_positions()
+
                             # ===== REINFORCEMENT LEARNING EXPERIENCE =====
                             if self.reinforcement_agent and self.reinforcement_agent.enabled:
                                 try:
@@ -1235,7 +1295,8 @@ class FXAiApplication:
                                         'action': action_taken,
                                         'entry_price': signal['entry_price'],
                                         'symbol': signal['symbol'],
-                                        'timestamp': datetime.now()
+                                        'timestamp': self.get_current_mt5_time(),
+                                        'closure_reason': 'natural_exit'  # Default, will be updated if forced closure
                                     }
 
                                     # Store in RL agent for learning when trade closes
@@ -1250,7 +1311,7 @@ class FXAiApplication:
                             # Record trade for learning
                             if self.adaptive_learning:
                                 trade_data = {
-                                    'timestamp': datetime.now(),
+                                    'timestamp': self.get_current_mt5_time(),
                                     'symbol': signal['symbol'],
                                     'direction': signal['action'],
                                     'entry_price': trade_result.get(
@@ -1271,8 +1332,12 @@ class FXAiApplication:
                                 ).start()
 
                 # 5. Monitor and update positions
+                print(f"DEBUG: About to start position monitoring for {len(symbols)} symbols")
+                self.logger.info(f"Starting position monitoring for {len(symbols)} symbols")
                 for symbol in symbols:
-                    await self.trading_engine.manage_positions(symbol)  # type: ignore
+                    print(f"DEBUG: Monitoring positions for {symbol}")
+                    self.logger.info(f"Monitoring positions for {symbol}")
+                    await self.trading_engine.manage_positions(symbol, self.time_manager, self.adaptive_learning)  # type: ignore
 
                     # NEW: Monitor correlation changes for open positions
                     if self.correlation_manager and hasattr(self.correlation_manager, 'monitor_correlation_changes'):
@@ -1315,13 +1380,26 @@ class FXAiApplication:
 
                     self.session_stats['models_retrained'] += 1
 
-                # 7. Check for day trading closure
-                if self.config.get('trading', {}).get(
-                        'day_trading_only', True):
-                    try:
-                        await self.check_day_trading_closure()
-                    except Exception as e:
-                        self.logger.error(f"Error in day trading closure: {e}")
+                    # Save RL model periodically
+                    if self.reinforcement_agent:
+                        try:
+                            self.reinforcement_agent.save_model()
+                            self.logger.info("RL model saved during periodic evaluation")
+                        except Exception as e:
+                            self.logger.error(f"Error saving RL model during evaluation: {e}")
+
+                    # Auto-learn from previous day logs (every 6 hours)
+                    if self.adaptive_learning and loop_count % (360 * 6) == 0:
+                        try:
+                            self.adaptive_learning.auto_learn_from_previous_day_logs()
+                        except Exception as e:
+                            self.logger.error(f"Error in auto log learning: {e}")
+
+                # 7. Check for time-based closure (always check after 22:00)
+                try:
+                    await self.check_time_based_closure()
+                except Exception as e:
+                    self.logger.error(f"Error in time-based closure: {e}")
 
                 # Sleep before next iteration
                 await asyncio.sleep(10)
@@ -1388,7 +1466,7 @@ class FXAiApplication:
                         trade_data['profit'] = history.get('profit', 0)
                         trade_data['profit_pct'] = profit_pct
                         trade_data['duration_minutes'] = (
-                            datetime.now() - trade_data['timestamp']).seconds // 60
+                            self.get_current_mt5_time() - trade_data['timestamp']).seconds // 60
                         trade_data['volume'] = history.get('volume', 0)
 
                         # Record trade result for cooldown management
@@ -1431,17 +1509,22 @@ class FXAiApplication:
                                 if hasattr(self.reinforcement_agent, 'pending_experiences') and ticket in self.reinforcement_agent.pending_experiences:
                                     experience = self.reinforcement_agent.pending_experiences[ticket]
 
-                                    # Calculate reward based on trade outcome
+                                    # Add closure reason to experience for learning
+                                    closure_reason = getattr(experience, 'closure_reason', 'natural_exit')
+
+                                    # Calculate reward based on trade outcome and closure reason
                                     reward = self.reinforcement_agent.calculate_reward(
                                         experience['entry_price'],
                                         exit_price,
                                         trade_data['direction'],
-                                        trade_data['duration_minutes']
+                                        trade_data['duration_minutes'],
+                                        closure_reason=closure_reason
                                     )
 
                                     # Create next state (position closed)
                                     next_state = experience['initial_state'].copy()
                                     next_state['position_status'] = 0  # Position closed
+                                    next_state['closure_reason'] = closure_reason  # Add closure reason to state
 
                                     # Learn from this experience
                                     self.reinforcement_agent.update_q_table(
@@ -1451,10 +1534,19 @@ class FXAiApplication:
                                         next_state
                                     )
 
+                                    # Save RL model periodically (every 10 trades)
+                                    self.session_stats['rl_models_saved'] += 1
+                                    if self.session_stats['rl_models_saved'] % 10 == 0:
+                                        try:
+                                            self.reinforcement_agent.save_model()
+                                            self.logger.debug(f"RL model saved after {self.session_stats['rl_models_saved']} trades")
+                                        except Exception as e:
+                                            self.logger.error(f"Error saving RL model after trade: {e}")
+
                                     # Remove from pending experiences
                                     del self.reinforcement_agent.pending_experiences[ticket]
 
-                                    self.logger.debug(f"RL updated: action={experience['action']}, reward={reward:.4f}")
+                                    self.logger.debug(f"RL updated: action={experience['action']}, reward={reward:.4f}, reason={closure_reason}")
 
                             except Exception as e:
                                 self.logger.warning(f"Failed to update RL agent: {e}")
@@ -1477,7 +1569,52 @@ class FXAiApplication:
                 else:
                     # Position still open - check time-based exit conditions
                     holding_minutes = (
-                        datetime.now() - trade_data['timestamp']).seconds // 60
+                        self.get_current_mt5_time() - trade_data['timestamp']).seconds // 60
+
+                    # Check for immediate closure after 22:00 MT5 time
+                    current_time = self.time_manager.get_current_time()
+                    current_time_only = current_time.time()
+                    immediate_close_time = self.time_manager.MT5_IMMEDIATE_CLOSE_TIME
+                    
+                    if current_time_only >= immediate_close_time:
+                        self.logger.info(
+                            f"Immediately closing {trade_data['symbol']} position - after {immediate_close_time.strftime('%H:%M')} MT5 time")
+                        try:
+                            # Close position at market
+                            close_result = asyncio.run(self.trading_engine.close_position(position))  # type: ignore
+                            if close_result:
+                                self.logger.info(f"Successfully closed position for immediate time-based exit")
+
+                                # Store closure reason in pending experience for RL learning
+                                if hasattr(self.reinforcement_agent, 'pending_experiences') and ticket in self.reinforcement_agent.pending_experiences:
+                                    self.reinforcement_agent.pending_experiences[ticket]['closure_reason'] = f"immediate_close_after_{immediate_close_time.strftime('%H:%M')}"
+
+                            else:
+                                self.logger.warning(f"Failed to close position for immediate time-based exit")
+                        except Exception as e:
+                            self.logger.error(f"Error closing position for immediate time-based exit: {e}")
+                        break
+
+                    # Check for time-based closure (market close buffer)
+                    should_close_time, close_reason = self.time_manager.should_close_positions()
+                    if should_close_time:
+                        self.logger.info(
+                            f"Closing {trade_data['symbol']} position due to time-based exit: {close_reason}")
+                        try:
+                            # Close position at market
+                            close_result = asyncio.run(self.trading_engine.close_position(position))  # type: ignore
+                            if close_result:
+                                self.logger.info(f"Successfully closed position for time-based exit: {close_reason}")
+
+                                # Store closure reason in pending experience for RL learning
+                                if hasattr(self.reinforcement_agent, 'pending_experiences') and ticket in self.reinforcement_agent.pending_experiences:
+                                    self.reinforcement_agent.pending_experiences[ticket]['closure_reason'] = close_reason
+
+                            else:
+                                self.logger.warning(f"Failed to close position for time-based exit: {close_reason}")
+                        except Exception as e:
+                            self.logger.error(f"Error closing position for time-based exit: {e}")
+                        break
 
                     # Check maximum holding time
                     if holding_minutes >= max_holding_minutes:
@@ -1632,18 +1769,14 @@ class FXAiApplication:
         except Exception as e:
             self.logger.error(f"Error handling correlation action for {symbol}: {e}")
 
-    async def check_day_trading_closure(self):
-        """Check if positions should be closed for day trading - uses MT5 server time"""
+    async def check_time_based_closure(self):
+        """Check if positions should be closed based on time - always check after 22:00"""
         try:
-            if not self.config.get('trading', {}).get(
-                    'day_trading_only', True):
-                return
-
             # Use TimeManager for consistent time handling
             should_close, reason = self.time_manager.should_close_positions()
 
             if should_close:
-                self.logger.info(f"Day trading hours ending - closing all positions: {reason}")
+                self.logger.info(f"Time-based closure triggered - closing all positions: {reason}")
                 self._last_closure_date = self.time_manager._last_closure_date  # Sync with TimeManager
 
                 # Safe async handling for close_all_positions
@@ -1665,9 +1798,18 @@ class FXAiApplication:
                     self.logger.warning("Trading engine not initialized yet")
 
         except Exception as e:
-            self.logger.error(f"Error in day trading closure: {e}")
+            self.logger.error(f"Error in time-based closure: {e}")
 
-    def get_default_parameters(self) -> dict:
+    def learn_from_logs(self, log_date: str = None):
+        """Manually trigger learning from trading logs"""
+        try:
+            if self.adaptive_learning:
+                self.adaptive_learning.learn_from_logs(log_date)
+                self.logger.info(f"Completed learning from logs for date: {log_date or 'latest'}")
+            else:
+                self.logger.warning("Adaptive learning not initialized")
+        except Exception as e:
+            self.logger.error(f"Error learning from logs: {e}")
         """Get default trading parameters"""
         return {
             'rsi_oversold': 30,
@@ -1728,6 +1870,21 @@ class FXAiApplication:
                 self.logger.error(
                     f"Error scheduling close_all_positions on shutdown: {e}")
 
+        # Save learning state
+        if self.reinforcement_agent:
+            try:
+                self.reinforcement_agent.save_model()
+                self.logger.info("RL model saved successfully")
+            except Exception as e:
+                self.logger.error(f"Error saving RL model: {e}")
+
+        if self.adaptive_learning:
+            try:
+                self.adaptive_learning.save_signal_weights()
+                self.logger.info("Adaptive learning state saved successfully")
+            except Exception as e:
+                self.logger.error(f"Error saving adaptive learning state: {e}")
+
         # Stop clock synchronization - DISABLED
         # if self.clock_sync:
         #     self.clock_sync.stop_sync_thread()
@@ -1741,7 +1898,7 @@ class FXAiApplication:
 
     def print_session_summary(self):
         """Print trading session summary"""
-        duration = datetime.now() - self.session_stats['start_time']
+        duration = self.get_current_mt5_time() - self.session_stats['start_time']
 
         self.logger.info("=" * 60)
         self.logger.info("SESSION SUMMARY")
@@ -1764,6 +1921,8 @@ class FXAiApplication:
         if self.learning_enabled:
             self.logger.info(
                 f"Models Retrained: {self.session_stats['models_retrained']}")
+            self.logger.info(
+                f"RL Models Saved: {self.session_stats['rl_models_saved']}")
             self.logger.info(
                 f"Parameters Optimized: {
                     self.session_stats['parameters_optimized']}")
@@ -1803,6 +1962,42 @@ class FXAiApplication:
             self.logger.error(f"Fatal error: {e}")
         finally:
             self.shutdown()
+
+    async def _log_active_positions(self):
+        """Log all currently active positions for monitoring"""
+        try:
+            # Get all positions from MT5
+            positions = mt5.positions_get()
+            if positions is None:
+                positions = []
+
+            active_fxai_positions = []
+            for position in positions:
+                if hasattr(position, 'magic') and position.magic == self.magic_number:
+                    active_fxai_positions.append(position)
+
+            if active_fxai_positions:
+                self.logger.info(f"ACTIVE POSITIONS ({len(active_fxai_positions)}):")
+                for pos in active_fxai_positions:
+                    direction = "LONG" if pos.type == mt5.ORDER_TYPE_BUY else "SHORT"
+                    commission = getattr(pos, 'commission', 0.0)
+                    pnl = pos.profit + pos.swap + commission
+                    sl_display = f"{pos.sl:.5f}" if pos.sl > 0 else "None"
+                    tp_display = f"{pos.tp:.5f}" if pos.tp > 0 else "None"
+                    self.logger.info(
+                        f"  {pos.symbol} {direction} | "
+                        f"Size: {pos.volume:.2f} lots | "
+                        f"Entry: {pos.price_open:.5f} | "
+                        f"Current: {pos.price_current:.5f} | "
+                        f"P&L: ${pnl:.2f} | "
+                        f"SL: {sl_display} | "
+                        f"TP: {tp_display}"
+                    )
+            else:
+                self.logger.info("ACTIVE POSITIONS: None")
+
+        except Exception as e:
+            self.logger.error(f"Error logging active positions: {e}")
 
     async def fundamental_monitor_loop(self):
         """Background fundamental monitor that checks for breaking news every 5 minutes"""

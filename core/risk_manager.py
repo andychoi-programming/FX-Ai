@@ -18,10 +18,11 @@ logger = logging.getLogger(__name__)
 class RiskManager:
     """Risk management with proper position sizing for fixed dollar risk"""
     
-    def __init__(self, config: dict, db_path: Optional[str] = None):
+    def __init__(self, config: dict, db_path: Optional[str] = None, mt5_connector=None):
         """Initialize risk manager"""
         self.config = config
         self.db_path = db_path
+        self.mt5_connector = mt5_connector
         
         # Try to read from new trading_rules section, fallback to old locations
         trading_rules = config.get('trading_rules', {})
@@ -525,7 +526,19 @@ class RiskManager:
                    If success=False, DO NOT allow trading
         """
         try:
-            # Method 1: Direct mt5.time_current() - MOST RELIABLE
+            # Method 1: Use MT5 connector if available (preferred)
+            if self.mt5_connector:
+                try:
+                    server_time = self.mt5_connector.get_server_time()
+                    if server_time:
+                        date_str = server_time.strftime('%Y-%m-%d')
+                        timestamp = server_time.timestamp()
+                        logger.debug(f"MT5 connector time: {date_str} (timestamp: {timestamp})")
+                        return (date_str, timestamp, True)
+                except Exception as e:
+                    logger.warning(f"MT5 connector time failed: {e}")
+            
+            # Method 2: Direct mt5.time_current() - MOST RELIABLE
             if hasattr(mt5, 'time_current'):
                 server_timestamp = mt5.time_current()  # type: ignore
                 if server_timestamp and server_timestamp > 0:
@@ -534,7 +547,7 @@ class RiskManager:
                     logger.debug(f"MT5 time source: mt5.time_current() = {date_str} (timestamp: {server_timestamp})")
                     return (date_str, server_timestamp, True)
             
-            # Method 2: Get tick time from EURUSD (reliable major pair)
+            # Method 3: Get tick time from EURUSD (reliable major pair)
             tick = mt5.symbol_info_tick('EURUSD')  # type: ignore
             if tick and hasattr(tick, 'time') and tick.time > 0:
                 server_time_utc = datetime.fromtimestamp(tick.time, tz=UTC)

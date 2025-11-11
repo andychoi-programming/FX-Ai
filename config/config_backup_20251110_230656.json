@@ -49,7 +49,6 @@
     "min_lot_size": 0.01,
     "max_lot_size": 1.0,
     "max_daily_loss": 500.0,
-    "min_risk_reward_ratio": 1.9,
     "enable_news_filter": true,
     "enable_session_filter": true,
     "day_trading_only": true,
@@ -104,7 +103,7 @@
       "min_signal_strength": 0.4,
       "max_spread": 3.0,
       "min_risk_reward_ratio": 1.9,
-      "require_ml_confirmation": false,
+      "require_ml_confirmation": true,
       "require_technical_confirmation": true,
       "_comment": "Signal must be >0.4 strength, spread <3 pips, RR >2:1"
     },
@@ -719,11 +718,5 @@
     "sl_tighten_threshold": 30,
     "sl_tighten_percentage": 0.5,
     "_comment": "Monitor fundamentals every 5 minutes. Exit if high-impact news within 15 mins, tighten SL if within 30 mins"
-  },
-  "_temporary_setting": {
-    "note": "ML confirmation disabled temporarily to allow trading while models rebuild",
-    "date": "2025-11-10T23:06:56.445842",
-    "revert_after": "Models retrained (24-48 hours)",
-    "revert_action": "Set require_ml_confirmation back to true"
   }
 }

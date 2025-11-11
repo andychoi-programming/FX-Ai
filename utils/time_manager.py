@@ -25,6 +25,10 @@ class TimeManager:
     # Trading Hours Configuration
     MT5_CLOSE_TIME = time(22, 30)  # 22:30 MT5 server time (when we stop trading)
     MT5_CLOSE_BUFFER_END = time(23, 59)  # End of no-trade buffer (until midnight)
+    MT5_OPEN_TIME = time(0, 0)  # 00:00 MT5 server time (market open)
+    MT5_TRADING_START = time(1, 0)  # 01:00 MT5 server time (1 hour after open)
+    MT5_FORCE_CLOSE_TIME = time(20, 30)  # 20:30 MT5 server time (2 hours before close)
+    MT5_IMMEDIATE_CLOSE_TIME = time(22, 0)  # 22:00 MT5 server time (immediate close)
 
     # Forex Market Hours (EST - Eastern Standard Time)
     # Forex is 24/5 but we follow our own trading discipline
@@ -86,6 +90,7 @@ class TimeManager:
     def is_trading_allowed(self) -> Tuple[bool, str]:
         """
         Check if trading is currently allowed.
+        Trading allowed 1 hour after market open (01:00 MT5 time).
 
         Returns:
             Tuple[bool, str]: (is_allowed, reason)
@@ -103,6 +108,11 @@ class TimeManager:
             close_time_str = f"{self.MT5_CLOSE_TIME.hour:02d}:{self.MT5_CLOSE_TIME.minute:02d}"
             return False, f"After daily close time ({close_time_str} MT5 time)"
 
+        # Check if we're before trading start time (1 hour after market open)
+        if current_time_only < self.MT5_TRADING_START:
+            start_time_str = f"{self.MT5_TRADING_START.hour:02d}:{self.MT5_TRADING_START.minute:02d}"
+            return False, f"Before trading start time ({start_time_str} MT5 time)"
+
         # Check forex market hours (EST)
         if not self._is_forex_market_open():
             return False, "Forex market closed (outside EST trading hours)"
@@ -112,7 +122,8 @@ class TimeManager:
     def should_close_positions(self) -> Tuple[bool, str]:
         """
         Check if all positions should be closed.
-        Now AI-driven: only close before weekends and on shutdown, let AI learn optimal daily timing.
+        - Close all positions 2 hours before market close (20:30 MT5 time)
+        - Close any remaining positions immediately after 22:00 MT5 time
 
         Returns:
             Tuple[bool, str]: (should_close, reason)
@@ -129,8 +140,19 @@ class TimeManager:
             self._last_closure_date = current_date
             return True, "Friday evening - closing before weekend"
 
+        # Check if it's after immediate close time (22:00 MT5 time)
+        current_time_only = current_time.time()
+        if current_time_only >= self.MT5_IMMEDIATE_CLOSE_TIME:
+            self._last_closure_date = current_date
+            return True, f"After immediate close time ({self.MT5_IMMEDIATE_CLOSE_TIME.strftime('%H:%M')} MT5 time)"
+
+        # Check if it's time to close all positions (2 hours before market close)
+        if current_time_only >= self.MT5_FORCE_CLOSE_TIME:
+            self._last_closure_date = current_date
+            close_time_str = f"{self.MT5_FORCE_CLOSE_TIME.hour:02d}:{self.MT5_FORCE_CLOSE_TIME.minute:02d}"
+            return True, f"2 hours before market close ({close_time_str} MT5 time)"
+
         # Check if system is shutting down (this would be set externally)
-        # For now, only close on weekends
         if self._is_weekend(current_time.date()):
             return True, "Weekend - forex markets closed"
 
