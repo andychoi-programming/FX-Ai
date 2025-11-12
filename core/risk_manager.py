@@ -717,9 +717,10 @@ class RiskManager:
                 symbol_positions = [p for p in positions if hasattr(p, 'symbol') and p.symbol == symbol] if positions else []
                 logger.debug(f"Existing positions on {symbol}: {len(symbol_positions)}")
                 if symbol_positions:
-                    reason = f"Already have {len(symbol_positions)} position(s) on {symbol}, skipping"
-                    logger.warning(reason)
-                    return False, reason
+                    # Allow trading on symbols with existing positions for position management
+                    # but still check daily trade limits
+                    logger.info(f"{symbol}: Has {len(symbol_positions)} existing position(s) - allowing trade for position management")
+                    # Continue to daily trade limit checks below
 
         except Exception as e:
             logger.error(f"Error checking positions for {symbol}: {e}, allowing trade")

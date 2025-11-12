@@ -45,6 +45,9 @@ class AdaptiveLearningManager:
         self.backtest_engine = backtest_engine
         self.risk_manager = risk_manager
         self.mt5 = mt5_connector
+        
+        # Initialize logger
+        self.logger = logging.getLogger(__name__)
 
         # Initialize modular components
         self.db = LearningDatabase()
