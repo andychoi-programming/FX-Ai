@@ -114,9 +114,12 @@ class ComponentInitializer:
                 self.app.logger.warning("MT5 time sync failed, using local time for log filename")
 
             # Reconfigure logger to use ClockSynchronizer for server time
-            self.app.logger.info("Reconfiguring logger to use MT5 server time...")
-            self.app.logger = setup_logger(
-                'FX-Ai',
+            self.app.logger.info("Switching to MT5 server time for trading logs...")
+
+            # Create a separate trading logger that uses MT5 time
+            # Keep the startup logger for any remaining startup messages
+            trading_logger = setup_logger(
+                'FX-Ai-Trading',  # Separate logger for trading operations
                 self.app.config.get(
                     'logging',
                     {}).get(
@@ -133,6 +136,15 @@ class ComponentInitializer:
                         'size'),
                 mt5_connector=self.app.mt5,
                 clock_sync=self.app.clock_sync)
+
+            # Store the trading logger separately
+            # Startup logger (self.app.logger) keeps local time logs
+            # Trading logger (self.app.trading_logger) uses MT5 time
+            self.app.trading_logger = trading_logger
+
+            # Log the switch with both loggers
+            self.app.logger.info("Startup logger (local time) will continue for system messages")
+            self.app.trading_logger.info("Trading logger (MT5 server time) now active for trading operations")
 
             # Update all existing loggers to use ClockSynchronizer for server time
             from utils.logger import MT5TimeFormatter

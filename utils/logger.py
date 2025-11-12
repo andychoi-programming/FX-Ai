@@ -119,13 +119,13 @@ class MT5TimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
             # Valid MT5 time, generate filename
             date_suffix = current_mt5_time.strftime("_%Y_%m_%d.log")
             self.baseFilename = filename + date_suffix
-            self.logger.debug(f"Log file created with MT5 server date: {date_suffix}")
+            print(f"Log file created with MT5 server date: {date_suffix}")
         else:
             # MT5 time not available, use local time but mark for later correction
             local_time = datetime.now()
             date_suffix = local_time.strftime("_%Y_%m_%d.log")
             self.baseFilename = filename + date_suffix
-            self.logger.warning(f"MT5 time not available, using local time for log filename: {date_suffix}")
+            print(f"MT5 time not available, using local time for log filename: {date_suffix}")
             # Set flag to check for MT5 time on first log write
             self._needs_mt5_time_check = True
 

@@ -32,7 +32,8 @@ class TradingOrchestrator:
             app: The main FXAiApplication instance
         """
         self.app = app
-        self.logger = app.logger
+        # Use trading logger if available (MT5 time), otherwise fallback to main logger
+        self.logger = getattr(app, 'trading_logger', app.logger)
         self.config = app.config
         self.mt5 = app.mt5
         self.trading_engine = app.trading_engine
