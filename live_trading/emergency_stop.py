@@ -141,12 +141,21 @@ class EmergencyStop:
             # Filter orders by our magic number
             our_orders = [o for o in orders if hasattr(o, 'magic') and o.magic == self.magic_number]
 
-            logger.info(f"Found {len(our_orders)} pending orders with magic number {self.magic_number}")
+            logger.info(f"Found {len(our_orders)} orders with magic number {self.magic_number} out of {len(orders)} total orders")
+
+            # Debug: show details of first few orders
+            for i, order in enumerate(our_orders[:3]):
+                logger.info(f"Order {i+1}: ticket={order.ticket}, symbol={order.symbol}, type={order.type}, magic={getattr(order, 'magic', 'N/A')}, state={getattr(order, 'state', 'N/A')}")
 
             cancelled_count = 0
             for order in our_orders:
                 try:
-                    logger.info(f"Cancelling order: {order.symbol} ticket {order.ticket} (type: {order.type}, price: {order.price})")
+                    logger.info(f"Cancelling order: {order.symbol} ticket {order.ticket} (type: {order.type}, price: {getattr(order, 'price_open', 'N/A')}, state: {getattr(order, 'state', 'N/A')})")
+
+                    # Check if order is in a cancellable state
+                    if hasattr(order, 'state') and order.state != mt5.ORDER_STATE_PLACED:
+                        logger.warning(f"Order {order.ticket} is not in cancellable state (state: {order.state})")
+                        continue
 
                     # Cancel the order
                     result = mt5.order_send({
@@ -159,7 +168,11 @@ class EmergencyStop:
                         cancelled_count += 1
                     else:
                         error_code = result.retcode if result else 'Unknown'
-                        logger.error(f"Failed to cancel {order.symbol} order {order.ticket}: {error_code}")
+                        logger.error(f"Failed to cancel {order.symbol} order {order.ticket}: retcode={error_code}, comment={getattr(result, 'comment', 'N/A') if result else 'N/A'}")
+
+                    # Small delay to avoid overwhelming MT5
+                    import time
+                    time.sleep(0.1)
 
                 except Exception as e:
                     logger.error(f"Error cancelling order {order.ticket}: {e}")
