@@ -888,3 +888,48 @@ class CorrelationManager:
 
         except Exception as e:
             self.logger.error(f"Error updating correlation learning: {e}")
+
+    def get_pending_actions(self) -> Dict[str, Dict]:
+        """
+        Get pending correlation-based trading actions
+
+        Returns:
+            Dict of symbol -> action_dict where action_dict contains:
+            - action: 'exit_recommended', 'entry_recommended', or 'exit_consideration'
+            - confidence: float confidence score
+            - correlation: float correlation value
+            - correlated_symbol: str symbol that triggered the action
+        """
+        try:
+            pending_actions = {}
+
+            # Get correlation-based exit signals
+            exit_signals = self.get_correlation_based_exit_signals([], self.open_positions_symbols)
+            for signal in exit_signals:
+                symbol = signal.get('symbol')
+                if symbol and symbol not in pending_actions:
+                    pending_actions[symbol] = {
+                        'action': 'exit_recommended',
+                        'confidence': signal.get('confidence', 0.5),
+                        'correlation': signal.get('correlation', 0),
+                        'correlated_symbol': signal.get('correlated_symbol', '')
+                    }
+
+            # Get correlation-based entry signals
+            entry_signals = self.get_correlation_opportunity_signals(list(self.open_positions_symbols), [])
+            for signal in entry_signals:
+                symbol = signal.get('symbol')
+                if symbol and symbol not in pending_actions:
+                    pending_actions[symbol] = {
+                        'action': 'entry_recommended',
+                        'confidence': signal.get('confidence', 0.5),
+                        'correlation': signal.get('correlation', 0),
+                        'correlated_symbol': signal.get('correlated_symbol', '')
+                    }
+
+            self.logger.debug(f"Found {len(pending_actions)} pending correlation actions")
+            return pending_actions
+
+        except Exception as e:
+            self.logger.error(f"Error getting pending correlation actions: {e}")
+            return {}

@@ -37,7 +37,7 @@ class RiskManager:
         # Position limits
         position_limits = trading_rules.get('position_limits', {})
         self.max_positions = position_limits.get('max_positions', trading_config.get('max_positions', 3))
-        self.max_trades_per_symbol_per_day = position_limits.get('max_trades_per_symbol_per_day', 1)
+        self.max_trades_per_symbol_per_day = position_limits.get('max_trades_per_symbol_per_day', 3)
         
         # Entry rules
         entry_rules = trading_rules.get('entry_rules', {})
@@ -669,8 +669,12 @@ class RiskManager:
         # Save to database for persistence
         self._save_daily_trade_count(symbol, current_date, self.daily_trades_per_symbol[symbol]['count'])
 
-    def can_trade(self, symbol: str) -> bool:
-        """Quick check if trading is allowed"""
+    def can_trade(self, symbol: str) -> tuple[bool, str]:
+        """Quick check if trading is allowed
+        
+        Returns:
+            tuple: (can_trade: bool, reason: str)
+        """
         
         # Check and reset daily loss if it's a new trading day
         self._check_and_reset_daily_loss()
@@ -679,13 +683,15 @@ class RiskManager:
         
         # CHECK #1: Daily trade limit per symbol (ONE TRADE PER DAY)
         if self.has_traded_today(symbol):
-            logger.warning(f"{symbol}: Already traded today - ONE trade per symbol per day limit")
-            return False
+            reason = f"{symbol}: Already traded today - ONE trade per symbol per day limit"
+            logger.warning(reason)
+            return False, reason
         
         # CHECK #2: Daily loss limit
         if self.daily_loss >= self.max_daily_loss:
-            logger.warning(f"Daily loss limit reached: ${self.daily_loss:.2f}")
-            return False
+            reason = f"Daily loss limit reached: ${self.daily_loss:.2f}"
+            logger.warning(reason)
+            return False, reason
 
         try:
             positions = mt5.positions_get()  # type: ignore
@@ -705,8 +711,9 @@ class RiskManager:
             logger.debug(f"Current position count: {position_count}, max_positions: {self.max_positions}")
             
             if position_count >= self.max_positions:
-                logger.warning(f"Max positions reached: {position_count} >= {self.max_positions}")
-                return False
+                reason = f"Max positions reached: {position_count} >= {self.max_positions}"
+                logger.warning(reason)
+                return False, reason
 
             # Check if we already have a position on this symbol (optional)
             prevent_multiple = self.config.get('trading', {}).get('prevent_multiple_positions_per_symbol', True)
@@ -716,8 +723,9 @@ class RiskManager:
                 symbol_positions = [p for p in positions if hasattr(p, 'symbol') and p.symbol == symbol] if positions else []
                 logger.debug(f"Existing positions on {symbol}: {len(symbol_positions)}")
                 if symbol_positions:
-                    logger.warning(f"Already have {len(symbol_positions)} position(s) on {symbol}, skipping")
-                    return False
+                    reason = f"Already have {len(symbol_positions)} position(s) on {symbol}, skipping"
+                    logger.warning(reason)
+                    return False, reason
 
         except Exception as e:
             logger.error(f"Error checking positions for {symbol}: {e}, allowing trade")
@@ -730,14 +738,15 @@ class RiskManager:
             cooldown_end = self.symbol_cooldowns[symbol]
             if current_time < cooldown_end:
                 remaining_minutes = (cooldown_end - current_time).total_seconds() / 60
-                logger.warning(f"Symbol {symbol} is in cooldown for {remaining_minutes:.1f} more minutes")
-                return False
+                reason = f"Symbol {symbol} is in cooldown for {remaining_minutes:.1f} more minutes"
+                logger.warning(reason)
+                return False, reason
             else:
                 # Cooldown expired, remove it
                 del self.symbol_cooldowns[symbol]
 
         logger.debug(f"Can trade {symbol}: True")
-        return True
+        return True, "OK"
     
     def calculate_risk_for_lot_size(self, symbol: str, lot_size: float, stop_loss_pips: float) -> float:
         """Calculate the dollar risk for a given lot size and stop loss pips"""
@@ -876,3 +885,43 @@ class RiskManager:
         except Exception as e:
             logger.error(f"Error in check_trade_risk: {e}")
             return {'approved': False, 'max_volume': 0.0}
+
+    def check_emergency_stop(self) -> bool:
+        """
+        Check if emergency stop conditions are met
+
+        Returns:
+            bool: True if emergency stop should be triggered
+        """
+        try:
+            # Check and reset daily loss if it's a new day
+            self._check_and_reset_daily_loss()
+
+            # Emergency stop conditions
+            emergency_config = self.config.get('emergency_stop', {})
+
+            # Check daily loss limit (emergency threshold - higher than normal trading limit)
+            emergency_loss_limit = emergency_config.get('emergency_loss_limit', 500.0)  # $500 emergency limit
+            if self.daily_loss >= emergency_loss_limit:
+                logger.critical(f"Emergency stop triggered: Daily loss ${self.daily_loss:.2f} exceeds emergency limit ${emergency_loss_limit:.2f}")
+                return True
+
+            # Check if we've exceeded maximum consecutive losses
+            max_consecutive_losses = emergency_config.get('max_consecutive_losses', 10)
+            # This would require tracking consecutive losses - for now, just check daily loss
+
+            # Check if MT5 connection is lost (this would be a major emergency)
+            if hasattr(self, 'mt5_connector') and self.mt5_connector:
+                if not self.mt5_connector.is_connected():
+                    logger.critical("Emergency stop triggered: MT5 connection lost")
+                    return True
+
+            # Check for extreme market conditions (this could be expanded)
+            # For now, just return False as no emergency conditions met
+
+            return False
+
+        except Exception as e:
+            logger.error(f"Error checking emergency stop conditions: {e}")
+            # In case of error, be conservative and trigger emergency stop
+            return True
