@@ -141,16 +141,18 @@ class MT5TimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
             if self.clock_sync:
                 server_time = self.clock_sync.get_synced_time()
                 if server_time:
+                    print(f"MT5TimedRotatingFileHandler: Using clock_sync time: {server_time}")
                     return server_time
 
             # Fallback to direct MT5 connector
             elif self.mt5_connector:
                 server_time = self.mt5_connector.get_server_time()
                 if server_time:
+                    print(f"MT5TimedRotatingFileHandler: Using MT5 connector time: {server_time}")
                     return server_time
 
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"MT5TimedRotatingFileHandler: Exception getting MT5 time: {e}")
 
         # Final fallback to local time
         local_time = datetime.now()

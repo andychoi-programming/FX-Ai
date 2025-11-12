@@ -117,7 +117,7 @@ class ComponentInitializer:
             self.app.logger.info("Switching to MT5 server time for trading logs...")
 
             # Create a separate trading logger that uses MT5 time
-            # Keep the startup logger for any remaining startup messages
+            # Keep the startup logger for system initialization (local time initially, then MT5 time)
             trading_logger = setup_logger(
                 'FX-Ai-Trading',  # Separate logger for trading operations
                 self.app.config.get(
@@ -125,10 +125,7 @@ class ComponentInitializer:
                     {}).get(
                         'level',
                         'INFO'),
-                self.app.config.get(
-                    'logging',
-                    {}).get(
-                        'file'),
+                'D:/FX-Ai-Data/logs/FX-Trading',  # Different base filename for trading logs
                 rotation_type=self.app.config.get(
                     'logging',
                     {}).get(
