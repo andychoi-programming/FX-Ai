@@ -297,13 +297,25 @@ class TradingEngine:
         """Apply breakeven stop loss - delegated to StopLossManager"""
         await self.stop_loss_manager.apply_breakeven(position)
 
-
+    async def close_all_positions(self):
         """Close all positions - delegated to PositionCloser"""
         await self.position_closer.close_all_positions()
 
-    async def close_position(self, position, reason: str = "Manual close") -> bool:
-        """Close position - delegated to PositionCloser"""
-        return await self.position_closer.close_position(position, reason)
+    async def close_position_by_ticket(self, ticket: int, reason: str = "Manual close") -> bool:
+        """Close position by ticket number"""
+        try:
+            # Get position by ticket
+            position = self.get_position_by_ticket(ticket)
+            if not position:
+                logger.warning(f"Position with ticket {ticket} not found")
+                return False
+            
+            # Close the position
+            return await self.position_closer.close_position(position, reason)
+            
+        except Exception as e:
+            logger.error(f"Error closing position by ticket {ticket}: {e}")
+            return False
 
     def get_position_by_ticket(self, ticket: int):
         """Get position by ticket number"""

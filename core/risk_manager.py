@@ -728,6 +728,35 @@ class RiskManager:
             reason = f"Daily loss limit reached: ${self.daily_loss:.2f}"
             logger.warning(reason)
             return False, reason
+        
+        # CHECK #3: Time-based exit restriction - block trading after 22:00 MT5 server time
+        current_date, current_timestamp, time_success = self._get_mt5_server_date_reliable()
+        if time_success:
+            from datetime import time
+            current_time_obj = datetime.fromtimestamp(current_timestamp, tz=UTC).time()
+            exit_cutoff_time = time(22, 0)  # 22:00 MT5 server time - no trading after this
+            
+            if current_time_obj >= exit_cutoff_time:
+                reason = f"{symbol}: Trading not allowed after 22:00 MT5 server time (current: {current_time_obj.strftime('%H:%M')})"
+                logger.info(reason)
+                return False, reason
+        
+        # CHECK #4: Time-based entry restriction - only allow trading after 01:00 MT5 server time
+        current_date, current_timestamp, time_success = self._get_mt5_server_date_reliable()
+        if time_success:
+            from datetime import time
+            current_time_obj = datetime.fromtimestamp(current_timestamp, tz=UTC).time()
+            entry_cutoff_time = time(1, 0)  # 01:00 MT5 server time
+            
+            if current_time_obj < entry_cutoff_time:
+                reason = f"{symbol}: Trading not allowed before 01:00 MT5 server time (current: {current_time_obj.strftime('%H:%M')})"
+                logger.info(reason)
+                return False, reason
+        else:
+            # If we can't get MT5 time, block trading for safety
+            reason = f"{symbol}: Cannot verify MT5 server time - blocking trade for safety"
+            logger.error(reason)
+            return False, reason
 
         try:
             positions = mt5.positions_get()  # type: ignore

@@ -10,6 +10,7 @@ import json
 import time as time_module
 from typing import Dict, Any, Optional
 import MetaTrader5 as mt5
+from datetime import datetime
 
 from core.trading_engine import TradingEngine
 from core.risk_manager import RiskManager
@@ -66,30 +67,30 @@ class TradingOrchestrator:
                 if loop_count % 30 == 0:
                     self.logger.info(f"=== TRADING CYCLE #{loop_count} ===")
 
-                # 1. Log active positions every 6 loops (60 seconds)
+                # 1. Check for time-based closure FIRST (always check after 22:00)
+                await self.check_time_based_closure()
+
+                # 2. Log active positions every 6 loops (60 seconds)
                 if loop_count - last_position_log >= 6:
                     await self._log_active_positions()
                     last_position_log = loop_count
 
-                # 2. Check for new trading opportunities
+                # 3. Check for new trading opportunities
                 if loop_count % 30 == 0:  # Log opportunity checking every 5 minutes
                     self.logger.debug("Checking for new trading opportunities...")
                 await self._check_trading_opportunities()
 
-                # 3. Monitor existing positions and learning systems
+                # 4. Monitor existing positions and learning systems
                 await self._monitor_positions_and_learning(loop_count)
 
-                # 4. Handle correlation-based actions
+                # 5. Handle correlation-based actions
                 await self._process_correlation_actions()
 
-                # 5. Emergency stop check
+                # 6. Emergency stop check
                 await self._check_emergency_conditions()
 
-                # 6. Learning system maintenance
+                # 7. Learning system maintenance
                 await self._maintain_learning_systems(loop_count)
-
-                # 7. Check for time-based closure (always check after 22:00)
-                await self.check_time_based_closure()
 
                 # Sleep before next iteration
                 await asyncio.sleep(10)
@@ -130,6 +131,14 @@ class TradingOrchestrator:
                         trade_result = await self.trading_engine.execute_trade(signal)
                         if trade_result and trade_result.get('success', False):
                             self.logger.info(f"[{symbol}] OK Trade executed successfully - Ticket: {trade_result.get('ticket', 'N/A')}")
+                            
+                            # Record trade for daily limit tracking
+                            self.risk_manager.record_trade(symbol)
+                            
+                            # Record open trade in database for monitoring
+                            if self.adaptive_learning:
+                                self.adaptive_learning.record_open_trade(trade_result)
+                            
                             # Start monitoring this trade (skip in dry run mode)
                             dry_run = self.config.get('trading', {}).get('dry_run', False)
                             if not dry_run:
@@ -523,7 +532,7 @@ class TradingOrchestrator:
             holding_minutes = (
                 self.app.get_current_mt5_time() - trade_data['timestamp']).seconds // 60
 
-            # Check for immediate closure after 22:00 MT5 time
+            # ONLY RULE: Check for immediate closure after 22:00 MT5 time
             current_time = self.time_manager.get_current_time()
             current_time_only = current_time.time()
             immediate_close_time = self.time_manager.MT5_IMMEDIATE_CLOSE_TIME
@@ -532,20 +541,7 @@ class TradingOrchestrator:
                 await self._close_position_immediately(ticket, trade_data, immediate_close_time)
                 return
 
-            # Check for time-based closure (market close buffer)
-            should_close_time, close_reason = self.time_manager.should_close_positions()
-            if should_close_time:
-                await self._close_position_time_based(ticket, trade_data, close_reason)
-                return
-
-            # Check maximum holding time
-            if holding_minutes >= max_holding_minutes:
-                await self._close_position_max_time(ticket, trade_data, max_holding_minutes)
-                return
-
-            # Check optimal holding time with profit
-            if holding_minutes >= optimal_holding_minutes:
-                await self._check_optimal_time_exit(ticket, trade_data, position, optimal_holding_minutes)
+            # No other time-based closures - only SL/TP or manual closure
 
         except Exception as e:
             self.logger.error(f"Error checking open position exits for ticket {ticket}: {e}")
@@ -555,6 +551,10 @@ class TradingOrchestrator:
         try:
             self.logger.info(
                 f"Immediately closing {trade_data['symbol']} position - after {close_time.strftime('%H:%M')} MT5 time")
+            
+            # Set closure reason in trade_data for database recording
+            trade_data['closure_reason'] = f"immediate_close_after_{close_time.strftime('%H:%M')}"
+            
             close_result = await self.trading_engine.close_position_by_ticket(ticket)
             if close_result:
                 self.logger.info("Successfully closed position for immediate time-based exit")
@@ -726,9 +726,51 @@ class TradingOrchestrator:
                         self.logger.warning("close_all_positions method not found on trading_engine")
                 else:
                     self.logger.warning("Trading engine not initialized yet")
+            
+            # ADDITIONAL CHECK: Close orphaned positions that missed their closure time
+            await self._check_orphaned_positions()
 
         except Exception as e:
             self.logger.error(f"Error in time-based closure: {e}")
+
+    async def _check_orphaned_positions(self):
+        """Check for positions that should have been closed but were missed (e.g., due to system restart)"""
+        try:
+            # Get current MT5 time
+            current_time = self.time_manager.get_current_time()
+            current_time_only = current_time.time()
+            closure_time = self.time_manager.MT5_IMMEDIATE_CLOSE_TIME
+
+            # Only check if we're past closure time
+            if current_time_only < closure_time:
+                return
+
+            # Get all positions
+            positions = mt5.positions_get()
+            if positions is None:
+                positions = []
+
+            orphaned_positions = []
+            for position in positions:
+                if hasattr(position, 'magic') and position.magic == self.magic_number:
+                    # Check if position was opened before closure time
+                    open_time = datetime.fromtimestamp(position.time)
+                    if open_time.time() < closure_time:
+                        orphaned_positions.append(position)
+
+            if orphaned_positions:
+                self.logger.warning(f"Found {len(orphaned_positions)} orphaned positions that missed 22:00 closure")
+                
+                for pos in orphaned_positions:
+                    self.logger.info(f"Force closing orphaned position: {pos.symbol} ticket {pos.ticket}")
+                    close_result = await self.trading_engine.close_position_by_ticket(pos.ticket)
+                    if close_result:
+                        self.logger.info(f"Successfully closed orphaned position {pos.symbol} ticket {pos.ticket}")
+                    else:
+                        self.logger.error(f"Failed to close orphaned position {pos.symbol} ticket {pos.ticket}")
+
+        except Exception as e:
+            self.logger.error(f"Error checking orphaned positions: {e}")
 
     async def _log_active_positions(self):
         """Log all currently active positions with detailed metrics"""
@@ -1140,3 +1182,40 @@ class TradingOrchestrator:
                 await asyncio.sleep(60)  # Wait 1 minute before retrying
 
         self.logger.info("Fundamental Monitor stopped")
+
+    async def _check_orphaned_positions(self):
+        """Check for positions that should have been closed but were missed (e.g., due to system restart)"""
+        try:
+            # Get all open positions
+            positions = mt5.positions_get()
+            if not positions:
+                return
+            
+            current_time = self.time_manager.get_current_time()
+            current_time_only = current_time.time()
+            closure_time = self.time_manager.MT5_IMMEDIATE_CLOSE_TIME
+            
+            orphaned_positions = []
+            
+            for pos in positions:
+                # Check if this position was opened before closure time
+                open_time = datetime.fromtimestamp(pos.time)
+                if open_time.time() < closure_time:
+                    # This position should have been closed at 22:00
+                    orphaned_positions.append(pos)
+            
+            if orphaned_positions:
+                self.logger.warning(f"Found {len(orphaned_positions)} orphaned positions that missed 22:00 closure")
+                
+                for pos in orphaned_positions:
+                    self.logger.info(f"Force closing orphaned position: {pos.symbol} ticket {pos.ticket} (opened {datetime.fromtimestamp(pos.time).strftime('%H:%M:%S')})")
+                    
+                    # Close the position
+                    close_result = await self.trading_engine.close_position_by_ticket(pos.ticket)
+                    if close_result:
+                        self.logger.info(f"Successfully closed orphaned position {pos.symbol} ticket {pos.ticket}")
+                    else:
+                        self.logger.error(f"Failed to close orphaned position {pos.symbol} ticket {pos.ticket}")
+        
+        except Exception as e:
+            self.logger.error(f"Error checking orphaned positions: {e}")
