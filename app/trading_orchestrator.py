@@ -245,7 +245,7 @@ class TradingOrchestrator:
             direction = 'BUY' if technical_score > 0.5 else 'SELL'
 
             # Calculate position size
-            position_size = self.risk_manager.calculate_position_size(symbol, signal_strength)
+            position_size = self.risk_manager.calculate_position_size(symbol)
 
             # Get stop loss and take profit levels
             sl_tp = self.risk_manager.calculate_stop_loss_take_profit(

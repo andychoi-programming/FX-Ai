@@ -264,9 +264,12 @@ class OrderExecutor:
                     logger.error(f"Failed to get tick data for {symbol}")
                     return {'success': False,
                             'error': f'Failed to get tick data for {symbol}'}
-                if order_type.lower() in ['buy', 'buy_limit', 'buy_stop']:
+                # For market orders, use current market price
+                if order_type.lower() in ['buy', 'sell']:
+                    price = tick.ask if order_type.lower() == 'buy' else tick.bid
+                elif order_type.lower() in ['buy_limit', 'buy_stop']:
                     price = tick.ask
-                else:
+                else:  # sell_limit, sell_stop
                     price = tick.bid
 
             # Determine MT5 order type
@@ -316,7 +319,8 @@ class OrderExecutor:
                 if take_profit is not None:
                     take_profit = round(take_profit, symbol_info.digits)
                 
-                logger.info(f"[{symbol}] Recalculated SL/TP for {order_type} @ {price:.5f}: SL={stop_loss:.5f}, TP={take_profit:.5f if take_profit else None}")
+                tp_display = f"{take_profit:.5f}" if take_profit is not None else "None"
+                logger.info(f"[{symbol}] Recalculated SL/TP for {order_type} @ {price:.5f}: SL={stop_loss:.5f}, TP={tp_display}")
 
             # Adjust stop loss to meet minimum broker requirements
             if stop_loss is not None and price is not None:
@@ -349,12 +353,12 @@ class OrderExecutor:
                 }
 
             # Try different filling modes if the first one fails
+            preferred_filling_mode = self.get_filling_mode(symbol)
             filling_modes_to_try = [
-                0,  # Default filling mode
-                None,  # No filling mode specified
-                mt5.ORDER_FILLING_FOK,         # Fill or Kill
+                preferred_filling_mode,  # Preferred mode first
                 mt5.ORDER_FILLING_IOC,         # Immediate or Cancel
                 mt5.ORDER_FILLING_RETURN,      # Return remaining
+                mt5.ORDER_FILLING_FOK,         # Fill or Kill
             ]
             
             # Remove duplicates but keep order
@@ -383,11 +387,8 @@ class OrderExecutor:
                     if filling_mode is not None:
                         request["type_filling"] = filling_mode
 
-                    # Add stop loss and take profit if provided
-                    if stop_loss is not None:
-                        request["sl"] = stop_loss
-                    if take_profit is not None:
-                        request["tp"] = take_profit
+                    # Note: SL/TP will be set after order placement using TRADE_ACTION_SLTP
+                    # to avoid broker restrictions on including them in the initial request
 
                     logger.debug(f"Trying filling mode {filling_mode} ({type(filling_mode).__name__}) for {symbol}")
                     
@@ -538,18 +539,28 @@ class OrderExecutor:
                 return None
 
             # Calculate pending order price based on order type
-            # For buy orders, place slightly below current ask (buy limit)
-            # For sell orders, place slightly above current bid (sell limit)
+            # For buy orders, place below current ask (buy limit)
+            # For sell orders, place above current bid (sell limit)
             spread = (tick.ask - tick.bid) / symbol_info.point
-            pip_distance = 5  # Place 5 pips away from current price
+            
+            # Calculate minimum distance based on broker requirements
+            stops_level = getattr(symbol_info, 'trade_stops_level', 20)  # Default 20 points
+            min_distance_points = stops_level + 10  # Add margin
+            pip_distance = min_distance_points / 10  # Convert points to pips (for 5-digit brokers)
+            
+            # Ensure minimum distance
+            if 'JPY' in symbol:
+                pip_distance = max(pip_distance, 20)  # JPY pairs need more
+            else:
+                pip_distance = max(pip_distance, 20)  # Forex minimum 20 pips away
 
             if order_type.lower() in ['buy', 'buy_limit']:
                 # Buy limit: place below current ask
-                pending_price = tick.ask - (pip_distance * symbol_info.point)
+                pending_price = tick.ask - (pip_distance * symbol_info.point * 10)  # *10 for 5-digit
                 mt5_order_type = mt5.ORDER_TYPE_BUY_LIMIT
             elif order_type.lower() in ['sell', 'sell_limit']:
                 # Sell limit: place above current bid
-                pending_price = tick.bid + (pip_distance * symbol_info.point)
+                pending_price = tick.bid + (pip_distance * symbol_info.point * 10)
                 mt5_order_type = mt5.ORDER_TYPE_SELL_LIMIT
             else:
                 logger.error(f"Unsupported order type for pending order: {order_type}")

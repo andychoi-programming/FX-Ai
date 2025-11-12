@@ -233,6 +233,20 @@ class RiskManager:
             min_lot = symbol_info.volume_min
             max_lot = symbol_info.volume_max
             
+            # Check account balance and margin requirements
+            account_info = mt5.account_info()  # type: ignore
+            if account_info:
+                # Calculate required margin for this position
+                margin_required = mt5.order_calc_margin(mt5.ORDER_TYPE_BUY, symbol, lot_size, tick.ask)  # type: ignore
+                if margin_required is not None:
+                    available_margin = account_info.margin_free
+                    if margin_required > available_margin:
+                        # Reduce lot size to fit available margin
+                        max_lot_by_margin = available_margin / margin_required * lot_size
+                        lot_size = min(lot_size, max_lot_by_margin)
+                        lot_size = round(lot_size / lot_step) * lot_step
+                        logger.warning(f"Reduced lot size to {lot_size:.2f} due to margin constraints (${margin_required:.2f} required, ${available_margin:.2f} available)")
+            
             if lot_size < min_lot:
                 logger.warning(f"Calculated lot size {lot_size:.4f} below minimum {min_lot}")
                 lot_size = min_lot
@@ -745,10 +759,9 @@ class RiskManager:
                 symbol_positions = [p for p in positions if hasattr(p, 'symbol') and p.symbol == symbol] if positions else []
                 logger.debug(f"Existing positions on {symbol}: {len(symbol_positions)}")
                 if symbol_positions:
-                    # Allow trading on symbols with existing positions for position management
-                    # but still check daily trade limits
-                    logger.info(f"{symbol}: Has {len(symbol_positions)} existing position(s) - allowing trade for position management")
-                    # Continue to daily trade limit checks below
+                    reason = f"Multiple positions per symbol not allowed: {symbol} already has {len(symbol_positions)} position(s)"
+                    logger.warning(reason)
+                    return False, reason
 
         except Exception as e:
             logger.error(f"Error checking positions for {symbol}: {e}, allowing trade")
