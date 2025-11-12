@@ -447,8 +447,12 @@ class TimeManager:
             current_session = self.get_current_session()
             base_threshold = config.get('trading', {}).get('min_signal_strength', 0.600)
 
-            # Session-specific thresholds (lower during active sessions)
-            session_thresholds = {
+            # Try to get session-specific thresholds from config first
+            session_config = config.get('trading_rules', {}).get('session_filter', {})
+            config_thresholds = session_config.get('signal_thresholds', {})
+
+            # Default session-specific thresholds (can be overridden by config)
+            default_thresholds = {
                 'london': 0.550,    # Most active session - lower threshold
                 'newyork': 0.575,  # Second most active
                 'overlap': 0.550,  # Session overlaps are good
@@ -456,10 +460,12 @@ class TimeManager:
                 'none': 0.650      # Higher threshold when no active session
             }
 
+            # Use config thresholds if available, otherwise use defaults
+            session_thresholds = {**default_thresholds, **config_thresholds}
             session_threshold = session_thresholds.get(current_session, base_threshold)
 
-            # Ensure threshold doesn't go below 0.500 (too risky)
-            return max(0.500, min(session_threshold, base_threshold))
+            # Ensure threshold doesn't go below 0.400 (too risky)
+            return max(0.400, min(session_threshold, base_threshold))
 
         except Exception as e:
             logger.warning(f"Error getting session threshold: {e}")

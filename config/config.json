@@ -154,6 +154,13 @@
         "newyork",
         "overlap"
       ],
+      "signal_thresholds": {
+        "london": 0.550,
+        "newyork": 0.400,
+        "overlap": 0.550,
+        "tokyo": 0.600,
+        "none": 0.650
+      },
       "require_overlap": true,
       "min_overlap_hours": 2,
       "avoid_thin_liquidity": true,
