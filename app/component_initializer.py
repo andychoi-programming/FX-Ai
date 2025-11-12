@@ -105,6 +105,14 @@ class ComponentInitializer:
             self.app.clock_sync = ClockSynchronizer(self.app.mt5)
             self.app.clock_sync.start_sync_thread()
 
+            # Force immediate sync to get MT5 time for log filename
+            self.app.logger.info("Performing initial clock sync for log filename...")
+            sync_result = self.app.clock_sync.force_sync()
+            if sync_result.get('mt5_time'):
+                self.app.logger.info(f"MT5 time synchronized: {sync_result['mt5_time']}")
+            else:
+                self.app.logger.warning("MT5 time sync failed, using local time for log filename")
+
             # Reconfigure logger to use ClockSynchronizer for server time
             self.app.logger.info("Reconfiguring logger to use MT5 server time...")
             self.app.logger = setup_logger(
