@@ -507,9 +507,9 @@ class TechnicalAnalyzer:
             # EMA score (0.3 weight)
             ema = analysis.get('ema', {})
             ema_trend = ema.get('trend', 'neutral')
-            if ema_trend == 'bullish':
+            if ema_trend == 'bullish' or ema_trend == 'bullish_crossover':
                 ema_score = 0.7
-            elif ema_trend == 'bearish':
+            elif ema_trend == 'bearish' or ema_trend == 'bearish_crossover':
                 ema_score = 0.3
             else:
                 ema_score = 0.5
@@ -528,7 +528,11 @@ class TechnicalAnalyzer:
 
             # Volume score (0.15 weight)
             volume = analysis.get('volume', {})
-            volume_signal = volume.get('signal', 'neutral')
+            volume_increasing = volume.get('increasing', False)
+            if volume_increasing:
+                volume_signal = 'increasing'
+            else:
+                volume_signal = 'decreasing'
             if volume_signal == 'increasing':
                 volume_score = 0.6
             elif volume_signal == 'decreasing':
@@ -539,7 +543,14 @@ class TechnicalAnalyzer:
 
             # Support/Resistance score (0.1 weight)
             sr = analysis.get('support_resistance', {})
-            sr_signal = sr.get('signal', 'neutral')
+            near_resistance = sr.get('near_resistance', False)
+            near_support = sr.get('near_support', False)
+            if near_resistance:
+                sr_signal = 'resistance'
+            elif near_support:
+                sr_signal = 'support'
+            else:
+                sr_signal = 'neutral'
             if sr_signal == 'support':
                 sr_score = 0.7  # Near support
             elif sr_signal == 'resistance':

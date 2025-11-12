@@ -295,7 +295,7 @@ class FundamentalMonitor:
 
             # DECISION LOGIC:
 
-            # 1. HIGH IMPACT + IMMEDIATE (just happened) → Consider EXIT or TIGHTEN
+            # 1. HIGH IMPACT + IMMEDIATE (just happened) -> Consider EXIT or TIGHTEN
             if impact == 'high' and urgency == 'IMMEDIATE':
                 minutes_ago = event.get('minutes_ago', 0)
 
@@ -341,7 +341,7 @@ class FundamentalMonitor:
                     logger.info(f"HIGH IMPACT news, tightening SL for {symbol}")
                     return 'TIGHTEN_SL'
 
-            # 2. HIGH IMPACT + UPCOMING (about to happen) → TIGHTEN SL
+            # 2. HIGH IMPACT + UPCOMING (about to happen) -> TIGHTEN SL
             elif impact == 'high' and urgency == 'UPCOMING':
                 minutes_until = event.get('minutes_until', 999)
 
@@ -354,7 +354,7 @@ class FundamentalMonitor:
                         logger.info(f"HIGH IMPACT news in {minutes_until} mins, tightening SL for {symbol}")
                         return 'TIGHTEN_SL'
 
-            # 3. MEDIUM IMPACT + IMMEDIATE → TIGHTEN SL if not profitable
+            # 3. MEDIUM IMPACT + IMMEDIATE -> TIGHTEN SL if not profitable
             elif impact == 'medium' and urgency == 'IMMEDIATE':
                 if not is_profitable:
                     logger.info(f"MEDIUM IMPACT news, position at loss - tightening SL for {symbol}")

@@ -149,6 +149,15 @@ class AdaptiveLearningManager:
         """Record a trade in the database"""
         return self.db.record_trade(trade_data)
 
+    def record_open_trade(self, trade_data: dict):
+        """Record an open trade in the database for monitoring"""
+        # For open trades, set exit_price to None and other fields accordingly
+        open_trade_data = trade_data.copy()
+        open_trade_data['exit_price'] = None
+        open_trade_data['closure_reason'] = None
+        open_trade_data['forced_closure'] = 0
+        return self.db.record_trade(open_trade_data)
+
     def record_trade_closure(self, ticket: int, reason: str, entry_price: float, exit_price: float, symbol: str = None):
         """Record trade closure in database"""
         return self.db.record_trade_closure(ticket, reason, entry_price, exit_price, symbol)

@@ -1,4 +1,4 @@
-﻿"""
+"""
 FX-Ai Trading Engine - Refactored Version
 Orchestrates trading operations using modular components
 """
@@ -96,6 +96,63 @@ class TradingEngine:
         except Exception as e:
             logger.error(f"Error syncing with MT5 positions: {e}")
 
+    async def sync_and_record_mt5_positions(self, adaptive_learning=None) -> int:
+        """Sync with MT5 positions and record open trades in database for monitoring"""
+        try:
+            positions = mt5.positions_get()  # type: ignore
+            
+            if positions is None:
+                logger.warning("Failed to get positions from MT5")
+                return 0
+            
+            recorded_count = 0
+            for position in positions:
+                if position.magic == self.magic_number:
+                    # Record open trade in database
+                    trade_data = {
+                        'id': None,  # Will be auto-assigned
+                        'timestamp': datetime.fromtimestamp(position.time).isoformat(),
+                        'symbol': position.symbol,
+                        'direction': 'BUY' if position.type == mt5.ORDER_TYPE_BUY else 'SELL',
+                        'entry_price': position.price_open,
+                        'exit_price': None,  # Open trade
+                        'volume': position.volume,
+                        'profit': position.profit,
+                        'profit_pct': 0.0,  # Calculate if needed
+                        'signal_strength': 0.5,  # Default for manual trades
+                        'ml_score': 0.5,
+                        'technical_score': 0.5,
+                        'sentiment_score': 0.5,
+                        'duration_minutes': int((datetime.now() - datetime.fromtimestamp(position.time)).seconds / 60),
+                        'model_version': 'manual_sync',
+                        'closure_reason': None,
+                        'forced_closure': 0
+                    }
+                    
+                    if adaptive_learning and hasattr(adaptive_learning, 'record_open_trade'):
+                        adaptive_learning.record_open_trade(trade_data)
+                        recorded_count += 1
+                    
+                    # Also update active positions tracking
+                    self.active_positions[position.ticket] = {
+                        'symbol': position.symbol,
+                        'type': 'buy' if position.type == mt5.ORDER_TYPE_BUY else 'sell',
+                        'volume': position.volume,
+                        'entry': position.price_open,
+                        'sl': position.sl,
+                        'tp': position.tp,
+                        'timestamp': datetime.fromtimestamp(position.time)
+                    }
+            
+            if recorded_count > 0:
+                logger.info(f"Synced and recorded {recorded_count} open positions from MT5")
+            
+            return recorded_count
+                
+        except Exception as e:
+            logger.error(f"Error syncing and recording MT5 positions: {e}")
+            return 0
+
     def get_filling_mode(self, symbol):
         """Get the correct filling mode for a symbol"""
         info = mt5.symbol_info(symbol)  # type: ignore
@@ -181,6 +238,48 @@ class TradingEngine:
             }
 
         return result
+
+    async def execute_trade(self, signal: Dict) -> Optional[Dict]:
+        """Execute a trading signal - main entry point for trade execution"""
+        try:
+            symbol = signal['symbol']
+            direction = signal['direction']
+            volume = signal['position_size']
+            stop_loss = signal.get('stop_loss')
+            take_profit = signal.get('take_profit')
+            entry_price = signal.get('entry_price')
+
+            # Place the order
+            result = await self.place_order(
+                symbol=symbol,
+                order_type=direction,
+                volume=volume,
+                stop_loss=stop_loss,
+                take_profit=take_profit,
+                price=entry_price
+            )
+
+            if result.get('success', False):
+                # Add signal data to result for monitoring
+                result.update({
+                    'symbol': symbol,
+                    'direction': direction,
+                    'entry_price': entry_price,
+                    'position_size': volume,
+                    'stop_loss': stop_loss,
+                    'take_profit': take_profit,
+                    'technical_score': signal.get('technical_score', 0.5),
+                    'fundamental_score': signal.get('fundamental_score', 0.5),
+                    'sentiment_score': signal.get('sentiment_score', 0.5),
+                    'signal_strength': signal.get('signal_strength', 0.5),
+                    'timestamp': datetime.now()
+                })
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Error executing trade for {signal.get('symbol', 'unknown')}: {e}")
+            return None
 
     async def manage_positions(self, symbol: str, time_manager=None, adaptive_learning=None):
         """Manage open positions for a symbol - delegated to PositionManager"""

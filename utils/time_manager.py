@@ -375,10 +375,131 @@ class TimeManager:
             'mt5_time_available': self.get_mt5_server_time() is not None
         }
 
-    def reset_daily_closure_flag(self):
-        """Reset the daily closure flag (for testing or manual override)"""
-        self._last_closure_date = None
-        logger.info("Daily closure flag reset")
+    def get_current_session(self) -> str:
+        """
+        Get the current forex trading session.
+
+        Returns:
+            str: Current session ('london', 'newyork', 'tokyo', 'overlap', 'none')
+        """
+        try:
+            now_utc = datetime.now(self.UTC)
+            hour = now_utc.hour
+            minute = now_utc.minute
+
+            # Check for overlap periods first (most specific conditions)
+            if hour == 13 and minute < 30:  # London opens while NY still active
+                return 'overlap'
+            elif hour == 16 and minute < 30:  # London closes while NY still active
+                return 'overlap'
+
+            # New York session: 13:30-22:00 GMT
+            elif (hour == 13 and minute >= 30) or (14 <= hour < 22):
+                return 'newyork'
+
+            # London session: 08:00-16:00 GMT (most active)
+            elif 8 <= hour < 16:
+                return 'london'
+
+            # Tokyo session: 00:00-09:00 GMT
+            elif 0 <= hour < 9:
+                return 'tokyo'
+
+            else:
+                return 'none'
+
+        except Exception as e:
+            logger.warning(f"Error determining current session: {e}")
+            return 'none'
+
+    def is_preferred_session(self, config: dict) -> bool:
+        """
+        Check if current session is in preferred sessions list.
+
+        Args:
+            config: Configuration dictionary
+
+        Returns:
+            bool: True if current session is preferred
+        """
+        try:
+            current_session = self.get_current_session()
+            session_config = config.get('trading_rules', {}).get('session_filter', {})
+            preferred_sessions = session_config.get('preferred_sessions', [])
+
+            return current_session in preferred_sessions
+
+        except Exception as e:
+            logger.warning(f"Error checking preferred session: {e}")
+            return True  # Default to allowing if check fails
+
+    def get_session_signal_threshold(self, config: dict) -> float:
+        """
+        Get session-aware signal strength threshold.
+
+        Args:
+            config: Configuration dictionary
+
+        Returns:
+            float: Adjusted signal threshold for current session
+        """
+        try:
+            current_session = self.get_current_session()
+            base_threshold = config.get('trading', {}).get('min_signal_strength', 0.600)
+
+            # Session-specific thresholds (lower during active sessions)
+            session_thresholds = {
+                'london': 0.550,    # Most active session - lower threshold
+                'newyork': 0.575,  # Second most active
+                'overlap': 0.550,  # Session overlaps are good
+                'tokyo': 0.600,    # Standard threshold
+                'none': 0.650      # Higher threshold when no active session
+            }
+
+            session_threshold = session_thresholds.get(current_session, base_threshold)
+
+            # Ensure threshold doesn't go below 0.500 (too risky)
+            return max(0.500, min(session_threshold, base_threshold))
+
+        except Exception as e:
+            logger.warning(f"Error getting session threshold: {e}")
+            return config.get('trading', {}).get('min_signal_strength', 0.600)
+
+    def get_session_info(self) -> dict:
+        """
+        Get comprehensive session information.
+
+        Returns:
+            dict: Session details
+        """
+        try:
+            current_session = self.get_current_session()
+            now_utc = datetime.now(self.UTC)
+
+            session_hours = {
+                'london': {'start': 8, 'end': 16, 'name': 'London'},
+                'newyork': {'start': 13, 'end': 22, 'name': 'New York'},
+                'tokyo': {'start': 0, 'end': 9, 'name': 'Tokyo'},
+                'overlap': {'start': None, 'end': None, 'name': 'Session Overlap'},
+                'none': {'start': None, 'end': None, 'name': 'No Active Session'}
+            }
+
+            session_data = session_hours.get(current_session, session_hours['none'])
+
+            return {
+                'current_session': current_session,
+                'session_name': session_data['name'],
+                'session_start_hour': session_data['start'],
+                'session_end_hour': session_data['end'],
+                'current_hour_utc': now_utc.hour,
+                'is_active_session': current_session != 'none',
+                'is_london_session': current_session == 'london',
+                'is_overlap': current_session == 'overlap'
+            }
+
+        except Exception as e:
+            logger.warning(f"Error getting session info: {e}")
+            return {'error': str(e)}
 
 
 # Global instance for easy access

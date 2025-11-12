@@ -45,7 +45,7 @@ class PositionManager:
                         if alerts:
                             for alert in alerts:
                                 if "VERY TIGHT SL" in alert and str(position.ticket) in alert:
-                                    logger.error(f"🚨 PREVENTING AUTOMATED MANAGEMENT: {alert}")
+                                    logger.error(f"[ALERT] PREVENTING AUTOMATED MANAGEMENT: {alert}")
                                     logger.error("Position has suspiciously tight SL - skipping automated management")
                                     continue
 
@@ -56,7 +56,7 @@ class PositionManager:
                                 f"[ERROR] POSITION VALIDATION FAILED for "
                                 f"{position.symbol} position {position.ticket}:")
                             for issue in validation['issues']:
-                                logger.error(f"  • {issue}")
+                                logger.error(f"  - {issue}")
                             logger.error("Skipping automated management due to validation failures")
                             continue
 
@@ -199,7 +199,7 @@ class PositionManager:
             if sl_change < min_change_distance and tp_change < min_change_distance:
                 logger.debug(
                     f"SL/TP changes too small for {position.symbol}: "
-                    f"SL Δ{sl_change:.5f}, TP Δ{tp_change:.5f}")
+                    f"SL delta{sl_change:.5f}, TP delta{tp_change:.5f}")
                 return
 
             # Record the adjustment before making it
@@ -228,8 +228,8 @@ class PositionManager:
             if result.retcode == mt5.TRADE_RETCODE_DONE:
                 logger.info(
                     f"Adaptive SL/TP adjustment applied for {position.symbol} position "
-                    f"{position.ticket}: SL: {position.sl:.5f} → {new_sl:.5f}, "
-                    f"TP: {position.tp:.5f} → {new_tp:.5f} "
+                    f"{position.ticket}: SL: {position.sl:.5f} -> {new_sl:.5f}, "
+                    f"TP: {position.tp:.5f} -> {new_tp:.5f} "
                     f"(ATR: {current_atr:.5f}, SL mult: {sl_multiplier:.2f}, "
                     f"TP mult: {tp_multiplier:.2f})")
             else:

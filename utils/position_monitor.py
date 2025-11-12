@@ -82,13 +82,13 @@ class PositionMonitor:
             sl_change = current['sl'] - previous['sl']
             if abs(sl_change) > 0.001:  # Significant change
                 direction = "tightened" if abs(sl_change) < abs(previous['sl'] - current['price_open']) else "loosened"
-                changes.append(f"SL {direction}: {previous['sl']:.5f} → {current['sl']:.5f}")
+                changes.append(f"SL {direction}: {previous['sl']:.5f} -> {current['sl']:.5f}")
 
         # Check TP changes
         if previous['tp'] != current['tp']:
             tp_change = current['tp'] - previous['tp']
             if abs(tp_change) > 0.001:  # Significant change
-                changes.append(f"TP changed: {previous['tp']:.5f} → {current['tp']:.5f}")
+                changes.append(f"TP changed: {previous['tp']:.5f} -> {current['tp']:.5f}")
 
         # Check for suspicious SL changes (very tight stops)
         if current['sl'] > 0:
@@ -118,7 +118,7 @@ class PositionMonitor:
                 logger.warning(f"\n{'='*50}")
                 logger.warning(f"POSITION MONITOR ALERTS ({datetime.now()})")
                 for alert in alerts:
-                    logger.warning(f"• {alert}")
+                    logger.warning(f"- {alert}")
                 logger.warning(f"{'='*50}")
 
             await asyncio.sleep(interval_seconds)

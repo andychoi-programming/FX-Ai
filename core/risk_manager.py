@@ -54,7 +54,7 @@ class RiskManager:
         # Cooldown tracking to prevent immediate reopening after losses
         self.symbol_cooldowns = {}  # symbol -> cooldown_end_time
         
-        # Daily trade tracking per symbol (ONE TRADE PER SYMBOL PER DAY)
+        # Daily trade tracking per symbol (up to 3 trades per symbol per day)
         self.daily_trades_per_symbol = {}  # symbol -> {'date': 'YYYY-MM-DD', 'count': N}
         
         # Daily loss reset tracking
@@ -211,7 +211,7 @@ class RiskManager:
                     conversion_tick = mt5.symbol_info_tick(conversion_symbol)  # type: ignore
                     
                     if conversion_tick:
-                        # EURGBP pip value = 10 GBP × GBPUSD rate
+                        # EURGBP pip value = 10 GBP x GBPUSD rate
                         pip_value_per_lot = 10.0 * conversion_tick.bid
                     else:
                         # Fallback if can't get conversion
@@ -242,7 +242,7 @@ class RiskManager:
             
             # Verify the calculation
             actual_risk = lot_size * stop_loss_pips * pip_value_per_lot
-            logger.info(f"{symbol}: {lot_size:.2f} lots × {stop_loss_pips} pips × ${pip_value_per_lot:.2f} = ${actual_risk:.2f} risk")
+            logger.info(f"{symbol}: {lot_size:.2f} lots x {stop_loss_pips} pips x ${pip_value_per_lot:.2f} = ${actual_risk:.2f} risk")
             
             # Safety check
             if actual_risk > risk_amount * 1.1:  # Allow 10% tolerance
@@ -307,14 +307,18 @@ class RiskManager:
                                  order_type: str,
                                  entry_price: float,
                                  stop_loss_pips: float = 20) -> float:
-        """Calculate stop loss price based on pips - Fixed for JPY pairs"""
+        """Calculate stop loss price based on pips - Fixed for JPY pairs and metals"""
         try:
             symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
                 return 0.0
             
-            # Correct pip size for JPY pairs
-            if "JPY" in symbol:
+            # Correct pip size for different symbol types
+            if "XAU" in symbol:
+                pip_size = 0.10  # Gold: 1 pip = 0.10 price units
+            elif "XAG" in symbol:
+                pip_size = 0.01  # Silver: 1 pip = 0.01 price units (practical)
+            elif "JPY" in symbol:
                 pip_size = 0.01  # JPY pairs: 1 pip = 0.01 price units
             else:
                 pip_size = 0.0001  # Standard pairs: 1 pip = 0.0001 price units
@@ -339,20 +343,21 @@ class RiskManager:
                                    order_type: str,
                                    entry_price: float,
                                    take_profit_pips: float = 40) -> float:
-        """Calculate take profit price based on pips"""
+        """Calculate take profit price based on pips - Fixed for metals"""
         try:
             symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
                 return 0.0
             
-            point = symbol_info.point
-            digits = symbol_info.digits
-            
-            # Determine pip size
-            if digits == 3 or digits == 5:
-                pip_size = point * 10
+            # Correct pip size for different symbol types
+            if "XAU" in symbol:
+                pip_size = 0.10  # Gold: 1 pip = 0.10 price units
+            elif "XAG" in symbol:
+                pip_size = 0.01  # Silver: 1 pip = 0.01 price units (practical)
+            elif "JPY" in symbol:
+                pip_size = 0.01  # JPY pairs: 1 pip = 0.01 price units
             else:
-                pip_size = point
+                pip_size = 0.0001  # Standard pairs: 1 pip = 0.0001 price units
             
             # Calculate TP price based on order type
             if order_type.upper() == "BUY":
@@ -361,13 +366,36 @@ class RiskManager:
                 tp_price = entry_price - (take_profit_pips * pip_size)
             
             # Round to symbol digits
-            tp_price = round(tp_price, digits)
+            tp_price = round(tp_price, symbol_info.digits)
             
             return tp_price
             
         except Exception as e:
             logger.error(f"Error calculating take profit: {e}")
             return 0.0
+
+    def calculate_stop_loss_take_profit(self,
+                                       symbol: str,
+                                       entry_price: float,
+                                       direction: str) -> Dict[str, float]:
+        """Calculate stop loss and take profit levels for a trade"""
+        try:
+            # Get default SL/TP pips from config
+            sl_pips = self.config.get('trading', {}).get('default_sl_pips', 20)
+            tp_pips = self.config.get('trading', {}).get('default_tp_pips', 60)
+            
+            # Calculate SL and TP prices
+            sl_price = self.calculate_stop_loss_price(symbol, direction, entry_price, sl_pips)
+            tp_price = self.calculate_take_profit_price(symbol, direction, entry_price, tp_pips)
+            
+            return {
+                'stop_loss': sl_price,
+                'take_profit': tp_price
+            }
+            
+        except Exception as e:
+            logger.error(f"Error calculating stop loss and take profit: {e}")
+            return {'stop_loss': 0.0, 'take_profit': 0.0}
     
     def validate_trade_risk(self, 
                            symbol: str, 
@@ -675,9 +703,9 @@ class RiskManager:
         
         logger.debug(f"Checking if can trade {symbol}: daily_loss={self.daily_loss}, max_daily_loss={self.max_daily_loss}")
         
-        # CHECK #1: Daily trade limit per symbol (ONE TRADE PER DAY)
+        # CHECK #1: Daily trade limit per symbol (up to 3 trades per day)
         if self.has_traded_today(symbol):
-            reason = f"{symbol}: Already traded today - ONE trade per symbol per day limit"
+            reason = f"{symbol}: Daily trade limit reached - {self.max_trades_per_symbol_per_day} trades per symbol per day maximum"
             logger.warning(reason)
             return False, reason
         

@@ -119,13 +119,11 @@ class MT5TimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
             # Valid MT5 time, generate filename
             date_suffix = current_mt5_time.strftime("_%Y_%m_%d.log")
             self.baseFilename = filename + date_suffix
-            print(f"Log file created with MT5 server date: {date_suffix}")
         else:
             # MT5 time not available, use local time but mark for later correction
             local_time = datetime.now()
             date_suffix = local_time.strftime("_%Y_%m_%d.log")
             self.baseFilename = filename + date_suffix
-            print(f"MT5 time not available, using local time for log filename: {date_suffix}")
             # Set flag to check for MT5 time on first log write
             self._needs_mt5_time_check = True
 
@@ -141,22 +139,19 @@ class MT5TimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
             if self.clock_sync:
                 server_time = self.clock_sync.get_synced_time()
                 if server_time:
-                    print(f"MT5TimedRotatingFileHandler: Using clock_sync time: {server_time}")
                     return server_time
 
             # Fallback to direct MT5 connector
             elif self.mt5_connector:
                 server_time = self.mt5_connector.get_server_time()
                 if server_time:
-                    print(f"MT5TimedRotatingFileHandler: Using MT5 connector time: {server_time}")
                     return server_time
 
         except Exception as e:
-            print(f"MT5TimedRotatingFileHandler: Exception getting MT5 time: {e}")
+            pass
 
         # Final fallback to local time
         local_time = datetime.now()
-        print(f"MT5TimedRotatingFileHandler: Using local time fallback: {local_time}")
         return local_time
 
     def _checkAndCorrectFilename(self):
@@ -189,10 +184,9 @@ class MT5TimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
                     import os
                     if os.path.exists(self.baseFilename):
                         os.rename(self.baseFilename, expected_filename)
-                        print(f"Corrected log filename from local time to MT5 server time: {expected_filename}")
                     self.baseFilename = expected_filename
         except Exception as e:
-            print(f"Could not correct log filename: {e}")
+            pass
         finally:
             self._needs_mt5_time_check = False
 

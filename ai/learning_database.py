@@ -535,7 +535,7 @@ class LearningDatabase:
 
             conn.commit()
             conn.close()
-            logger.debug(f"Recorded position adjustment for ticket {ticket}: SL {old_sl:.5f}→{new_sl:.5f}, TP {old_tp:.5f}→{new_tp:.5f}")
+            logger.debug(f"Recorded position adjustment for ticket {ticket}: SL {old_sl:.5f}->{new_sl:.5f}, TP {old_tp:.5f}->{new_tp:.5f}")
 
         except Exception as e:
             logger.error(f"Error recording position adjustment: {e}")

@@ -62,12 +62,18 @@ class TradingOrchestrator:
             try:
                 loop_count += 1
 
+                # Log detailed status every 30 loops (5 minutes)
+                if loop_count % 30 == 0:
+                    self.logger.info(f"=== TRADING CYCLE #{loop_count} ===")
+
                 # 1. Log active positions every 6 loops (60 seconds)
                 if loop_count - last_position_log >= 6:
                     await self._log_active_positions()
                     last_position_log = loop_count
 
                 # 2. Check for new trading opportunities
+                if loop_count % 30 == 0:  # Log opportunity checking every 5 minutes
+                    self.logger.debug("Checking for new trading opportunities...")
                 await self._check_trading_opportunities()
 
                 # 3. Monitor existing positions and learning systems
@@ -96,29 +102,58 @@ class TradingOrchestrator:
         """Check for new trading opportunities across all symbols."""
         try:
             symbols = self.config.get('trading', {}).get('symbols', [])
+            opportunities_found = 0
+            symbols_analyzed = 0
+
+            self.logger.info(f"Analyzing {len(symbols)} trading symbols for opportunities...")
 
             for symbol in symbols:
                 try:
+                    symbols_analyzed += 1
+
                     # Check if we can trade this symbol
                     can_trade, reason = self.risk_manager.can_trade(symbol)
                     if not can_trade:
+                        self.logger.debug(f"[{symbol}] Cannot trade: {reason}")
                         continue
 
                     # Generate trading signal
                     signal = await self._generate_trading_signal(symbol)
                     if signal:
+                        opportunities_found += 1
+                        self.logger.info(f"[{symbol}] TRADE SIGNAL: {signal['direction']} "
+                                       f"(Strength: {signal['signal_strength']:.3f}) | "
+                                       f"Size: {signal['position_size']:.2f} lots | "
+                                       f"Entry: {signal['entry_price']:.5f}")
+
                         # Execute the trade
                         trade_result = await self.trading_engine.execute_trade(signal)
-                        if trade_result:
-                            self.logger.info(f"Successfully executed trade for {symbol}")
-                            # Start monitoring this trade
-                            asyncio.create_task(self.monitor_trade(
-                                trade_result.get('ticket', 0), trade_result))
+                        if trade_result and trade_result.get('success', False):
+                            self.logger.info(f"[{symbol}] OK Trade executed successfully - Ticket: {trade_result.get('ticket', 'N/A')}")
+                            # Start monitoring this trade (skip in dry run mode)
+                            dry_run = self.config.get('trading', {}).get('dry_run', False)
+                            if not dry_run:
+                                asyncio.create_task(self.monitor_trade(
+                                    trade_result.get('ticket', 0), trade_result))
+                            else:
+                                # In dry run mode, just log that we're "monitoring"
+                                self.logger.info(f"[{symbol}] Dry run: Simulating monitoring for {trade_result.get('ticket', 'N/A')}")
                         else:
-                            self.logger.warning(f"Failed to execute trade for {symbol}")
+                            error_msg = trade_result.get('error', 'Unknown error') if trade_result else 'Trade execution failed'
+                            self.logger.warning(f"[{symbol}] [FAILED] Trade execution failed: {error_msg}")
+                    else:
+                        # Log why no signal was generated (less frequent logging)
+                        if symbols_analyzed % 5 == 0:  # Log every 5th symbol to avoid spam
+                            self.logger.debug(f"[{symbol}] No trading signal (insufficient strength)")
 
                 except Exception as e:
-                    self.logger.error(f"Error processing symbol {symbol}: {e}")
+                    self.logger.error(f"[{symbol}] Error processing: {e}")
+
+            # Summary logging
+            if opportunities_found > 0:
+                self.logger.info(f"TRADING SUMMARY: {opportunities_found} opportunities found, {symbols_analyzed} symbols analyzed")
+            elif symbols_analyzed % 10 == 0:  # Log summary every 10 cycles when no opportunities
+                self.logger.info(f"TRADING SUMMARY: No opportunities found, {symbols_analyzed} symbols analyzed")
 
         except Exception as e:
             self.logger.error(f"Error checking trading opportunities: {e}")
@@ -134,27 +169,61 @@ class TradingOrchestrator:
             Trading signal dictionary or None if no signal
         """
         try:
-            # Get market data
-            market_data = self.app.market_data_manager.get_market_data(symbol)
-            if not market_data:
+            # Get market data (H1 bars for technical analysis)
+            h1_data = self.app.market_data_manager.get_bars(symbol, mt5.TIMEFRAME_H1, 200)
+            if h1_data is None or len(h1_data) < 50:
                 return None
+            
+            # Format data as expected by analyzers
+            market_data = {'H1': h1_data}
+            
+            # Get current price from tick data
+            tick_data = self.app.market_data_manager.get_market_data(symbol)
+            if tick_data:
+                current_price = tick_data.get('last', tick_data.get('bid', 0))
+            else:
+                current_price = h1_data['close'].iloc[-1] if len(h1_data) > 0 else 0
 
             # Get analysis from all analyzers
             technical_score = self.app.technical_analyzer.analyze(symbol, market_data)
             fundamental_score = self.app.fundamental_collector.get_news_sentiment(symbol)['score']
             sentiment_score = self.app.sentiment_analyzer.analyze(symbol, market_data)
 
+            # Boost fundamental and sentiment scores during active sessions (similar to check_opportunities.py)
+            current_session = self.time_manager.get_current_session()
+            if current_session == 'london':
+                fundamental_score = min(0.6, fundamental_score + 0.1)
+                sentiment_score = min(0.6, sentiment_score + 0.1)
+            elif current_session == 'new_york':
+                fundamental_score = min(0.65, fundamental_score + 0.15)
+                sentiment_score = min(0.65, sentiment_score + 0.15)
+
             # Combine signals using adaptive learning weights
-            if self.adaptive_learning:
+            if self.adaptive_learning and current_session not in ['london', 'new_york']:
+                # Use adaptive learning only outside active sessions
                 signal_strength = self.adaptive_learning.calculate_signal_strength(
                     technical_score, fundamental_score, sentiment_score)
             else:
-                # Default weighting
-                signal_strength = (technical_score * 0.5 + fundamental_score * 0.3 + sentiment_score * 0.2)
+                # Use improved weighting with boosted scores during active sessions
+                signal_strength = (technical_score * 0.6 + fundamental_score * 0.25 + sentiment_score * 0.15)
 
-            # Check minimum signal strength
-            min_strength = self.config.get('trading', {}).get('min_signal_strength', 0.6)
+            # Get session-aware minimum signal strength
+            min_strength = self.time_manager.get_session_signal_threshold(self.config)
+
+            # Check session filtering (if enabled)
+            session_config = self.config.get('trading_rules', {}).get('session_filter', {})
+            if session_config.get('enabled', False):
+                if not self.time_manager.is_preferred_session(self.config):
+                    # Not in preferred session - require higher threshold
+                    preferred_sessions = session_config.get('preferred_sessions', [])
+                    current_session = self.time_manager.get_current_session()
+                    self.logger.debug(f"[{symbol}] Not in preferred session ({current_session}), skipping. Preferred: {preferred_sessions}")
+                    return None
+
+            # Check minimum signal strength (session-aware)
             if signal_strength < min_strength:
+                current_session = self.time_manager.get_current_session()
+                self.logger.debug(f"[{symbol}] Signal strength {signal_strength:.3f} below threshold {min_strength:.3f} for {current_session} session")
                 return None
 
             # Determine trade direction
@@ -165,12 +234,12 @@ class TradingOrchestrator:
 
             # Get stop loss and take profit levels
             sl_tp = self.risk_manager.calculate_stop_loss_take_profit(
-                symbol, market_data['close'], direction)
+                symbol, current_price, direction)
 
             return {
                 'symbol': symbol,
                 'direction': direction,
-                'entry_price': market_data['close'],
+                'entry_price': current_price,
                 'position_size': position_size,
                 'stop_loss': sl_tp['stop_loss'],
                 'take_profit': sl_tp['take_profit'],
@@ -718,8 +787,72 @@ class TradingOrchestrator:
             else:
                 self.logger.info("ACTIVE POSITIONS: None")
 
+            # Add system health and market information
+            await self._log_system_health()
+
         except Exception as e:
             self.logger.error(f"Error logging active positions: {e}")
+
+    async def _log_system_health(self):
+        """Log comprehensive system health and market information"""
+        try:
+            # Session statistics
+            session_duration = self.app.get_current_mt5_time() - self.app.session_stats['start_time']
+            hours_running = session_duration.total_seconds() / 3600
+
+            self.logger.info(f"SESSION: {hours_running:.1f}h | Trades: {self.app.session_stats['total_trades']} | "
+                           f"P&L: ${self.app.session_stats['total_profit']:.2f}")
+
+            # Risk manager status
+            if hasattr(self.risk_manager, 'daily_trade_count'):
+                daily_trades = self.risk_manager.daily_trade_count
+                max_daily = self.config.get('risk', {}).get('max_daily_trades', 10)
+                self.logger.info(f"RISK: Daily trades {daily_trades}/{max_daily} | "
+                               f"Drawdown: ${self.risk_manager.current_drawdown:.2f}")
+
+            # ML/AI status
+            ml_status = []
+            if self.adaptive_learning and hasattr(self.adaptive_learning, 'is_learning'):
+                ml_status.append("Adaptive Learning: Active" if self.adaptive_learning.is_learning else "Adaptive Learning: Idle")
+
+            if self.reinforcement_agent and hasattr(self.reinforcement_agent, 'is_training'):
+                ml_status.append("RL Agent: Training" if self.reinforcement_agent.is_training else "RL Agent: Ready")
+
+            if ml_status:
+                self.logger.info(f"AI/ML: {' | '.join(ml_status)}")
+
+            # Market regime detection
+            if hasattr(self.app, 'market_regime_detector') and self.app.market_regime_detector:
+                try:
+                    regime = self.app.market_regime_detector.get_current_regime()
+                    self.logger.info(f"MARKET REGIME: {regime}")
+                except:
+                    pass
+
+            # Fundamental monitor status
+            if hasattr(self.app, 'fundamental_collector'):
+                try:
+                    news_count = len(self.app.fundamental_collector.recent_news) if hasattr(self.app.fundamental_collector, 'recent_news') else 0
+                    self.logger.info(f"FUNDAMENTAL: {news_count} recent news items monitored")
+                except:
+                    pass
+
+            # System health indicators
+            health_indicators = []
+            if self.mt5 and mt5.terminal_info():
+                health_indicators.append("MT5: Connected")
+            else:
+                health_indicators.append("MT5: Disconnected")
+
+            if self.app.running:
+                health_indicators.append("System: Running")
+            else:
+                health_indicators.append("System: Stopped")
+
+            self.logger.info(f"SYSTEM HEALTH: {' | '.join(health_indicators)}")
+
+        except Exception as e:
+            self.logger.debug(f"Error logging system health: {e}")
 
     def _get_pip_size(self, symbol: str) -> float:
         """Get pip size for a symbol"""

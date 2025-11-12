@@ -300,9 +300,22 @@ class SentimentAnalyzer:
 
             sentiment = base_sentiment.get(symbol, {'long': 50, 'short': 50})
 
+            # Calculate contrarian score (0-1 scale)
+            # When retail is heavily long (>60%), score tends toward bearish (0.3)
+            # When retail is heavily short (<40%), score tends toward bullish (0.7)
+            # Neutral at 50%
+            long_pct = sentiment['long']
+            if long_pct > 60:
+                contrarian_score = 0.3  # Bearish contrarian signal
+            elif long_pct < 40:
+                contrarian_score = 0.7  # Bullish contrarian signal
+            else:
+                contrarian_score = 0.5  # Neutral
+
             return {
                 'long_percentage': sentiment['long'],
                 'short_percentage': sentiment['short'],
+                'score': contrarian_score,  # Add score for overall calculation
                 'contrarian_signal': 'buy' if sentiment['long'] < 40 else ('sell' if sentiment['long'] > 60 else 'neutral')
             }
 
