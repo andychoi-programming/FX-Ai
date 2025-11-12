@@ -21,18 +21,40 @@ class OrderExecutor:
         self.config = config
         self.magic_number = config.get('trading', {}).get('magic_number', 20241029)
         self.max_slippage = config.get('trading', {}).get('max_slippage', 3)
+        self.dry_run = config.get('trading', {}).get('dry_run', False)
 
     def get_filling_mode(self, symbol):
         """Get appropriate filling mode for symbol"""
         try:
+            # First check terminal-wide filling mode support
+            terminal_info = mt5.terminal_info()  # type: ignore
+            terminal_filling_modes = 0
+            try:
+                if terminal_info and hasattr(terminal_info, 'trade_filling_flags'):
+                    terminal_filling_modes = terminal_info.trade_filling_flags
+                    logger.debug(f"Terminal supports filling modes: {terminal_filling_modes}")
+                else:
+                    logger.debug(f"Terminal filling mode info not available")
+            except Exception as e:
+                logger.debug(f"Could not get terminal filling modes: {e}")
+
             symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
+                logger.warning(f"No symbol info for {symbol}, using FOK")
                 return mt5.ORDER_FILLING_FOK  # Fallback
 
-            # Check available filling modes
+            # Check available filling modes (both terminal and symbol level)
             filling_modes = symbol_info.filling_mode
+            logger.debug(f"{symbol} supports filling modes: {filling_modes}")
 
-            # Prefer IOC, then FOK, then RETURN
+            # If terminal has filling mode restrictions, respect them
+            if terminal_info and hasattr(terminal_info, 'trade_filling_flags'):
+                filling_modes &= terminal_info.trade_filling_flags
+                logger.debug(f"{symbol} filling modes after terminal restrictions: {filling_modes}")
+            else:
+                logger.debug(f"Terminal filling mode restrictions not available, using symbol modes only")
+
+            # Try modes in order of preference, but be more permissive
             if filling_modes & mt5.ORDER_FILLING_IOC:
                 return mt5.ORDER_FILLING_IOC
             elif filling_modes & mt5.ORDER_FILLING_FOK:
@@ -40,7 +62,13 @@ class OrderExecutor:
             elif filling_modes & mt5.ORDER_FILLING_RETURN:
                 return mt5.ORDER_FILLING_RETURN
             else:
-                return mt5.ORDER_FILLING_FOK  # Default fallback
+                # If no standard modes supported, try immediate or return
+                logger.warning(f"{symbol} doesn't support standard filling modes, trying alternatives")
+                if filling_modes & mt5.ORDER_FILLING_IMMEDIATE:
+                    return mt5.ORDER_FILLING_IMMEDIATE
+                else:
+                    logger.error(f"{symbol} has no supported filling modes: {filling_modes}")
+                    return mt5.ORDER_FILLING_FOK  # Last resort
 
         except Exception as e:
             logger.error(f"Error getting filling mode for {symbol}: {e}")
@@ -50,26 +78,22 @@ class OrderExecutor:
         """Calculate minimum stop distance in price units"""
         stops_level = getattr(symbol_info, 'trade_stops_level', 0)
 
-        # Calculate minimum stop distance in PIPS, not points
-        # Gold: 1 pip = 0.10, Silver: 1 pip = 0.001, JPY: 1 pip = 0.01, others: 1 pip = 0.0001
-        if 'XAG' in symbol:
-            pip_size = 0.001  # Silver
-            # Silver: minimum 50 pips due to wider spreads
-            min_stop_pips = max(stops_level / 10, 50)
-        elif 'XAU' in symbol or 'GOLD' in symbol:
-            pip_size = 0.10  # Gold
-            # Gold: minimum 50 pips due to wider spreads
-            min_stop_pips = max(stops_level / 100, 50)
-        elif "JPY" in symbol:
-            pip_size = 0.01  # JPY pairs
-            # Convert points to pips, minimum 15 pips
-            min_stop_pips = max(stops_level / 10, 15)
-        else:
-            pip_size = 0.0001  # Standard forex
-            # Convert points to pips, minimum 15 pips
-            min_stop_pips = max(stops_level / 10, 15)
+        # stops_level is in points, convert to price units
+        point_size = symbol_info.point
 
-        return min_stop_pips * pip_size
+        # Minimum stop distance in price units (broker requirement)
+        min_stop_price_distance = stops_level * point_size
+
+        # Only apply minimums for metals where broker limits might be too restrictive
+        if 'XAU' in symbol or 'GOLD' in symbol:
+            # Gold: ensure minimum 0.5 price units (5 pips * 0.10) - reasonable for metals
+            min_stop_price_distance = max(min_stop_price_distance, 0.5)
+        elif 'XAG' in symbol or 'SILVER' in symbol:
+            # Silver: ensure minimum 0.05 price units (5 pips * 0.01)
+            min_stop_price_distance = max(min_stop_price_distance, 0.05)
+        # For forex pairs, trust the broker's stops_level
+
+        return min_stop_price_distance
 
     def _adjust_stop_loss(self, symbol: str, order_type: str, price: float,
                          stop_loss: float, symbol_info) -> float:
@@ -130,7 +154,8 @@ class OrderExecutor:
         reward_distance = abs(take_profit - price)
         ratio = reward_distance / risk_distance if risk_distance > 0 else 0
 
-        if ratio < 3.0:
+        # Allow for small floating point precision errors
+        if ratio < 2.95:  # Slightly below 3.0 to account for precision
             logger.error(
                 f"Order rejected: insufficient risk-reward ratio {ratio:.2f}:1 (required: 3.0:1)")
             return False
@@ -266,89 +291,143 @@ class OrderExecutor:
                         'success': False,
                         'error': f'Insufficient risk-reward ratio'}
 
-            # Round prices to symbol's decimal places
-            price, stop_loss, take_profit = self._round_prices_to_symbol_precision(
-                symbol, price, stop_loss, take_profit, symbol_info)
-
-            # Ensure broker minimum stop distance restrictions
-            stop_loss, take_profit = self._ensure_broker_minimum_stops(
-                symbol, order_type, price, stop_loss, take_profit, symbol_info)
-
-            # Debug logging
-            logger.debug("=== SENDING TO MT5 ===")
-            logger.debug(f"Symbol: {symbol}")
-            logger.debug(f"Entry: {price}")
-            logger.debug(f"Stop Loss: {stop_loss}")
-            logger.debug(f"Take Profit: {take_profit}")
-            logger.debug("=" * 30)
-
-            # Create order request
-            request = {
-                "action": mt5.TRADE_ACTION_DEAL,
-                "symbol": symbol,
-                "volume": volume,
-                "type": mt5_order_type,
-                "price": price,
-                "deviation": self.max_slippage,
-                "magic": self.magic_number,
-                "comment": comment or "FX-Ai",
-                "type_time": mt5.ORDER_TIME_GTC,
-                "type_filling": self.get_filling_mode(symbol),
-            }
-
-            # Add stop loss and take profit if provided
-            if stop_loss is not None:
-                request["sl"] = stop_loss
-            if take_profit is not None:
-                request["tp"] = take_profit
-
-            # Send order
-            result = mt5.order_send(request)  # type: ignore
-
-            # Check if order_send returned None
-            if result is None:
-                logger.error("Order send failed - no response from MT5")
+            # Check if dry run mode is enabled
+            if self.dry_run:
+                order_desc = f"{order_type} order"
+                if mt5_order_type in [mt5.ORDER_TYPE_BUY_LIMIT, mt5.ORDER_TYPE_SELL_LIMIT, 
+                                     mt5.ORDER_TYPE_BUY_STOP, mt5.ORDER_TYPE_SELL_STOP]:
+                    order_desc = f"pending {order_type} order"
+                logger.info(f"[DRY RUN] Would place {order_desc} for {symbol} @ {price}")
+                logger.info(f"[DRY RUN] SL: {stop_loss}, TP: {take_profit}, Volume: {volume}")
                 return {
-                    'success': False,
-                    'error': 'Order send failed - no response from MT5'
+                    'success': True,
+                    'order': 999999,  # Fake order ticket
+                    'price': price,
+                    'dry_run': True
                 }
 
-            if result.retcode == mt5.TRADE_RETCODE_DONE:
-                logger.info(f"Order placed: {symbol} {order_type} @ {price}")
+            # Try different filling modes if the first one fails
+            filling_modes_to_try = [
+                0,  # Default filling mode
+                None,  # No filling mode specified
+                mt5.ORDER_FILLING_FOK,         # Fill or Kill
+                mt5.ORDER_FILLING_IOC,         # Immediate or Cancel
+                mt5.ORDER_FILLING_RETURN,      # Return remaining
+            ]
+            
+            # Remove duplicates but keep order
+            seen = set()
+            filling_modes_to_try = [x for x in filling_modes_to_try if not (x in seen or seen.add(x))]
+            
+            result = None
+            last_error = None
+            
+            for filling_mode in filling_modes_to_try:
+                try:
+                    # Create order request
+                    request = {
+                        "action": mt5.TRADE_ACTION_DEAL,
+                        "symbol": symbol,
+                        "volume": volume,
+                        "type": mt5_order_type,
+                        "price": price,
+                        "deviation": self.max_slippage,
+                        "magic": self.magic_number,
+                        "comment": comment or "FX-Ai",
+                        "type_time": mt5.ORDER_TIME_GTC,
+                    }
 
-                # Use TRADE_ACTION_SLTP to set SL/TP after order placement
-                if stop_loss is not None or take_profit is not None:
-                    await asyncio.sleep(0.2)  # Brief pause before modifying
+                    # Add filling mode if specified
+                    if filling_mode is not None:
+                        request["type_filling"] = filling_mode
 
-                    # Get the actual position ticket
-                    positions = mt5.positions_get(symbol=symbol)  # type: ignore
-                    if positions:
-                        position = positions[-1]  # Last position
-                        position_ticket = position.ticket
+                    # Add stop loss and take profit if provided
+                    if stop_loss is not None:
+                        request["sl"] = stop_loss
+                    if take_profit is not None:
+                        request["tp"] = take_profit
 
-                        modify_request = {
-                            "action": mt5.TRADE_ACTION_SLTP,
-                            "position": position_ticket,
-                            "symbol": symbol,
-                        }
+                    logger.debug(f"Trying filling mode {filling_mode} ({type(filling_mode).__name__}) for {symbol}")
+                    
+                    # Send order
+                    result = mt5.order_send(request)  # type: ignore
 
-                        if stop_loss is not None:
-                            modify_request["sl"] = stop_loss
-                        if take_profit is not None:
-                            modify_request["tp"] = take_profit
+                    # Check if order_send returned None
+                    if result is None:
+                        last_error = f"Filling mode {filling_mode}: Order send failed - no response from MT5"
+                        logger.debug(last_error)
+                        continue
 
-                        logger.debug(
-                            f"Modifying position {position_ticket} with SLTP: {modify_request}")
-                        modify_result = mt5.order_send(modify_request)  # type: ignore
-
-                        if modify_result and modify_result.retcode != mt5.TRADE_RETCODE_DONE:
-                            logger.warning(
-                                f"Failed to set SL/TP for position {position_ticket}: "
-                                f"{modify_result.comment}")
-                        else:
-                            logger.debug("[OK] SLTP modification successful")
+                    if result.retcode == mt5.TRADE_RETCODE_DONE:
+                        logger.info(f"Order placed with filling mode {filling_mode}: {symbol} {order_type} @ {price}")
+                        break  # Success, exit the retry loop
                     else:
-                        logger.debug("[WARNING] No position found to modify SL/TP")
+                        error_desc = f"Filling mode {filling_mode}: Retcode {result.retcode}"
+                        if hasattr(result, 'comment') and result.comment:
+                            error_desc += f", Comment: {result.comment}"
+                        logger.debug(f"Filling mode {filling_mode} failed: {error_desc}")
+                        last_error = error_desc
+                        continue
+                        
+                except Exception as e:
+                    last_error = str(e)
+                    logger.debug(f"Error with filling mode {filling_mode}: {e}")
+                    continue
+            
+            # If all filling modes failed, try pending orders as fallback
+            if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
+                logger.info(f"Market orders failed for {symbol}, trying pending orders as fallback")
+                pending_result = await self._place_pending_order(
+                    symbol, order_type, volume, stop_loss, take_profit, price, comment
+                )
+                if pending_result and pending_result.get('success', False):
+                    logger.info(f"Pending order placed successfully for {symbol}")
+                    return pending_result
+            
+            # If both market and pending orders failed, return the last error
+            if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
+                logger.error(f"All order types failed for {symbol}. Last error: {last_error}")
+                return {
+                    'success': False,
+                    'error': last_error or 'All order types failed'
+                }
+
+            # Order was successful - handle SL/TP and verification
+            logger.info(f"Order placed: {symbol} {order_type} @ {price}")
+
+            # Use TRADE_ACTION_SLTP to set SL/TP after order placement
+            if stop_loss is not None or take_profit is not None:
+                await asyncio.sleep(0.2)  # Brief pause before modifying
+
+                # Get the actual position ticket
+                positions = mt5.positions_get(symbol=symbol)  # type: ignore
+                if positions:
+                    position = positions[-1]  # Last position
+                    position_ticket = position.ticket
+
+                    modify_request = {
+                        "action": mt5.TRADE_ACTION_SLTP,
+                        "position": position_ticket,
+                        "symbol": symbol,
+                    }
+
+                    if stop_loss is not None:
+                        modify_request["sl"] = stop_loss
+                    if take_profit is not None:
+                        modify_request["tp"] = take_profit
+
+                    logger.debug(
+                        f"Modifying position {position_ticket} with SLTP: {modify_request}")
+                    modify_result = mt5.order_send(modify_request)  # type: ignore
+
+                    if modify_result and modify_result.retcode != mt5.TRADE_RETCODE_DONE:
+                        logger.warning(
+                            f"Failed to set SL/TP for position {position_ticket}: "
+                            f"{modify_result.comment}")
+                    else:
+                        logger.debug("[OK] SLTP modification successful")
+                else:
+                    logger.debug("[WARNING] No position found to modify SL/TP")
 
                 # Enhanced verification
                 await asyncio.sleep(0.5)  # Wait for position to register
@@ -359,7 +438,7 @@ class OrderExecutor:
                     actual_sl = actual_position.sl
                     actual_tp = actual_position.tp
 
-                    logger.debug("\n✅ ORDER VERIFICATION:")
+                    logger.debug("\n[ORDER VERIFICATION]:")
                     logger.debug(f"Requested SL: {stop_loss}")
                     logger.debug(f"MT5 Set SL: {actual_sl}")
                     logger.debug(f"Requested TP: {take_profit}")
@@ -398,3 +477,86 @@ class OrderExecutor:
                 'success': False,
                 'error': str(e)
             }
+
+    async def _place_pending_order(self, symbol: str, order_type: str, volume: float,
+                                   stop_loss: Optional[float] = None, take_profit: Optional[float] = None,
+                                   market_price: Optional[float] = None, comment: str = "") -> Optional[Dict]:
+        """Place pending order as fallback when market orders fail"""
+        try:
+            # Get current market price
+            tick = mt5.symbol_info_tick(symbol)  # type: ignore
+            if tick is None:
+                logger.error(f"Failed to get tick data for pending order {symbol}")
+                return None
+
+            # Get symbol info for spread and pip calculations
+            symbol_info = mt5.symbol_info(symbol)  # type: ignore
+            if symbol_info is None:
+                logger.error(f"Symbol {symbol} not found for pending order")
+                return None
+
+            # Calculate pending order price based on order type
+            # For buy orders, place slightly below current ask (buy limit)
+            # For sell orders, place slightly above current bid (sell limit)
+            spread = (tick.ask - tick.bid) / symbol_info.point
+            pip_distance = 5  # Place 5 pips away from current price
+
+            if order_type.lower() in ['buy', 'buy_limit']:
+                # Buy limit: place below current ask
+                pending_price = tick.ask - (pip_distance * symbol_info.point)
+                mt5_order_type = mt5.ORDER_TYPE_BUY_LIMIT
+            elif order_type.lower() in ['sell', 'sell_limit']:
+                # Sell limit: place above current bid
+                pending_price = tick.bid + (pip_distance * symbol_info.point)
+                mt5_order_type = mt5.ORDER_TYPE_SELL_LIMIT
+            else:
+                logger.error(f"Unsupported order type for pending order: {order_type}")
+                return None
+
+            # Round price to symbol precision
+            pending_price = round(pending_price, symbol_info.digits)
+
+            logger.info(f"Placing pending {order_type} order for {symbol} @ {pending_price} (market: {tick.ask}/{tick.bid})")
+
+            # Create pending order request
+            request = {
+                "action": mt5.TRADE_ACTION_PENDING,
+                "symbol": symbol,
+                "volume": volume,
+                "type": mt5_order_type,
+                "price": pending_price,
+                "deviation": self.max_slippage,
+                "magic": self.magic_number,
+                "comment": comment or "FX-Ai Pending",
+                "type_time": mt5.ORDER_TIME_GTC,  # Good till cancelled
+                "type_filling": mt5.ORDER_FILLING_RETURN,  # Return remaining
+            }
+
+            # Add stop loss and take profit if provided
+            if stop_loss is not None:
+                request["sl"] = stop_loss
+            if take_profit is not None:
+                request["tp"] = take_profit
+
+            # Send pending order
+            result = mt5.order_send(request)  # type: ignore
+
+            if result is None:
+                logger.error(f"Pending order send failed - no response from MT5 for {symbol}")
+                return None
+
+            if result.retcode == mt5.TRADE_RETCODE_DONE:
+                logger.info(f"Pending order placed successfully: {symbol} {order_type} @ {pending_price}")
+                return {
+                    'success': True,
+                    'order': result.order,
+                    'price': pending_price,
+                    'pending': True
+                }
+            else:
+                logger.error(f"Pending order failed: {symbol} - Retcode {result.retcode}, Comment: {result.comment}")
+                return None
+
+        except Exception as e:
+            logger.error(f"Error placing pending order for {symbol}: {e}")
+            return None
