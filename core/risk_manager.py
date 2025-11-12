@@ -948,3 +948,61 @@ class RiskManager:
             logger.error(f"Error checking emergency stop conditions: {e}")
             # In case of error, be conservative and trigger emergency stop
             return True
+
+    def calculate_stop_loss_take_profit(self, symbol: str, current_price: float, direction: str) -> Dict[str, float]:
+        """
+        Calculate stop loss and take profit levels based on default pips from config
+        
+        Args:
+            symbol: Trading symbol
+            current_price: Current market price
+            direction: 'BUY' or 'SELL'
+            
+        Returns:
+            Dict with 'stop_loss' and 'take_profit' prices
+        """
+        try:
+            # Get default pips from config
+            default_sl_pips = self.config.get('trading', {}).get('default_sl_pips', 20)
+            default_tp_pips = self.config.get('trading', {}).get('default_tp_pips', 60)
+            
+            # Get symbol info for pip calculation
+            symbol_info = mt5.symbol_info(symbol)  # type: ignore
+            if symbol_info is None:
+                logger.error(f"Cannot get symbol info for {symbol}")
+                return {'stop_loss': current_price * 0.98, 'take_profit': current_price * 1.02}  # Fallback
+            
+            # Calculate pip size
+            if "XAU" in symbol or "GOLD" in symbol or "XAG" in symbol:
+                pip_size = symbol_info.point * 10  # Metals: 1 pip = 10 points
+            elif symbol_info.digits == 3 or symbol_info.digits == 5:
+                pip_size = symbol_info.point * 10
+            else:
+                pip_size = symbol_info.point
+            
+            # Calculate stop loss and take profit prices
+            if direction.upper() == 'BUY':
+                stop_loss = current_price - (default_sl_pips * pip_size)
+                take_profit = current_price + (default_tp_pips * pip_size)
+            else:  # SELL
+                stop_loss = current_price + (default_sl_pips * pip_size)
+                take_profit = current_price - (default_tp_pips * pip_size)
+            
+            # Round to symbol precision
+            stop_loss = round(stop_loss, symbol_info.digits)
+            take_profit = round(take_profit, symbol_info.digits)
+            
+            logger.info(f"[{symbol}] {direction}: price={current_price:.5f}, SL={stop_loss:.5f}, TP={take_profit:.5f} (SL: {default_sl_pips}pips, TP: {default_tp_pips}pips, pip_size={pip_size})")
+            
+            return {
+                'stop_loss': stop_loss,
+                'take_profit': take_profit
+            }
+            
+        except Exception as e:
+            logger.error(f"Error calculating SL/TP for {symbol}: {e}")
+            # Fallback values
+            return {
+                'stop_loss': current_price * 0.98 if direction.upper() == 'BUY' else current_price * 1.02,
+                'take_profit': current_price * 1.02 if direction.upper() == 'BUY' else current_price * 0.98
+            }

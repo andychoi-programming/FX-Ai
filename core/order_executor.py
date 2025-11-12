@@ -84,14 +84,24 @@ class OrderExecutor:
         # Minimum stop distance in price units (broker requirement)
         min_stop_price_distance = stops_level * point_size
 
-        # Only apply minimums for metals where broker limits might be too restrictive
+        # Ensure minimum stop distances for all symbol types
         if 'XAU' in symbol or 'GOLD' in symbol:
             # Gold: ensure minimum 0.5 price units (5 pips * 0.10) - reasonable for metals
             min_stop_price_distance = max(min_stop_price_distance, 0.5)
         elif 'XAG' in symbol or 'SILVER' in symbol:
             # Silver: ensure minimum 0.05 price units (5 pips * 0.01)
             min_stop_price_distance = max(min_stop_price_distance, 0.05)
-        # For forex pairs, trust the broker's stops_level
+        else:
+            # For forex pairs, ensure minimum 2 pips stop distance
+            # Most brokers require at least 2-3 pips for stops
+            if 'JPY' in symbol:
+                # JPY pairs: 2 pips minimum (0.02 price units)
+                min_stop_price_distance = max(min_stop_price_distance, 0.02)
+            else:
+                # Other forex pairs: 2 pips minimum (0.0002 price units for 5-digit brokers)
+                min_stop_price_distance = max(min_stop_price_distance, 0.0002)
+
+        return min_stop_price_distance
 
         return min_stop_price_distance
 
@@ -276,7 +286,39 @@ class OrderExecutor:
                 return {'success': False,
                         'error': f'Unknown order type: {order_type}'}
 
-            # Adjust stop loss to meet minimum requirements
+            # Recalculate stop loss and take profit based on actual order price
+            if stop_loss is not None and price is not None:
+                # Get default pips from config
+                config = getattr(self, 'config', {})
+                default_sl_pips = config.get('trading', {}).get('default_sl_pips', 20)
+                default_tp_pips = config.get('trading', {}).get('default_tp_pips', 60)
+                
+                # Calculate pip size
+                if "XAU" in symbol or "GOLD" in symbol or "XAG" in symbol:
+                    pip_size = symbol_info.point * 10  # Metals: 1 pip = 10 points
+                elif symbol_info.digits == 3 or symbol_info.digits == 5:
+                    pip_size = symbol_info.point * 10
+                else:
+                    pip_size = symbol_info.point
+                
+                # Recalculate SL/TP based on actual price
+                if order_type.lower() in ['buy', 'buy_limit', 'buy_stop']:
+                    stop_loss = price - (default_sl_pips * pip_size)
+                    if take_profit is not None:
+                        take_profit = price + (default_tp_pips * pip_size)
+                else:  # sell orders
+                    stop_loss = price + (default_sl_pips * pip_size)
+                    if take_profit is not None:
+                        take_profit = price - (default_tp_pips * pip_size)
+                
+                # Round to symbol precision
+                stop_loss = round(stop_loss, symbol_info.digits)
+                if take_profit is not None:
+                    take_profit = round(take_profit, symbol_info.digits)
+                
+                logger.info(f"[{symbol}] Recalculated SL/TP for {order_type} @ {price:.5f}: SL={stop_loss:.5f}, TP={take_profit:.5f if take_profit else None}")
+
+            # Adjust stop loss to meet minimum broker requirements
             if stop_loss is not None and price is not None:
                 stop_loss = self._adjust_stop_loss(symbol, order_type, price, stop_loss, symbol_info)
 

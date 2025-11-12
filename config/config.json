@@ -48,6 +48,7 @@
     "max_spread": 3.0,
     "min_lot_size": 0.01,
     "max_lot_size": 1.0,
+    "min_signal_strength": 0.050,
     "max_daily_loss": 500.0,
     "min_risk_reward_ratio": 1.9,
     "enable_news_filter": true,
@@ -156,7 +157,7 @@
       ],
       "signal_thresholds": {
         "london": 0.550,
-        "newyork": 0.400,
+        "newyork": 0.250,
         "overlap": 0.550,
         "tokyo": 0.600,
         "none": 0.650
@@ -685,7 +686,7 @@
   },
   "continuous_learning": {
     "enabled": true,
-    "learning_only_mode": true,
+    "learning_only_mode": false,
     "monitor_market_conditions": true,
     "update_technical_indicators": true,
     "adaptive_parameter_tuning": true,

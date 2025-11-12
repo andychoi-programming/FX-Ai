@@ -180,9 +180,19 @@ class TradingOrchestrator:
             # Get current price from tick data
             tick_data = self.app.market_data_manager.get_market_data(symbol)
             if tick_data:
-                current_price = tick_data.get('last', tick_data.get('bid', 0))
+                # Use mid price (average of bid/ask) for forex symbols where 'last' might be 0
+                bid = tick_data.get('bid', 0)
+                ask = tick_data.get('ask', 0)
+                current_price = (bid + ask) / 2 if bid > 0 and ask > 0 else tick_data.get('last', 0)
+                self.logger.info(f"[{symbol}] Tick data: bid={bid}, ask={ask}, last={tick_data.get('last')}, using price={current_price}")
             else:
                 current_price = h1_data['close'].iloc[-1] if len(h1_data) > 0 else 0
+                self.logger.info(f"[{symbol}] No tick data, using H1 close: {current_price}")
+
+            # Validate current price
+            if current_price <= 0 or current_price is None:
+                self.logger.info(f"[{symbol}] Invalid current price: {current_price}, skipping signal")
+                return None
 
             # Get analysis from all analyzers
             technical_score = self.app.technical_analyzer.analyze(symbol, market_data)
@@ -207,6 +217,11 @@ class TradingOrchestrator:
                 # Use improved weighting with boosted scores during active sessions
                 signal_strength = (technical_score * 0.6 + fundamental_score * 0.25 + sentiment_score * 0.15)
 
+            self.logger.info(f"[{symbol}] Scores - Tech: {technical_score:.3f}, Fund: {fundamental_score:.3f}, Sent: {sentiment_score:.3f}, Combined: {signal_strength:.3f}")
+
+            # Get session-aware minimum signal strength
+            min_strength = self.time_manager.get_session_signal_threshold(self.config)
+
             # Get session-aware minimum signal strength
             min_strength = self.time_manager.get_session_signal_threshold(self.config)
 
@@ -217,13 +232,13 @@ class TradingOrchestrator:
                     # Not in preferred session - require higher threshold
                     preferred_sessions = session_config.get('preferred_sessions', [])
                     current_session = self.time_manager.get_current_session()
-                    self.logger.debug(f"[{symbol}] Not in preferred session ({current_session}), skipping. Preferred: {preferred_sessions}")
+                    self.logger.info(f"[{symbol}] Not in preferred session ({current_session}), skipping. Preferred: {preferred_sessions}")
                     return None
 
             # Check minimum signal strength (session-aware)
             if signal_strength < min_strength:
                 current_session = self.time_manager.get_current_session()
-                self.logger.debug(f"[{symbol}] Signal strength {signal_strength:.3f} below threshold {min_strength:.3f} for {current_session} session")
+                self.logger.info(f"[{symbol}] Signal strength {signal_strength:.3f} below threshold {min_strength:.3f} for {current_session} session")
                 return None
 
             # Determine trade direction
