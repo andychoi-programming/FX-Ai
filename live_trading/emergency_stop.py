@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 FX-Ai Emergency Stop Script
-Immediately closes all positions and cancels all pending orders
+Immediately closes ALL open positions AND cancels ALL pending orders
 """
 
 import sys
@@ -29,7 +29,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class EmergencyStop:
-    """Emergency stop functionality to close all positions and cancel orders"""
+    """Emergency stop functionality to close ALL open positions and cancel ALL pending orders"""
 
     def __init__(self):
         self.mt5 = None
@@ -146,7 +146,7 @@ class EmergencyStop:
             cancelled_count = 0
             for order in our_orders:
                 try:
-                    logger.info(f"Cancelling order: {order.symbol} ticket {order.ticket} (type: {order.type})")
+                    logger.info(f"Cancelling order: {order.symbol} ticket {order.ticket} (type: {order.type}, price: {order.price})")
 
                     # Cancel the order
                     result = mt5.order_send({
@@ -174,7 +174,7 @@ class EmergencyStop:
     def run_emergency_stop(self):
         """Run the complete emergency stop procedure"""
         logger.info("=" * 60)
-        logger.info("FX-AI EMERGENCY STOP - IMMEDIATE POSITION CLOSURE")
+        logger.info("FX-AI EMERGENCY STOP - CLOSING ALL POSITIONS AND CANCELING ALL ORDERS")
         logger.info("=" * 60)
 
         success = True

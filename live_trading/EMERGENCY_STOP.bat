@@ -1,11 +1,11 @@
 @echo off
 REM Emergency Stop Batch Script for FX-Ai
-REM Closes all open positions immediately
+REM Closes ALL open positions AND cancels ALL pending orders immediately
 
 echo.
 echo ============================================================================
 echo                FX-Ai EMERGENCY STOP
-echo        IMMEDIATELY CLOSING ALL POSITIONS
+echo        IMMEDIATELY CLOSING ALL POSITIONS AND CANCELING ALL ORDERS
 echo ============================================================================
 echo.
 
