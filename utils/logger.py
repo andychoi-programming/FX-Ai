@@ -113,13 +113,21 @@ class MT5TimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
                         encoding=encoding, delay=delay, utc=False, atTime=atTime)
 
         # Generate initial filename with current server date
+        # Try to get MT5 time, but delay filename generation if not available yet
         current_mt5_time = self._getMT5Time()
-        date_suffix = current_mt5_time.strftime("_%Y_%m_%d.log")
-        self.baseFilename = filename + date_suffix
-
-        # For dated filenames, we don't need additional suffix since date is already in filename
-        # But we still need to handle rotation properly
-        self.suffix = ""  # No additional suffix needed
+        if current_mt5_time and hasattr(current_mt5_time, 'year') and current_mt5_time.year > 2000:
+            # Valid MT5 time, generate filename
+            date_suffix = current_mt5_time.strftime("_%Y_%m_%d.log")
+            self.baseFilename = filename + date_suffix
+            self.logger.debug(f"Log file created with MT5 server date: {date_suffix}")
+        else:
+            # MT5 time not available, use local time but mark for later correction
+            local_time = datetime.now()
+            date_suffix = local_time.strftime("_%Y_%m_%d.log")
+            self.baseFilename = filename + date_suffix
+            self.logger.warning(f"MT5 time not available, using local time for log filename: {date_suffix}")
+            # Set flag to check for MT5 time on first log write
+            self._needs_mt5_time_check = True
 
     def _getMT5Time(self) -> datetime:
         """
@@ -145,7 +153,56 @@ class MT5TimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
             pass
 
         # Final fallback to local time
-        return datetime.now()
+        local_time = datetime.now()
+        print(f"MT5TimedRotatingFileHandler: Using local time fallback: {local_time}")
+        return local_time
+
+    def _checkAndCorrectFilename(self):
+        """
+        Check if filename needs correction with MT5 time (called on first log write)
+        """
+        if not getattr(self, '_needs_mt5_time_check', False):
+            return
+
+        try:
+            # Try to get MT5 time now
+            current_mt5_time = self._getMT5Time()
+            if current_mt5_time and hasattr(current_mt5_time, 'year') and current_mt5_time.year > 2000:
+                # Valid MT5 time available, check if we need to rename the file
+                mt5_date_suffix = current_mt5_time.strftime("_%Y_%m_%d.log")
+
+                # Extract base name (remove current date suffix)
+                base_name = self.baseFilename
+                if base_name.endswith('.log'):
+                    import re
+                    date_pattern = re.compile(r'_\d{4}_\d{2}_\d{2}\.log$')
+                    match = date_pattern.search(base_name)
+                    if match:
+                        base_name = base_name[:match.start()]
+
+                expected_filename = base_name + mt5_date_suffix
+
+                if expected_filename != self.baseFilename:
+                    # Need to rename the file
+                    import os
+                    if os.path.exists(self.baseFilename):
+                        os.rename(self.baseFilename, expected_filename)
+                        print(f"Corrected log filename from local time to MT5 server time: {expected_filename}")
+                    self.baseFilename = expected_filename
+        except Exception as e:
+            print(f"Could not correct log filename: {e}")
+        finally:
+            self._needs_mt5_time_check = False
+
+    def emit(self, record):
+        """
+        Emit a record, checking filename correction on first write
+        """
+        # Check if we need to correct the filename with MT5 time
+        self._checkAndCorrectFilename()
+
+        # Call parent emit method
+        super().emit(record)
 
     def shouldRollover(self, record):
         """
