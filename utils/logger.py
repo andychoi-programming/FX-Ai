@@ -112,6 +112,11 @@ class MT5TimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
         super().__init__(filename, when=when, interval=interval, backupCount=backupCount,
                         encoding=encoding, delay=delay, utc=False, atTime=atTime)
 
+        # Generate initial filename with current server date
+        current_mt5_time = self._getMT5Time()
+        date_suffix = current_mt5_time.strftime("_%Y_%m_%d.log")
+        self.baseFilename = filename + date_suffix
+
         # For dated filenames, we don't need additional suffix since date is already in filename
         # But we still need to handle rotation properly
         self.suffix = ""  # No additional suffix needed
@@ -169,8 +174,7 @@ class MT5TimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
     def doRollover(self):
         """
         Perform log file rollover using MT5 server time for naming
-        Since filename already includes date, we just need to close current file
-        and create new one with next day's date
+        Close current file and create new one with current day's date
         """
         try:
             # Close the current file
@@ -181,15 +185,13 @@ class MT5TimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
             # Get current MT5 server time
             current_time = self._getMT5Time()
             
-            # Generate new filename with next day's date (since rotation happens at midnight)
-            next_day = current_time.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
-            date_suffix = next_day.strftime("_%Y_%m_%d.log")
+            # Generate new filename with current day's date (rotation happens at midnight, so new day started)
+            date_suffix = current_time.strftime("_%Y_%m_%d.log")
             
             # Extract base name (remove current date suffix)
             base_name = self.baseFilename
             if base_name.endswith('.log'):
                 # Remove the date suffix pattern _YYYY_MM_DD.log
-                # Look for the pattern _dddd_dd_dd.log at the end
                 import re
                 # Match _YYYY_MM_DD.log at the end of filename
                 date_pattern = re.compile(r'_\d{4}_\d{2}_\d{2}\.log$')
@@ -201,7 +203,7 @@ class MT5TimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
                     # Fallback: remove .log extension if no date pattern found
                     base_name = base_name[:-4]
             
-            # Create new filename with next day's date
+            # Create new filename with current day's date
             new_filename = base_name + date_suffix
             
             # Update the baseFilename for the new file
@@ -313,29 +315,9 @@ def setup_logger(name: str = 'FX-Ai', level: str = 'INFO',
             
             # Create appropriate file handler based on rotation type
             if rotation_type == 'time':
-                # For time-based rotation, generate filename with current MT5 server date
-                if mt5_connector or clock_sync:
-                    # Get current MT5 server date for filename
-                    try:
-                        if clock_sync:
-                            current_mt5_time = clock_sync.get_synced_time()
-                        elif mt5_connector:
-                            current_mt5_time = mt5_connector.get_server_time()
-                        else:
-                            current_mt5_time = datetime.now()
-                        
-                        if current_mt5_time:
-                            # Format as FX-Ai_YYYY_MM_DD.log
-                            date_suffix = current_mt5_time.strftime("_%Y_%m_%d.log")
-                            dated_log_file = log_file + date_suffix
-                        else:
-                            dated_log_file = log_file + datetime.now().strftime("_%Y_%m_%d.log")
-                    except Exception:
-                        # Fallback to local time if MT5 time unavailable
-                        dated_log_file = log_file + datetime.now().strftime("_%Y_%m_%d.log")
-                else:
-                    # No MT5 connector, use local time
-                    dated_log_file = log_file + datetime.now().strftime("_%Y_%m_%d.log")
+                # For time-based rotation, let MT5TimedRotatingFileHandler handle filename generation
+                # Don't add date suffix here - handler will generate it based on server time when needed
+                dated_log_file = log_file
                 
                 # MT5 server time-based rotating file handler
                 file_handler = MT5TimedRotatingFileHandler(
