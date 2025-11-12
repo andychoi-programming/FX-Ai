@@ -234,7 +234,7 @@ class OrderExecutor:
     async def place_order(self, symbol: str, order_type: str, volume: float,
                           stop_loss: Optional[float] = None, take_profit: Optional[float] = None,
                           price: Optional[float] = None, comment: str = "") -> Dict:
-        """Place order through MT5 - ASYNC"""
+        """Place order through MT5 - ASYNC - ONLY STOP ORDERS ALLOWED"""
         try:
             # Check MT5 connection
             terminal_info = mt5.terminal_info()  # type: ignore
@@ -257,102 +257,102 @@ class OrderExecutor:
                 logger.error(f"Symbol {symbol} not found")
                 return {'success': False, 'error': 'Symbol not found'}
 
-            # Check if we should use pending orders
-            order_type_config = self.config.get('trading', {}).get('order_type', 'market')
-            use_pending_orders = order_type_config == 'pending'
+            # CHECK FOR DUPLICATE SYMBOLS: No stop orders or positions for same symbol
+            # Check existing positions
+            positions = mt5.positions_get(symbol=symbol)  # type: ignore
+            if positions and len(positions) > 0:
+                for pos in positions:
+                    if hasattr(pos, 'magic') and pos.magic == self.magic_number:
+                        logger.warning(f"[{symbol}] Cannot place stop order: existing position found (ticket {pos.ticket})")
+                        return {
+                            'success': False,
+                            'error': f'Existing position for {symbol} (ticket {pos.ticket})'}
 
-            # Get current price if not provided
-            if price is None:
-                tick = mt5.symbol_info_tick(symbol)  # type: ignore
-                if tick is None:
-                    logger.error(f"Failed to get tick data for {symbol}")
-                    return {'success': False,
-                            'error': f'Failed to get tick data for {symbol}'}
-                
-                if use_pending_orders:
-                    # For pending orders, calculate price based on distance from current market
-                    current_price = (tick.ask + tick.bid) / 2  # Use mid price as reference
-                    
-                    # Get pending order distance configuration
-                    pending_config = self.config.get('trading', {}).get('pending_order_distances', {})
-                    
-                    # Determine pip ranges based on symbol
-                    if 'XAU' in symbol or 'GOLD' in symbol:
-                        min_pips = pending_config.get('xauusd_min_pips', 50)
-                        max_pips = pending_config.get('xauusd_max_pips', 150)
-                    elif 'XAG' in symbol or 'SILVER' in symbol:
-                        min_pips = pending_config.get('xagusd_min_pips', 20)
-                        max_pips = pending_config.get('xagusd_max_pips', 50)
-                    else:
-                        min_pips = pending_config.get('forex_min_pips', 10)
-                        max_pips = pending_config.get('forex_max_pips', 25)
-                    
-                    # Calculate pip size
-                    if 'XAU' in symbol or 'GOLD' in symbol or 'XAG' in symbol:
-                        pip_size = symbol_info.point * 10  # Metals: 1 pip = 10 points
-                    elif symbol_info.digits == 3 or symbol_info.digits == 5:
-                        pip_size = symbol_info.point * 10
-                    else:
-                        pip_size = symbol_info.point
-                    
-                    # Get order type preference (limit or stop)
-                    pending_order_type = pending_config.get('order_type', 'limit').lower()
-                    
-                    # Generate random distance within range
-                    import random
-                    random_pips = random.uniform(min_pips, max_pips)
-                    distance = random_pips * pip_size
-                    
-                    # Calculate pending order price based on direction and order type
-                    if order_type.lower() == 'buy':
-                        if pending_order_type == 'stop':
-                            # BUY STOP: above current price (breakout buying)
-                            price = current_price + distance
-                            order_type = 'buy_stop'
-                            logger.info(f"[{symbol}] BUY STOP: {random_pips:.1f} pips above current price {current_price:.5f} -> {price:.5f}")
-                        else:
-                            # BUY LIMIT: below current price (dip buying)
-                            price = current_price - distance
-                            order_type = 'buy_limit'
-                            logger.info(f"[{symbol}] BUY LIMIT: {random_pips:.1f} pips below current price {current_price:.5f} -> {price:.5f}")
-                    else:  # sell
-                        if pending_order_type == 'stop':
-                            # SELL STOP: below current price (breakdown selling)
-                            price = current_price - distance
-                            order_type = 'sell_stop'
-                            logger.info(f"[{symbol}] SELL STOP: {random_pips:.1f} pips below current price {current_price:.5f} -> {price:.5f}")
-                        else:
-                            # SELL LIMIT: above current price (rally selling)
-                            price = current_price + distance
-                            order_type = 'sell_limit'
-                            logger.info(f"[{symbol}] SELL LIMIT: {random_pips:.1f} pips above current price {current_price:.5f} -> {price:.5f}")
-                else:
-                    # For market orders, use current market price
-                    if order_type.lower() in ['buy', 'sell']:
-                        price = tick.ask if order_type.lower() == 'buy' else tick.bid
-                    elif order_type.lower() in ['buy_limit', 'buy_stop']:
-                        price = tick.ask
-                    else:  # sell_limit, sell_stop
-                        price = tick.bid
+            # Check existing pending orders
+            orders = mt5.orders_get(symbol=symbol)  # type: ignore
+            if orders and len(orders) > 0:
+                for order in orders:
+                    if hasattr(order, 'magic') and order.magic == self.magic_number:
+                        logger.warning(f"[{symbol}] Cannot place stop order: existing pending order found (ticket {order.ticket})")
+                        return {
+                            'success': False,
+                            'error': f'Existing pending order for {symbol} (ticket {order.ticket})'}
 
-            # Determine MT5 order type
+            # FORCE STOP ORDERS ONLY: Convert any order type to stop order
             if order_type.lower() == 'buy':
-                mt5_order_type = mt5.ORDER_TYPE_BUY
+                order_type = 'buy_stop'
+                logger.info(f"[{symbol}] Converting BUY to BUY_STOP order")
             elif order_type.lower() == 'sell':
-                mt5_order_type = mt5.ORDER_TYPE_SELL
-            elif order_type.lower() == 'buy_limit':
-                mt5_order_type = mt5.ORDER_TYPE_BUY_LIMIT
-            elif order_type.lower() == 'sell_limit':
-                mt5_order_type = mt5.ORDER_TYPE_SELL_LIMIT
-            elif order_type.lower() == 'buy_stop':
+                order_type = 'sell_stop'
+                logger.info(f"[{symbol}] Converting SELL to SELL_STOP order")
+            elif order_type.lower() in ['buy_limit', 'sell_limit']:
+                # Convert limit orders to stop orders
+                if order_type.lower() == 'buy_limit':
+                    order_type = 'buy_stop'
+                else:
+                    order_type = 'sell_stop'
+                logger.info(f"[{symbol}] Converting LIMIT to STOP order")
+
+            # Get current price for stop order placement
+            tick = mt5.symbol_info_tick(symbol)  # type: ignore
+            if tick is None:
+                logger.error(f"Failed to get tick data for {symbol}")
+                return {'success': False,
+                        'error': f'Failed to get tick data for {symbol}'}
+
+            # Calculate stop order price based on direction and current market
+            current_price = (tick.ask + tick.bid) / 2  # Use mid price as reference
+
+            # Get stop order distance configuration
+            pending_config = self.config.get('trading', {}).get('pending_order_distances', {})
+
+            # Determine pip ranges based on symbol
+            if 'XAU' in symbol or 'GOLD' in symbol:
+                min_pips = pending_config.get('xauusd_min_pips', 50)
+                max_pips = pending_config.get('xauusd_max_pips', 150)
+            elif 'XAG' in symbol or 'SILVER' in symbol:
+                min_pips = pending_config.get('xagusd_min_pips', 20)
+                max_pips = pending_config.get('xagusd_max_pips', 50)
+            else:
+                min_pips = pending_config.get('forex_min_pips', 10)
+                max_pips = pending_config.get('forex_max_pips', 25)
+
+            # Calculate pip size
+            if 'XAU' in symbol or 'GOLD' in symbol or 'XAG' in symbol:
+                pip_size = symbol_info.point * 10  # Metals: 1 pip = 10 points
+            elif symbol_info.digits == 3 or symbol_info.digits == 5:
+                pip_size = symbol_info.point * 10
+            else:
+                pip_size = symbol_info.point
+
+            # Generate random distance within range for stop order placement
+            import random
+            random_pips = random.uniform(min_pips, max_pips)
+            distance = random_pips * pip_size
+
+            # Calculate stop order price based on direction
+            if order_type.lower() == 'buy_stop':
+                # BUY STOP: place above current price (breakout buying)
+                price = current_price + distance
+                logger.info(f"[{symbol}] BUY STOP: {random_pips:.1f} pips above current price {current_price:.5f} -> {price:.5f}")
+            elif order_type.lower() == 'sell_stop':
+                # SELL STOP: place below current price (breakdown selling)
+                price = current_price - distance
+                logger.info(f"[{symbol}] SELL STOP: {random_pips:.1f} pips below current price {current_price:.5f} -> {price:.5f}")
+            else:
+                return {'success': False,
+                        'error': f'Invalid order type for stop-only system: {order_type}'}
+
+            # Determine MT5 order type (ONLY STOP ORDERS ALLOWED)
+            if order_type.lower() == 'buy_stop':
                 mt5_order_type = mt5.ORDER_TYPE_BUY_STOP
             elif order_type.lower() == 'sell_stop':
                 mt5_order_type = mt5.ORDER_TYPE_SELL_STOP
             else:
                 return {'success': False,
-                        'error': f'Unknown order type: {order_type}'}
+                        'error': f'Only stop orders allowed: {order_type} is not supported'}
 
-            # Recalculate stop loss and take profit based on actual order price
+            # Recalculate stop loss and take profit based on stop order price
             if stop_loss is not None and price is not None:
                 # Get default pips from config
                 config = getattr(self, 'config', {})
@@ -367,12 +367,14 @@ class OrderExecutor:
                 else:
                     pip_size = symbol_info.point
                 
-                # Recalculate SL/TP based on actual price
-                if order_type.lower() in ['buy', 'buy_limit', 'buy_stop']:
+                # For stop orders, SL/TP are calculated from the stop order price
+                if order_type.lower() == 'buy_stop':
+                    # BUY STOP: SL below stop price, TP above stop price
                     stop_loss = price - (default_sl_pips * pip_size)
                     if take_profit is not None:
                         take_profit = price + (default_tp_pips * pip_size)
-                else:  # sell orders
+                elif order_type.lower() == 'sell_stop':
+                    # SELL STOP: SL above stop price, TP below stop price
                     stop_loss = price + (default_sl_pips * pip_size)
                     if take_profit is not None:
                         take_profit = price - (default_tp_pips * pip_size)
@@ -383,7 +385,7 @@ class OrderExecutor:
                     take_profit = round(take_profit, symbol_info.digits)
                 
                 tp_display = f"{take_profit:.5f}" if take_profit is not None else "None"
-                logger.info(f"[{symbol}] Recalculated SL/TP for {order_type} @ {price:.5f}: SL={stop_loss:.5f}, TP={tp_display}")
+                logger.info(f"[{symbol}] SL/TP for {order_type} @ {price:.5f}: SL={stop_loss:.5f}, TP={tp_display}")
 
             # Adjust stop loss to meet minimum broker requirements
             if stop_loss is not None and price is not None:
@@ -402,11 +404,7 @@ class OrderExecutor:
 
             # Check if dry run mode is enabled
             if self.dry_run:
-                order_desc = f"{order_type} order"
-                if mt5_order_type in [mt5.ORDER_TYPE_BUY_LIMIT, mt5.ORDER_TYPE_SELL_LIMIT, 
-                                     mt5.ORDER_TYPE_BUY_STOP, mt5.ORDER_TYPE_SELL_STOP]:
-                    order_desc = f"pending {order_type} order"
-                logger.info(f"[DRY RUN] Would place {order_desc} for {symbol} @ {price}")
+                logger.info(f"[DRY RUN] Would place STOP ORDER for {symbol}: {order_type} @ {price:.5f}")
                 logger.info(f"[DRY RUN] SL: {stop_loss}, TP: {take_profit}, Volume: {volume}")
                 return {
                     'success': True,

@@ -379,31 +379,53 @@ class TimeManager:
         """
         Get the current forex trading session.
 
+        Sessions:
+        - Sydney: 22:00-07:00 GMT (overlaps with Tokyo start, London end)
+        - Tokyo: 00:00-09:00 GMT (overlaps with Sydney end, London start)
+        - London: 08:00-16:00 GMT (overlaps with Tokyo end, NY start)
+        - New York: 13:30-22:00 GMT (overlaps with London end, Sydney start)
+
         Returns:
-            str: Current session ('london', 'newyork', 'tokyo', 'overlap', 'none')
+            str: Current session ('sydney', 'tokyo', 'london', 'newyork', 'overlap', 'none')
         """
         try:
-            now_utc = datetime.now(self.UTC)
-            hour = now_utc.hour
-            minute = now_utc.minute
+            # Use MT5 server time for consistent session detection
+            current_time = self.get_current_time()
+            hour = current_time.hour
+            minute = current_time.minute
 
             # Check for overlap periods first (most specific conditions)
-            if hour == 13 and minute < 30:  # London opens while NY still active
+            # London/NY overlap: 13:00-16:30 GMT
+            if (hour == 13 and minute >= 0) or (hour == 14 or hour == 15) or (hour == 16 and minute < 30):
                 return 'overlap'
-            elif hour == 16 and minute < 30:  # London closes while NY still active
+
+            # Tokyo/London overlap: 08:00-09:00 GMT
+            elif hour == 8:
                 return 'overlap'
+
+            # Sydney/Tokyo overlap: 00:00-01:00 GMT
+            elif hour == 0:
+                return 'overlap'
+
+            # Sydney/London overlap: 16:00-17:00 GMT (London close, Sydney still active briefly)
+            elif hour == 16 and minute >= 30:
+                return 'overlap'
+
+            # Sydney session: 22:00-07:00 GMT (most active Asian session)
+            elif hour >= 22 or hour < 7:
+                return 'sydney'
+
+            # Tokyo session: 01:00-08:00 GMT
+            elif 1 <= hour < 8:
+                return 'tokyo'
+
+            # London session: 08:00-16:00 GMT (most active European trading)
+            elif 8 <= hour < 16:
+                return 'london'
 
             # New York session: 13:30-22:00 GMT
             elif (hour == 13 and minute >= 30) or (14 <= hour < 22):
                 return 'newyork'
-
-            # London session: 08:00-16:00 GMT (most active)
-            elif 8 <= hour < 16:
-                return 'london'
-
-            # Tokyo session: 00:00-09:00 GMT
-            elif 0 <= hour < 9:
-                return 'tokyo'
 
             else:
                 return 'none'
@@ -470,6 +492,61 @@ class TimeManager:
         except Exception as e:
             logger.warning(f"Error getting session threshold: {e}")
             return config.get('trading', {}).get('min_signal_strength', 0.600)
+
+    def is_optimal_trading_hour(self, config: dict) -> bool:
+        """
+        Check if current hour is optimal for trading based on learned performance.
+
+        Args:
+            config: Configuration dictionary with learned hourly weights
+
+        Returns:
+            bool: True if current hour has above-average performance weight
+        """
+        try:
+            # Use MT5 server time for consistent hour checking
+            current_time = self.get_current_time()
+            current_hour = current_time.hour
+
+            # Get hourly weights from adaptive learning config
+            adaptive_config = config.get('adaptive_learning', {}).get('session_time_optimization', {})
+            hourly_weights = adaptive_config.get('hourly_weights', {})
+
+            if not hourly_weights:
+                return True  # No optimization data, allow trading
+
+            current_weight = hourly_weights.get(str(current_hour), 1.0)
+            avg_weight = sum(hourly_weights.values()) / len(hourly_weights)
+
+            # Consider hour optimal if weight is above average
+            return current_weight >= avg_weight * 0.9  # 90% of average threshold
+
+        except Exception as e:
+            logger.warning(f"Error checking optimal trading hour: {e}")
+            return True  # Default to allowing if check fails
+
+    def get_hourly_performance_weight(self, config: dict) -> float:
+        """
+        Get the learned performance weight for the current hour.
+
+        Args:
+            config: Configuration dictionary
+
+        Returns:
+            float: Performance weight (higher = better performance)
+        """
+        try:
+            # Use MT5 server time for consistent weight lookup
+            current_time = self.get_current_time()
+            current_hour = current_time.hour
+            adaptive_config = config.get('adaptive_learning', {}).get('session_time_optimization', {})
+            hourly_weights = adaptive_config.get('hourly_weights', {})
+
+            return hourly_weights.get(str(current_hour), 1.0)
+
+        except Exception as e:
+            logger.warning(f"Error getting hourly performance weight: {e}")
+            return 1.0
 
     def get_session_info(self) -> dict:
         """

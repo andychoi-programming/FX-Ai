@@ -208,6 +208,32 @@ class TradingOrchestrator:
             fundamental_score = self.app.fundamental_collector.get_news_sentiment(symbol)['score']
             sentiment_score = self.app.sentiment_analyzer.analyze(symbol, market_data)
 
+            # Get ML prediction if available
+            ml_score = 0.0
+            ml_confidence = 0.0
+            ml_prediction = None
+
+            if self.app.ml_predictor:
+                try:
+                    # Get technical signals for ML prediction using analyze_symbol
+                    technical_signals = self.app.technical_analyzer.analyze_symbol(symbol, market_data)
+
+                    # Make ML prediction
+                    ml_prediction = await self.app.ml_predictor.predict(
+                        symbol, h1_data, technical_signals, 'H1'
+                    )
+
+                    if ml_prediction and 'confidence' in ml_prediction:
+                        ml_score = ml_prediction['confidence']
+                        ml_confidence = ml_prediction.get('confidence', 0.0)
+                        self.logger.info(f"[{symbol}] ML Prediction: score={ml_score:.3f}, confidence={ml_confidence:.3f}")
+                    else:
+                        self.logger.warning(f"[{symbol}] ML prediction failed or returned invalid result")
+                except Exception as e:
+                    self.logger.error(f"[{symbol}] Error getting ML prediction: {e}")
+                    ml_score = 0.0
+                    ml_confidence = 0.0
+
             # Boost fundamental and sentiment scores during active sessions (similar to check_opportunities.py)
             current_session = self.time_manager.get_current_session()
             if current_session == 'london':
@@ -217,16 +243,21 @@ class TradingOrchestrator:
                 fundamental_score = min(0.65, fundamental_score + 0.15)
                 sentiment_score = min(0.65, sentiment_score + 0.15)
 
-            # Combine signals using adaptive learning weights
+            # Combine signals using adaptive learning weights (including ML)
             if self.adaptive_learning and current_session not in ['london', 'new_york']:
                 # Use adaptive learning only outside active sessions
                 signal_strength = self.adaptive_learning.calculate_signal_strength(
-                    technical_score, fundamental_score, sentiment_score)
+                    technical_score, fundamental_score, sentiment_score, ml_score)
             else:
                 # Use improved weighting with boosted scores during active sessions
-                signal_strength = (technical_score * 0.6 + fundamental_score * 0.25 + sentiment_score * 0.15)
+                # Include ML score if confidence is high enough
+                if ml_confidence > 0.6:
+                    signal_strength = (technical_score * 0.4 + fundamental_score * 0.2 +
+                                     sentiment_score * 0.15 + ml_score * 0.25)
+                else:
+                    signal_strength = (technical_score * 0.6 + fundamental_score * 0.25 + sentiment_score * 0.15)
 
-            self.logger.info(f"[{symbol}] Scores - Tech: {technical_score:.3f}, Fund: {fundamental_score:.3f}, Sent: {sentiment_score:.3f}, Combined: {signal_strength:.3f}")
+            self.logger.info(f"[{symbol}] Scores - Tech: {technical_score:.3f}, Fund: {fundamental_score:.3f}, Sent: {sentiment_score:.3f}, ML: {ml_score:.3f} ({ml_confidence:.2f}), Combined: {signal_strength:.3f}")
 
             # Get session-aware minimum signal strength
             min_strength = self.time_manager.get_session_signal_threshold(self.config)
@@ -242,6 +273,13 @@ class TradingOrchestrator:
                     preferred_sessions = session_config.get('preferred_sessions', [])
                     current_session = self.time_manager.get_current_session()
                     self.logger.info(f"[{symbol}] Not in preferred session ({current_session}), skipping. Preferred: {preferred_sessions}")
+                    return None
+
+                # Check if current hour is optimal for trading
+                if not self.time_manager.is_optimal_trading_hour(self.config):
+                    current_hour = self.app.get_current_mt5_time().hour
+                    hourly_weight = self.time_manager.get_hourly_performance_weight(self.config)
+                    self.logger.info(f"[{symbol}] Sub-optimal trading hour ({current_hour:02d}:00, weight: {hourly_weight:.3f}), skipping")
                     return None
 
             # Check minimum signal strength (session-aware)
@@ -270,6 +308,7 @@ class TradingOrchestrator:
                 'technical_score': technical_score,
                 'fundamental_score': fundamental_score,
                 'sentiment_score': sentiment_score,
+                'ml_score': ml_score,
                 'signal_strength': signal_strength
             }
 
@@ -419,6 +458,12 @@ class TradingOrchestrator:
                     self.app.get_current_mt5_time() - trade_data['timestamp']).seconds // 60
                 trade_data['volume'] = history.get('volume', 0)
 
+                # Add session and day-of-week information for learning
+                trade_data['session'] = self.time_manager.get_current_session()
+                trade_timestamp = trade_data.get('timestamp', self.app.get_current_mt5_time())
+                trade_data['day_of_week'] = trade_timestamp.strftime('%A').lower()
+                trade_data['hour_of_day'] = trade_timestamp.hour
+
                 # Record trade result for cooldown management
                 actual_profit = history.get('profit', 0)
                 self.risk_manager.record_trade_result(trade_data['symbol'], actual_profit)
@@ -532,14 +577,18 @@ class TradingOrchestrator:
             holding_minutes = (
                 self.app.get_current_mt5_time() - trade_data['timestamp']).seconds // 60
 
-            # ONLY RULE: Check for immediate closure after 22:00 MT5 time
+            # Check for immediate closure after 22:00 MT5 time ONLY if not in active session
             current_time = self.time_manager.get_current_time()
             current_time_only = current_time.time()
             immediate_close_time = self.time_manager.MT5_IMMEDIATE_CLOSE_TIME
 
+            # Only close if after immediate close time AND not in an active trading session
             if current_time_only >= immediate_close_time:
-                await self._close_position_immediately(ticket, trade_data, immediate_close_time)
-                return
+                current_session = self.time_manager.get_current_session()
+                # Don't close if we're in Sydney or Tokyo sessions (active after 22:00)
+                if current_session not in ['sydney', 'tokyo']:
+                    await self._close_position_immediately(ticket, trade_data, immediate_close_time)
+                    return
 
             # No other time-based closures - only SL/TP or manual closure
 
@@ -1194,6 +1243,7 @@ class TradingOrchestrator:
             current_time = self.time_manager.get_current_time()
             current_time_only = current_time.time()
             closure_time = self.time_manager.MT5_IMMEDIATE_CLOSE_TIME
+            current_session = self.time_manager.get_current_session()
             
             orphaned_positions = []
             
@@ -1201,8 +1251,10 @@ class TradingOrchestrator:
                 # Check if this position was opened before closure time
                 open_time = datetime.fromtimestamp(pos.time)
                 if open_time.time() < closure_time:
-                    # This position should have been closed at 22:00
-                    orphaned_positions.append(pos)
+                    # This position should have been closed at 22:00, BUT only if we're not in an active session
+                    # (Sydney and Tokyo sessions are active after 22:00)
+                    if current_session not in ['sydney', 'tokyo']:
+                        orphaned_positions.append(pos)
             
             if orphaned_positions:
                 self.logger.warning(f"Found {len(orphaned_positions)} orphaned positions that missed 22:00 closure")

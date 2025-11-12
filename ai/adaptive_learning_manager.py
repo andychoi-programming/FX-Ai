@@ -213,15 +213,16 @@ class AdaptiveLearningManager:
         """Adjust signal weights"""
         return self.algorithms.adjust_signal_weights()
 
-    def calculate_signal_strength(self, technical_score: float, fundamental_score: float, sentiment_score: float) -> float:
+    def calculate_signal_strength(self, technical_score: float, fundamental_score: float, sentiment_score: float, ml_score: float = 0.0) -> float:
         """
         Calculate overall signal strength using adaptive weights
-        
+
         Args:
             technical_score: Technical analysis score (0-1)
-            fundamental_score: Fundamental analysis score (0-1) 
+            fundamental_score: Fundamental analysis score (0-1)
             sentiment_score: Sentiment analysis score (0-1)
-            
+            ml_score: ML prediction score (0-1), defaults to 0.0
+
         Returns:
             float: Combined signal strength (0-1)
         """
@@ -230,23 +231,25 @@ class AdaptiveLearningManager:
             weights = getattr(self, 'signal_weights', {
                 'technical_score': 0.4,
                 'fundamental_score': 0.3,
-                'sentiment_score': 0.3
+                'sentiment_score': 0.3,
+                'ml_prediction': 0.0  # Default to 0 if not set
             })
-            
+
             # Calculate weighted signal strength
             signal_strength = (
                 technical_score * weights.get('technical_score', 0.4) +
                 fundamental_score * weights.get('fundamental_score', 0.3) +
-                sentiment_score * weights.get('sentiment_score', 0.3)
+                sentiment_score * weights.get('sentiment_score', 0.3) +
+                ml_score * weights.get('ml_prediction', 0.0)
             )
-            
+
             # Ensure result is in 0-1 range
             return max(0.0, min(1.0, signal_strength))
-            
+
         except Exception as e:
             # Fallback to simple average if anything goes wrong
             self.logger.warning(f"Error calculating adaptive signal strength: {e}, using simple average")
-            return (technical_score + fundamental_score + sentiment_score) / 3.0
+            return (technical_score + fundamental_score + sentiment_score + ml_score) / 4.0
 
     def optimize_symbol_sl_tp(self, symbol: str):
         """Optimize SL/TP for symbol"""

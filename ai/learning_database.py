@@ -46,7 +46,10 @@ class LearningDatabase:
                 technical_score REAL,
                 sentiment_score REAL,
                 duration_minutes INTEGER,
-                model_version TEXT
+                model_version TEXT,
+                session TEXT,
+                day_of_week TEXT,
+                hour_of_day INTEGER
             )
         ''')
 
@@ -387,6 +390,21 @@ class LearningDatabase:
         except sqlite3.OperationalError:
             pass  # Column already exists
 
+        try:
+            cursor.execute("ALTER TABLE trades ADD COLUMN session TEXT")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
+        try:
+            cursor.execute("ALTER TABLE trades ADD COLUMN day_of_week TEXT")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
+        try:
+            cursor.execute("ALTER TABLE trades ADD COLUMN hour_of_day INTEGER")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
         # Add new columns to symbol_holding_times table for forced closure analysis
         try:
             cursor.execute("ALTER TABLE symbol_holding_times ADD COLUMN natural_trades INTEGER")
@@ -470,8 +488,9 @@ class LearningDatabase:
                 INSERT INTO trades (
                     timestamp, symbol, direction, entry_price, exit_price,
                     volume, profit, profit_pct, signal_strength, ml_score,
-                    technical_score, sentiment_score, duration_minutes, model_version
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    technical_score, sentiment_score, duration_minutes, model_version,
+                    session, day_of_week, hour_of_day
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 trade_data.get('timestamp', datetime.now()),
                 trade_data.get('symbol'),
@@ -486,7 +505,10 @@ class LearningDatabase:
                 trade_data.get('technical_score', 0),
                 trade_data.get('sentiment_score', 0),
                 trade_data.get('duration_minutes', 0),
-                trade_data.get('model_version', 'unknown')
+                trade_data.get('model_version', 'unknown'),
+                trade_data.get('session', 'unknown'),
+                trade_data.get('day_of_week', 'unknown'),
+                trade_data.get('hour_of_day', 0)
             ))
 
             conn.commit()

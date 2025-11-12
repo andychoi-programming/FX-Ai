@@ -90,6 +90,18 @@ class LearningAlgorithms:
             # Analyze performance by signal components
             self._analyze_signal_performance(performance_data)
 
+            # Analyze performance by session
+            session_performance = self.analyze_session_performance(performance_data)
+            self.performance_metrics['session_performance'] = session_performance
+
+            # Analyze performance by day of week
+            day_performance = self.analyze_day_of_week_performance(performance_data)
+            self.performance_metrics['day_performance'] = day_performance
+
+            # Analyze performance by hour of day
+            hourly_performance = self.analyze_hourly_performance(performance_data)
+            self.performance_metrics['hourly_performance'] = hourly_performance
+
             # Identify patterns
             self._identify_patterns(performance_data)
 
@@ -112,7 +124,8 @@ class LearningAlgorithms:
             # Get recent trades (last 5 years with recency weighting)
             query = '''
                 SELECT symbol, direction, profit_pct, signal_strength,
-                       ml_score, technical_score, sentiment_score, timestamp
+                       ml_score, technical_score, sentiment_score, timestamp,
+                       session, day_of_week, hour_of_day
                 FROM trades
                 WHERE timestamp > datetime('now', '-1825 days')
             '''
@@ -240,6 +253,222 @@ class LearningAlgorithms:
 
         except Exception as e:
             logger.error(f"Error identifying patterns: {e}")
+
+    def analyze_session_performance(self, df: pd.DataFrame) -> dict:
+        """Analyze trading performance by session"""
+        try:
+            if 'session' not in df.columns or len(df) < 20:
+                return {}
+
+            session_performance = {}
+            for session in df['session'].unique():
+                session_trades = df[df['session'] == session]
+                if len(session_trades) >= 5:  # Minimum trades for meaningful analysis
+                    win_rate = (session_trades['profit_pct'] > 0).mean()
+                    avg_profit = (session_trades['profit_pct'] * session_trades.get('weight', 1)).mean()
+                    total_trades = len(session_trades)
+                    sharpe = self._calculate_sharpe_ratio(session_trades['profit_pct'])
+
+                    session_performance[session] = {
+                        'win_rate': win_rate,
+                        'avg_profit_pct': avg_profit,
+                        'total_trades': total_trades,
+                        'sharpe_ratio': sharpe,
+                        'confidence': min(1.0, total_trades / 50)  # Confidence based on sample size
+                    }
+
+            # Update session weights based on performance
+            if session_performance:
+                self._update_session_weights(session_performance)
+
+            return session_performance
+
+        except Exception as e:
+            logger.error(f"Error analyzing session performance: {e}")
+            return {}
+
+    def analyze_day_of_week_performance(self, df: pd.DataFrame) -> dict:
+        """Analyze trading performance by day of week"""
+        try:
+            if 'day_of_week' not in df.columns or len(df) < 20:
+                return {}
+
+            day_performance = {}
+            day_names = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
+
+            for day_name in day_names:
+                day_trades = df[df['day_of_week'] == day_name]
+                if len(day_trades) >= 3:  # Minimum trades for meaningful analysis
+                    win_rate = (day_trades['profit_pct'] > 0).mean()
+                    avg_profit = (day_trades['profit_pct'] * day_trades.get('weight', 1)).mean()
+                    total_trades = len(day_trades)
+                    sharpe = self._calculate_sharpe_ratio(day_trades['profit_pct'])
+
+                    day_performance[day_name] = {
+                        'win_rate': win_rate,
+                        'avg_profit_pct': avg_profit,
+                        'total_trades': total_trades,
+                        'sharpe_ratio': sharpe,
+                        'confidence': min(1.0, total_trades / 30)  # Confidence based on sample size
+                    }
+
+            # Update day weights based on performance
+            if day_performance:
+                self._update_day_weights(day_performance)
+
+            return day_performance
+
+        except Exception as e:
+            logger.error(f"Error analyzing day of week performance: {e}")
+            return {}
+
+    def _update_session_weights(self, session_performance: dict):
+        """Update session weights based on performance analysis"""
+        try:
+            config = self.config.get('adaptive_learning', {}).get('session_time_optimization', {})
+            if not config.get('enabled', False):
+                return
+
+            adaptation_rate = config.get('adaptation_rate', 0.05)
+            current_weights = config.get('session_weights', {})
+
+            for session, perf in session_performance.items():
+                if session in current_weights and perf['confidence'] > 0.3:
+                    # Adjust weight based on win rate and Sharpe ratio
+                    performance_score = (perf['win_rate'] * 0.6 + min(1.0, perf['sharpe_ratio'] / 2) * 0.4)
+
+                    # Target weight adjustment (higher performance = higher weight)
+                    target_weight = 0.8 + (performance_score * 0.4)  # Range: 0.8-1.2
+
+                    # Smooth adjustment
+                    current_weight = current_weights[session]
+                    new_weight = current_weight + (target_weight - current_weight) * adaptation_rate
+
+                    # Keep within reasonable bounds
+                    new_weight = max(0.5, min(1.5, new_weight))
+                    current_weights[session] = round(new_weight, 3)
+
+                    logger.info(f"Updated {session} weight: {current_weight:.3f} -> {new_weight:.3f}")
+
+        except Exception as e:
+            logger.error(f"Error updating session weights: {e}")
+
+    def _update_day_weights(self, day_performance: dict):
+        """Update day-of-week weights based on performance analysis"""
+        try:
+            config = self.config.get('adaptive_learning', {}).get('session_time_optimization', {})
+            if not config.get('enabled', False):
+                return
+
+            adaptation_rate = config.get('adaptation_rate', 0.05)
+            current_weights = config.get('day_of_week_weights', {})
+
+            for day, perf in day_performance.items():
+                if day in current_weights and perf['confidence'] > 0.2:
+                    # Adjust weight based on win rate and Sharpe ratio
+                    performance_score = (perf['win_rate'] * 0.6 + min(1.0, perf['sharpe_ratio'] / 2) * 0.4)
+
+                    # Target weight adjustment
+                    target_weight = 0.8 + (performance_score * 0.4)  # Range: 0.8-1.2
+
+                    # Smooth adjustment
+                    current_weight = current_weights[day]
+                    new_weight = current_weight + (target_weight - current_weight) * adaptation_rate
+
+                    # Keep within reasonable bounds
+                    new_weight = max(0.5, min(1.5, new_weight))
+                    current_weights[day] = round(new_weight, 3)
+
+                    logger.info(f"Updated {day} weight: {current_weight:.3f} -> {new_weight:.3f}")
+
+        except Exception as e:
+            logger.error(f"Error updating day weights: {e}")
+
+    def analyze_hourly_performance(self, df: pd.DataFrame) -> dict:
+        """Analyze trading performance by hour of day"""
+        try:
+            if 'hour_of_day' not in df.columns or len(df) < 20:
+                return {}
+
+            hourly_performance = {}
+            for hour in range(24):  # 0-23 hours
+                hour_trades = df[df['hour_of_day'] == hour]
+                if len(hour_trades) >= 2:  # Minimum trades for meaningful analysis
+                    win_rate = (hour_trades['profit_pct'] > 0).mean()
+                    avg_profit = (hour_trades['profit_pct'] * hour_trades.get('weight', 1)).mean()
+                    total_trades = len(hour_trades)
+                    sharpe = self._calculate_sharpe_ratio(hour_trades['profit_pct'])
+
+                    hourly_performance[hour] = {
+                        'win_rate': win_rate,
+                        'avg_profit_pct': avg_profit,
+                        'total_trades': total_trades,
+                        'sharpe_ratio': sharpe,
+                        'confidence': min(1.0, total_trades / 20)  # Confidence based on sample size
+                    }
+
+            # Update hourly weights based on performance
+            if hourly_performance:
+                self._update_hourly_weights(hourly_performance)
+
+            return hourly_performance
+
+        except Exception as e:
+            logger.error(f"Error analyzing hourly performance: {e}")
+            return {}
+
+    def _update_hourly_weights(self, hourly_performance: dict):
+        """Update hourly weights based on performance analysis"""
+        try:
+            config = self.config.get('adaptive_learning', {}).get('session_time_optimization', {})
+            if not config.get('enabled', False):
+                return
+
+            adaptation_rate = config.get('adaptation_rate', 0.05)
+            current_weights = config.get('hourly_weights', {})
+
+            # Initialize hourly weights if not exists
+            if not current_weights:
+                current_weights = {hour: 1.0 for hour in range(24)}
+
+            for hour, perf in hourly_performance.items():
+                if hour in current_weights and perf['confidence'] > 0.1:
+                    # Adjust weight based on win rate and Sharpe ratio
+                    performance_score = (perf['win_rate'] * 0.6 + min(1.0, perf['sharpe_ratio'] / 2) * 0.4)
+
+                    # Target weight adjustment (higher performance = higher weight)
+                    target_weight = 0.8 + (performance_score * 0.4)  # Range: 0.8-1.2
+
+                    # Smooth adjustment
+                    current_weight = current_weights[hour]
+                    new_weight = current_weight + (target_weight - current_weight) * adaptation_rate
+
+                    # Keep within reasonable bounds
+                    new_weight = max(0.5, min(1.5, new_weight))
+                    current_weights[hour] = round(new_weight, 3)
+
+                    logger.info(f"Updated hour {hour:02d}:00 weight: {current_weight:.3f} -> {new_weight:.3f}")
+
+        except Exception as e:
+            logger.error(f"Error updating hourly weights: {e}")
+
+    def _calculate_sharpe_ratio(self, returns: pd.Series) -> float:
+        """Calculate Sharpe ratio for a series of returns"""
+        try:
+            if len(returns) < 2:
+                return 0.0
+
+            mean_return = returns.mean()
+            std_return = returns.std()
+
+            if std_return == 0:
+                return float('inf') if mean_return > 0 else float('-inf')
+
+            # Annualized Sharpe ratio (assuming daily returns)
+            return (mean_return / std_return) * np.sqrt(252)
+
+        except Exception:
+            return 0.0
 
     def optimize_parameters(self, test_data: Optional[pd.DataFrame] = None) -> dict:
         """Optimize trading parameters based on recent performance"""
@@ -513,3 +742,118 @@ class LearningAlgorithms:
         # Keep only recent trades
         if len(self.trade_history) > 1000:
             self.trade_history = self.trade_history[-1000:]
+
+    def retrain_models(self):
+        """Retrain ML models using recent performance data"""
+        try:
+            logger.info("Starting ML model retraining...")
+
+            # Import here to avoid circular imports
+            from ai.ml_predictor import MLPredictor
+            from data.market_data_manager import MarketDataManager
+
+            # Initialize components
+            ml_predictor = MLPredictor(self.config)
+            market_data_manager = MarketDataManager(self.config)
+
+            # Get symbols with recent trades
+            symbols_to_retrain = self._get_symbols_for_retraining()
+
+            if not symbols_to_retrain:
+                logger.info("No symbols require retraining based on trade volume")
+                return
+
+            retrained_count = 0
+
+            for symbol in symbols_to_retrain:
+                try:
+                    logger.info(f"Retraining model for {symbol}...")
+
+                    # Get recent market data for training
+                    data = market_data_manager.get_bars(symbol, 'H1', 1000)  # Last 1000 hours
+
+                    if data is None or len(data) < 200:
+                        logger.warning(f"Insufficient data for {symbol}, skipping retraining")
+                        continue
+
+                    # Get recent trade performance for this symbol
+                    trade_data = self._get_recent_trade_data(symbol)
+
+                    # Retrain the model
+                    success = ml_predictor._load_or_train_model(symbol, data, 'H1', trade_data)
+
+                    if success:
+                        retrained_count += 1
+                        logger.info(f"Successfully retrained model for {symbol}")
+                    else:
+                        logger.warning(f"Failed to retrain model for {symbol}")
+
+                except Exception as e:
+                    logger.error(f"Error retraining model for {symbol}: {e}")
+                    continue
+
+            logger.info(f"ML retraining completed. Retrained {retrained_count} out of {len(symbols_to_retrain)} models")
+
+        except Exception as e:
+            logger.error(f"Error in retrain_models: {e}")
+
+    def _get_symbols_for_retraining(self) -> list:
+        """Get symbols that have enough recent trades for retraining"""
+        try:
+            import sqlite3
+            import pandas as pd
+            from datetime import datetime, timedelta
+
+            # Connect to database
+            conn = sqlite3.connect(self.db_path)
+
+            # Get symbols with recent trades (last 30 days)
+            cutoff_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+
+            query = f"""
+            SELECT symbol, COUNT(*) as trade_count
+            FROM trades
+            WHERE timestamp >= '{cutoff_date}'
+            GROUP BY symbol
+            HAVING trade_count >= 20
+            ORDER BY trade_count DESC
+            """
+
+            df = pd.read_sql_query(query, conn)
+            conn.close()
+
+            symbols = df['symbol'].tolist()
+            logger.info(f"Found {len(symbols)} symbols eligible for retraining: {symbols}")
+            return symbols
+
+        except Exception as e:
+            logger.error(f"Error getting symbols for retraining: {e}")
+            return []
+
+    def _get_recent_trade_data(self, symbol: str) -> pd.DataFrame:
+        """Get recent trade data for a symbol to use in retraining"""
+        try:
+            import sqlite3
+            from datetime import datetime, timedelta
+
+            conn = sqlite3.connect(self.db_path)
+
+            # Get trades from last 90 days
+            cutoff_date = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+
+            query = f"""
+            SELECT timestamp, direction, entry_price, exit_price, profit, profit_pct,
+                   signal_strength, technical_score, sentiment_score
+            FROM trades
+            WHERE symbol = '{symbol}' AND timestamp >= '{cutoff_date}'
+            ORDER BY timestamp DESC
+            """
+
+            df = pd.read_sql_query(query, conn)
+            conn.close()
+
+            return df
+
+        except Exception as e:
+            logger.error(f"Error getting trade data for {symbol}: {e}")
+            return pd.DataFrame()

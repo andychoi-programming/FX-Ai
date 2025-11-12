@@ -221,7 +221,7 @@ class TradingEngine:
 
     async def place_order(self, symbol: str, order_type: str, volume: float,
                           stop_loss: Optional[float] = None, take_profit: Optional[float] = None,
-                          price: Optional[float] = None, comment: str = "") -> Dict:
+                          price: Optional[float] = None, comment: str = "", signal_data: Optional[Dict] = None) -> Dict:
         """Place order through MT5 - delegated to OrderExecutor"""
         result = await self.order_executor.place_order(symbol, order_type, volume, stop_loss, take_profit, price, comment)
 
@@ -234,7 +234,14 @@ class TradingEngine:
                 'entry': result.get('price', price),
                 'sl': stop_loss,
                 'tp': take_profit,
-                'timestamp': datetime.now()
+                'timestamp': datetime.now(),
+                'signal_data': signal_data or {  # Store signal data for learning
+                    'technical_score': 0.5,
+                    'fundamental_score': 0.5,
+                    'sentiment_score': 0.5,
+                    'ml_score': 0.0,
+                    'signal_strength': 0.5
+                }
             }
 
         return result
@@ -256,7 +263,14 @@ class TradingEngine:
                 volume=volume,
                 stop_loss=stop_loss,
                 take_profit=take_profit,
-                price=entry_price
+                price=entry_price,
+                signal_data={
+                    'technical_score': signal.get('technical_score', 0.5),
+                    'fundamental_score': signal.get('fundamental_score', 0.5),
+                    'sentiment_score': signal.get('sentiment_score', 0.5),
+                    'ml_score': signal.get('ml_score', 0.0),
+                    'signal_strength': signal.get('signal_strength', 0.5)
+                }
             )
 
             if result.get('success', False):
@@ -271,8 +285,9 @@ class TradingEngine:
                     'technical_score': signal.get('technical_score', 0.5),
                     'fundamental_score': signal.get('fundamental_score', 0.5),
                     'sentiment_score': signal.get('sentiment_score', 0.5),
+                    'ml_score': signal.get('ml_score', 0.0),
                     'signal_strength': signal.get('signal_strength', 0.5),
-                    'timestamp': datetime.now()
+                    'timestamp': self.mt5.get_server_time() if self.mt5 else datetime.now()
                 })
 
             return result

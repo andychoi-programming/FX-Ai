@@ -780,17 +780,30 @@ class RiskManager:
                 logger.warning(reason)
                 return False, reason
 
-            # Check if we already have a position on this symbol (optional)
+            # Check if we already have a position on this symbol (only for market orders)
             prevent_multiple = self.config.get('trading', {}).get('prevent_multiple_positions_per_symbol', True)
-            logger.debug(f"Prevent multiple positions per symbol: {prevent_multiple}")
+            order_type_config = self.config.get('trading', {}).get('order_type', 'market')
+            is_pending_order = order_type_config == 'pending'
             
-            if prevent_multiple:
+            logger.debug(f"Order type config: {order_type_config}, is_pending: {is_pending_order}")
+            
+            if prevent_multiple and not is_pending_order:
+                # For market orders, prevent multiple positions per symbol
                 symbol_positions = [p for p in positions if hasattr(p, 'symbol') and p.symbol == symbol] if positions else []
                 logger.debug(f"Existing positions on {symbol}: {len(symbol_positions)}")
                 if symbol_positions:
                     reason = f"Multiple positions per symbol not allowed: {symbol} already has {len(symbol_positions)} position(s)"
                     logger.warning(reason)
                     return False, reason
+            elif prevent_multiple and is_pending_order:
+                # For pending orders, check for existing pending orders instead of positions
+                orders = mt5.orders_get(symbol=symbol)  # type: ignore
+                if orders and len(orders) > 0:
+                    magic_orders = [o for o in orders if hasattr(o, 'magic') and o.magic == self.magic_number]
+                    if magic_orders:
+                        reason = f"Multiple pending orders per symbol not allowed: {symbol} already has {len(magic_orders)} pending order(s)"
+                        logger.warning(reason)
+                        return False, reason
 
         except Exception as e:
             logger.error(f"Error checking positions for {symbol}: {e}, allowing trade")
