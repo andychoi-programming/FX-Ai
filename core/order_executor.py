@@ -442,12 +442,16 @@ class OrderExecutor:
 
             # Check if dry run mode is enabled
             if self.dry_run:
+                tp_display = f"{take_profit:.5f}" if take_profit is not None else "None"
+                sl_display = f"{stop_loss:.5f}" if stop_loss is not None else "None"
                 logger.info(f"[DRY RUN] Would place STOP ORDER for {symbol}: {order_type} @ {price:.5f}")
-                logger.info(f"[DRY RUN] SL: {stop_loss}, TP: {take_profit}, Volume: {volume}")
+                logger.info(f"[DRY RUN] SL: {sl_display}, TP: {tp_display}, Volume: {volume}")
                 return {
                     'success': True,
                     'order': 999999,  # Fake order ticket
                     'price': price,
+                    'sl': stop_loss,
+                    'tp': take_profit,
                     'dry_run': True
                 }
 
@@ -491,12 +495,19 @@ class OrderExecutor:
                         "type_time": mt5.ORDER_TIME_GTC,
                     }
 
+                    # Add SL/TP for pending orders (they are applied when order fills)
+                    if trade_action == mt5.TRADE_ACTION_PENDING:
+                        if stop_loss is not None:
+                            request["sl"] = stop_loss
+                        if take_profit is not None:
+                            request["tp"] = take_profit
+
                     # Add filling mode only for market orders
                     if filling_mode is not None and trade_action == mt5.TRADE_ACTION_DEAL:
                         request["type_filling"] = filling_mode
 
-                    # Note: SL/TP will be set after order placement using TRADE_ACTION_SLTP
-                    # to avoid broker restrictions on including them in the initial request
+                    # Note: SL/TP are included in pending order requests and will be applied when order fills
+                    # For market orders, SL/TP will be set after order placement using TRADE_ACTION_SLTP
 
                     logger.debug(f"Trying filling mode {filling_mode} ({type(filling_mode).__name__}) for {symbol}")
                     
@@ -546,8 +557,9 @@ class OrderExecutor:
             # Order was successful - handle SL/TP and verification
             logger.info(f"Order placed: {symbol} {order_type} @ {price}")
 
-            # Use TRADE_ACTION_SLTP to set SL/TP after order placement
-            if stop_loss is not None or take_profit is not None:
+            # For market orders, set SL/TP after order placement using TRADE_ACTION_SLTP
+            # For pending orders, SL/TP are already set in the order request
+            if trade_action == mt5.TRADE_ACTION_DEAL and (stop_loss is not None or take_profit is not None):
                 await asyncio.sleep(0.2)  # Brief pause before modifying
 
                 # Get the actual position ticket
