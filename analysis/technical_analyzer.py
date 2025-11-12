@@ -89,7 +89,7 @@ class TechnicalAnalyzer:
             self.logger.error(f"Error analyzing {symbol}: {e}")
             return {}
 
-    async def analyze(self, symbol: str, data: Dict[str, pd.DataFrame]) -> Dict:
+    async def analyze_async(self, symbol: str, data: Dict[str, pd.DataFrame]) -> Dict:
         """
         Async wrapper for analyze_symbol method
 
@@ -101,6 +101,34 @@ class TechnicalAnalyzer:
             dict: Technical analysis results
         """
         return self.analyze_symbol(symbol, data)
+
+    def analyze(self, symbol: str, data: Dict[str, pd.DataFrame]) -> float:
+        """
+        Synchronous analyze method for trading orchestrator compatibility
+
+        Args:
+            symbol: Trading symbol
+            data: Market data dictionary
+
+        Returns:
+            float: Technical analysis score (0-1)
+        """
+        try:
+            # Call the synchronous analyze_symbol method
+            result = self.analyze_symbol(symbol, data)
+
+            # Extract the overall score
+            overall_score = result.get('overall_score', 0.5)
+
+            # Ensure it's a float in 0-1 range
+            if isinstance(overall_score, (int, float)):
+                return max(0.0, min(1.0, float(overall_score)))
+            else:
+                return 0.5
+
+        except Exception as e:
+            self.logger.error(f"Error in synchronous technical analysis for {symbol}: {e}")
+            return 0.5
 
     def _calculate_vwap(self, data: pd.DataFrame) -> Dict:
         """
