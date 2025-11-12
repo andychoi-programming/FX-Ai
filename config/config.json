@@ -63,8 +63,8 @@
     "pending_order_distances": {
       "forex_min_pips": 10,
       "forex_max_pips": 25,
-      "xauusd_min_pips": 50,
-      "xauusd_max_pips": 150,
+      "xauusd_min_pips": 25,
+      "xauusd_max_pips": 75,
       "xagusd_min_pips": 10,
       "xagusd_max_pips": 25,
       "order_type": "stop",
