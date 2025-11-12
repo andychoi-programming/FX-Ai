@@ -5,6 +5,7 @@ Analyzes market sentiment from news, social media, and retail positioning
 
 import logging
 import re
+import asyncio
 import numpy as np
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -445,3 +446,48 @@ class SentimentAnalyzer:
         for symbol in ['EURUSD', 'GBPUSD', 'USDJPY']:  # Default symbols
             results[symbol] = await self.analyze_sentiment(symbol)
         return results
+
+    def analyze(self, symbol: str, market_data: Optional[Dict] = None) -> float:
+        """
+        Synchronous analyze method for trading orchestrator compatibility
+
+        Args:
+            symbol: Trading symbol
+            market_data: Market data (not used for sentiment analysis)
+
+        Returns:
+            float: Sentiment score between 0 and 1
+        """
+        try:
+            # Create a new event loop if one doesn't exist
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # If loop is running, we need to handle this differently
+                    # For now, return a default neutral score
+                    return 0.5
+            except RuntimeError:
+                # No event loop, create one
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+            # Run the async analysis
+            result = loop.run_until_complete(self.analyze_sentiment(symbol))
+
+            # Extract the overall sentiment score
+            overall_sentiment = result.get('overall_sentiment', 0.5)
+
+            # Convert to 0-1 scale if needed
+            if isinstance(overall_sentiment, str):
+                # Convert sentiment strings to numeric
+                sentiment_map = {'bullish': 0.7, 'neutral': 0.5, 'bearish': 0.3}
+                return sentiment_map.get(overall_sentiment.lower(), 0.5)
+            elif isinstance(overall_sentiment, (int, float)):
+                # Ensure it's in 0-1 range
+                return max(0.0, min(1.0, float(overall_sentiment)))
+            else:
+                return 0.5
+
+        except Exception as e:
+            self.logger.error(f"Error in synchronous sentiment analysis for {symbol}: {e}")
+            return 0.5  # Return neutral sentiment on error

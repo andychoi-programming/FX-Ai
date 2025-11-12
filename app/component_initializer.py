@@ -235,9 +235,13 @@ class ComponentInitializer:
                 self.app.risk_manager.daily_trades_per_symbol.clear()
                 self.app.logger.info("Cleared in-memory daily trade tracking")
 
-            # Clear false database records (only if no trades today)
-            from datetime import datetime
-            today = datetime.now().date()
+            # Get today's date using the same method as risk manager
+            today, _, success = self.app.risk_manager._get_mt5_server_date_reliable()
+            if not success:
+                # Fallback to local time if MT5 not available during init
+                from datetime import datetime
+                today = datetime.now().date()
+                self.app.logger.info("Using local time for daily trade reset (MT5 not available)")
 
             import sqlite3
             db_path = os.path.join('data', 'performance_history.db')
@@ -255,9 +259,9 @@ class ComponentInitializer:
                     cursor.execute("DELETE FROM daily_trade_counts WHERE trade_date = ?", (today,))
                     cleared = cursor.rowcount
                     conn.commit()
-                    self.app.logger.info(f"Cleared {cleared} false 'already traded' flags from database")
+                    self.app.logger.info(f"Cleared {cleared} false 'already traded' flags from database for date {today}")
                 else:
-                    self.app.logger.info(f"{actual_trades_today} real trades exist today - keeping tracking")
+                    self.app.logger.info(f"{actual_trades_today} real trades exist today ({today}) - keeping tracking")
 
                 conn.close()
             else:
