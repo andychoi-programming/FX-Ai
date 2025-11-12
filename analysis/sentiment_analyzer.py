@@ -440,13 +440,6 @@ class SentimentAnalyzer:
                 'reason': 'error_fallback'
             }
 
-    async def analyze(self):
-        """Analyze sentiment for all symbols"""
-        results = {}
-        for symbol in ['EURUSD', 'GBPUSD', 'USDJPY']:  # Default symbols
-            results[symbol] = await self.analyze_sentiment(symbol)
-        return results
-
     def analyze(self, symbol: str, market_data: Optional[Dict] = None) -> float:
         """
         Synchronous analyze method for trading orchestrator compatibility
