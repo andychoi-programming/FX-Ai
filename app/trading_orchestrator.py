@@ -298,6 +298,18 @@ class TradingOrchestrator:
             sl_tp = self.risk_manager.calculate_stop_loss_take_profit(
                 symbol, current_price, direction)
 
+            # Calculate risk multiplier based on fundamental analysis
+            risk_multiplier = 1.0
+            if fundamental_score < 0.4:
+                risk_multiplier = 1.3  # High risk - increase stops
+            elif fundamental_score < 0.6:
+                risk_multiplier = 1.1  # Moderate risk
+
+            # Check for high impact events
+            if hasattr(self.app, 'fundamental_analyzer') and self.app.fundamental_analyzer:
+                if self.app.fundamental_analyzer.should_avoid_trading(symbol):
+                    risk_multiplier *= 1.5  # Avoid trading but if we do, very wide stops
+
             return {
                 'symbol': symbol,
                 'direction': direction,
@@ -309,7 +321,8 @@ class TradingOrchestrator:
                 'fundamental_score': fundamental_score,
                 'sentiment_score': sentiment_score,
                 'ml_score': ml_score,
-                'signal_strength': signal_strength
+                'signal_strength': signal_strength,
+                'risk_multiplier': risk_multiplier
             }
 
         except Exception as e:

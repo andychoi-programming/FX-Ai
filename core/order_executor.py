@@ -233,7 +233,7 @@ class OrderExecutor:
 
     async def place_order(self, symbol: str, order_type: str, volume: float,
                           stop_loss: Optional[float] = None, take_profit: Optional[float] = None,
-                          price: Optional[float] = None, comment: str = "") -> Dict:
+                          price: Optional[float] = None, comment: str = "", signal_data: Optional[Dict] = None) -> Dict:
         """Place order through MT5 - ASYNC - ONLY STOP ORDERS ALLOWED"""
         try:
             # Check MT5 connection
@@ -316,6 +316,44 @@ class OrderExecutor:
             else:
                 min_pips = pending_config.get('forex_min_pips', 10)
                 max_pips = pending_config.get('forex_max_pips', 25)
+
+            # Adjust stop distance based on signal analysis
+            risk_factor = 1.0
+            if signal_data:
+                # Apply fundamental risk multiplier
+                risk_multiplier = signal_data.get('risk_multiplier', 1.0)
+                risk_factor *= risk_multiplier
+
+                # Increase stop distance for low signal strength (higher risk)
+                signal_strength = signal_data.get('signal_strength', 0.5)
+                if signal_strength < 0.4:
+                    risk_factor *= 1.5
+                elif signal_strength < 0.6:
+                    risk_factor *= 1.2
+
+                # Adjust based on fundamental analysis
+                fundamental_score = signal_data.get('fundamental_score', 0.5)
+                if order_type.lower() == 'buy_stop' and fundamental_score < 0.4:
+                    # Bearish fundamental for buy signal - increase stop
+                    risk_factor *= 1.2
+                elif order_type.lower() == 'sell_stop' and fundamental_score > 0.6:
+                    # Bullish fundamental for sell signal - increase stop
+                    risk_factor *= 1.2
+
+                # Adjust based on sentiment analysis
+                sentiment_score = signal_data.get('sentiment_score', 0.5)
+                if sentiment_score < 0.4:
+                    # Negative sentiment - increase stop distance
+                    risk_factor *= 1.1
+
+                # Cap risk factor to prevent excessive stops
+                risk_factor = min(risk_factor, 3.0)
+
+                logger.info(f"[{symbol}] Risk factor: {risk_factor:.2f} (multiplier: {risk_multiplier:.2f}, strength: {signal_strength:.2f}, fund: {fundamental_score:.2f}, sent: {sentiment_score:.2f})")
+
+            # Apply risk factor to pip ranges
+            min_pips *= risk_factor
+            max_pips *= risk_factor
 
             # Calculate pip size
             if 'XAU' in symbol or 'GOLD' in symbol or 'XAG' in symbol:

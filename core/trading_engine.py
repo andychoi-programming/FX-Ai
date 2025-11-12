@@ -223,7 +223,7 @@ class TradingEngine:
                           stop_loss: Optional[float] = None, take_profit: Optional[float] = None,
                           price: Optional[float] = None, comment: str = "", signal_data: Optional[Dict] = None) -> Dict:
         """Place order through MT5 - delegated to OrderExecutor"""
-        result = await self.order_executor.place_order(symbol, order_type, volume, stop_loss, take_profit, price, comment)
+        result = await self.order_executor.place_order(symbol, order_type, volume, stop_loss, take_profit, price, comment, signal_data)
 
         # Track the order if successful
         if result.get('success', False) and order_type.lower() in ['buy', 'sell']:
@@ -269,7 +269,8 @@ class TradingEngine:
                     'fundamental_score': signal.get('fundamental_score', 0.5),
                     'sentiment_score': signal.get('sentiment_score', 0.5),
                     'ml_score': signal.get('ml_score', 0.0),
-                    'signal_strength': signal.get('signal_strength', 0.5)
+                    'signal_strength': signal.get('signal_strength', 0.5),
+                    'risk_multiplier': signal.get('risk_multiplier', 1.0)
                 }
             )
 
