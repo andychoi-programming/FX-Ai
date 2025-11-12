@@ -29,7 +29,7 @@ import time as time_module
 import threading
 import json
 import signal
-from datetime import datetime, time
+from datetime import datetime, time, timezone
 from typing import Dict
 import asyncio
 import pandas as pd
@@ -119,7 +119,7 @@ class FXAiApplication:
         This ensures all trading decisions and logging use the same time source.
         
         Returns:
-            datetime: MT5 server time or local time as fallback
+            datetime: MT5 server time or local time as fallback (always timezone-aware)
         """
         try:
             if self.mt5:
@@ -130,7 +130,8 @@ class FXAiApplication:
             self.logger.warning(f"Failed to get MT5 server time: {e}")
         
         # Fallback to local time if MT5 time unavailable
-        return datetime.now()
+        # Make it timezone-aware to match MT5 server time format
+        return datetime.now(timezone.utc)
 
     async def validate_configuration(self):
         """Validate critical configuration before trading starts"""
@@ -736,7 +737,7 @@ class FXAiApplication:
                             else:
                                 # Use ATR-based TP for forex
                                 base_tp_multiplier = adaptive_params.get(
-                                    'take_profit_atr_multiplier', 6.0)
+                                    'take_profit_atr_multiplier', 9.0)
                                 tp_atr_multiplier = base_tp_multiplier
                                 take_profit_distance = atr_value * tp_atr_multiplier
 
@@ -758,7 +759,7 @@ class FXAiApplication:
                             # For forex, calculate ATR-based base values
                             if atr_value > 0:
                                 sl_atr_multiplier = adaptive_params.get('stop_loss_atr_multiplier', 3.0)
-                                tp_atr_multiplier = adaptive_params.get('take_profit_atr_multiplier', 6.0)
+                                tp_atr_multiplier = adaptive_params.get('take_profit_atr_multiplier', 9.0)
                                 base_sl_distance = atr_value * sl_atr_multiplier
                                 base_tp_distance = atr_value * tp_atr_multiplier
 
@@ -969,45 +970,31 @@ class FXAiApplication:
                     symbol_elapsed = time_module.time() - symbol_start_time
                     self.logger.info(f"Completed processing {symbol} ({symbol_counter}/{len(market_data_dict)}) in {symbol_elapsed:.2f}s")
 
-                # Check if trading is allowed (before 22:30 MT5 server time)
-                if self.config.get('trading', {}).get('day_trading_only', True):
-                    is_allowed, reason = self.time_manager.is_trading_allowed()
-
-                    if not is_allowed:
-                        self.logger.info(f"Trading halted: {reason}")
-                        signals = []  # Clear all signals to prevent trading
-
-                # Check optimal entry timing for generated signals
-                if signals and self.adaptive_learning:
-                    try:
-                        filtered_signals = []
-                        for signal in signals:
-                            timing_analysis = self.adaptive_learning.get_optimal_entry_timing(signal['symbol'])
-                            
-                            # Only allow signals with good timing or low confidence (let it learn)
-                            if timing_analysis['recommended'] or timing_analysis['confidence'] < 0.3:
-                                filtered_signals.append(signal)
-                                self.logger.debug(f"Signal allowed for {signal['symbol']}: "
-                                                f"timing_score={timing_analysis['timing_score']:.2f}, "
-                                                f"confidence={timing_analysis['confidence']:.2f}")
-                            else:
-                                self.logger.info(f"Signal filtered for {signal['symbol']} due to poor timing: "
-                                               f"timing_score={timing_analysis['timing_score']:.2f}")
-                        
-                        signals = filtered_signals
-                        self.logger.info(f"Timing analysis filtered signals: {len(signals)} remaining")
-                        
-                    except Exception as e:
-                        self.logger.warning(f"Error in timing analysis: {e}")
-                        # Continue with original signals if timing analysis fails
-
                 # 4. Execute trades with risk management
                 if signals:
                     self.logger.info(f"Generated {len(signals)} trading signal(s), evaluating for execution...")
                 else:
                     self.logger.info("No trading signals generated this cycle")
 
+                # DEBUG: Check signals before day trading filter
+                self.logger.info(f"DEBUG: Signals before day trading check: {len(signals)}")
+
+                # Check if trading is allowed (before 22:30 MT5 server time)
+                # TEMPORARILY DISABLED FOR TESTING
+                # if self.config.get('trading', {}).get('day_trading_only', True):
+                #     is_allowed, reason = self.time_manager.is_trading_allowed()
+                #     self.logger.info(f"DEBUG: Day trading check - allowed: {is_allowed}, reason: {reason}")
+                #     if not is_allowed:
+                #         self.logger.info(f"Trading halted: {reason}")
+                #         signals = []  # Clear all signals to prevent trading
+
+                # DEBUG: Check signals after day trading filter
+                self.logger.info(f"DEBUG: Signals after day trading check: {len(signals)}")
+
                 for signal in signals:
+                    # DEBUG CHECKPOINT 2: Starting signal processing
+                    self.logger.info(f"DEBUG CHECKPOINT 2: Processing signal for {signal['symbol']}")
+
                     # Validate signal has required trading parameters
                     self.logger.debug(
                         f"Processing signal for {signal['symbol']}: "
@@ -1025,7 +1012,12 @@ class FXAiApplication:
                             f"(entry: {signal.get('entry_price', 'None')}, "
                             f"stop: {signal.get('stop_loss', 'None')})"
                         )
+                        # DEBUG CHECKPOINT 2A: Signal rejected - missing data
+                        self.logger.info(f"DEBUG CHECKPOINT 2A: Signal for {signal['symbol']} rejected - missing entry/stop data")
                         continue
+
+                    # DEBUG CHECKPOINT 3: Signal passed basic validation
+                    self.logger.info(f"DEBUG CHECKPOINT 3: Signal for {signal['symbol']} passed basic validation")
 
                     # Update risk metrics before checking limits
                     # Note: New RiskManager doesn't have update_metrics method
@@ -1096,146 +1088,156 @@ class FXAiApplication:
                             signal['symbol']} {
                             signal['action']}: {risk_check}")
                     if risk_check:
-                        # ===== ADVANCED RISK ASSESSMENT =====
-                        # Using cached H1 data already fetched in bars_dict (no additional API calls)
-                        if self.advanced_risk_metrics and loop_count % 10 == 0:  # Run every 10th loop to reduce overhead
-                            try:
-                                # Use already-fetched H1 data from bars_dict (100 bars available)
-                                symbol_hist_data = bars_dict.get(signal['symbol'], {}).get('H1')
+                        # DEBUG CHECKPOINT 4: Risk check passed
+                        self.logger.info(f"DEBUG CHECKPOINT 4: Risk check PASSED for {signal['symbol']}")
+                    else:
+                        # DEBUG CHECKPOINT 4A: Risk check failed
+                        self.logger.info(f"DEBUG CHECKPOINT 4A: Risk check FAILED for {signal['symbol']}")
+                        continue
 
-                                if symbol_hist_data is not None and len(symbol_hist_data) >= 30:
-                                    # Calculate quick risk metrics using available data
-                                    symbol_df = pd.DataFrame(symbol_hist_data)
-                                    symbol_df['returns'] = symbol_df['close'].pct_change()
+                    # ===== ADVANCED RISK ASSESSMENT =====
+                    # Using cached H1 data already fetched in bars_dict (no additional API calls)
+                    if self.advanced_risk_metrics and loop_count % 10 == 0:  # Run every 10th loop to reduce overhead
+                        try:
+                            # Use already-fetched H1 data from bars_dict (100 bars available)
+                            symbol_hist_data = bars_dict.get(signal['symbol'], {}).get('H1')
 
-                                    # Calculate VaR and CVaR for this symbol
-                                    var_95 = self.advanced_risk_metrics.calculate_var(symbol_df['returns'].dropna(), confidence=0.95)
-                                    cvar_95 = self.advanced_risk_metrics.calculate_cvar(symbol_df['returns'].dropna(), confidence=0.95)
+                            if symbol_hist_data is not None and len(symbol_hist_data) >= 30:
+                                # Calculate quick risk metrics using available data
+                                symbol_df = pd.DataFrame(symbol_hist_data)
+                                symbol_df['returns'] = symbol_df['close'].pct_change()
 
-                                    # Calculate Sharpe ratio
-                                    sharpe = self.advanced_risk_metrics.calculate_sharpe_ratio(symbol_df['returns'].dropna())
+                                # Calculate VaR and CVaR for this symbol
+                                var_95 = self.advanced_risk_metrics.calculate_var(symbol_df['returns'].dropna(), confidence=0.95)
+                                cvar_95 = self.advanced_risk_metrics.calculate_cvar(symbol_df['returns'].dropna(), confidence=0.95)
 
-                                    # Get account balance
-                                    account_info = mt5.account_info()  # type: ignore
-                                    account_balance = account_info.balance if account_info else 10000
+                                # Calculate Sharpe ratio
+                                sharpe = self.advanced_risk_metrics.calculate_sharpe_ratio(symbol_df['returns'].dropna())
 
-                                    # Calculate position risk as percentage of account
-                                    trade_risk = abs(signal['entry_price'] - signal['stop_loss']) * signal.get('position_size', 0.01)
-                                    risk_pct = (trade_risk / account_balance) * 100
+                                # Get account balance
+                                account_info = mt5.account_info()  # type: ignore
+                                account_balance = account_info.balance if account_info else 10000
 
-                                    # Risk warning if position risk > 2% of account
-                                    if risk_pct > 2.0:
-                                        self.logger.warning(
-                                            f"{signal['symbol']}: High risk trade - {risk_pct:.2f}% of account "
-                                            f"(VaR95: {var_95 * 100:.2f}%, CVaR95: {cvar_95 * 100:.2f}%, Sharpe: {sharpe:.2f})"
-                                        )
+                                # Calculate position risk as percentage of account
+                                trade_risk = abs(signal['entry_price'] - signal['stop_loss']) * signal.get('position_size', 0.01)
+                                risk_pct = (trade_risk / account_balance) * 100
 
-                                    # Log advanced metrics every 50th loop
-                                    if loop_count % 50 == 0:
-                                        self.logger.info(
-                                            f"{signal['symbol']} Risk Metrics: "
-                                            f"VaR(95%): {var_95 * 100:.2f}%, "
-                                            f"CVaR(95%): {cvar_95 * 100:.2f}%, "
-                                            f"Sharpe: {sharpe:.2f}, "
-                                            f"Position Risk: {risk_pct:.2f}%"
-                                        )
+                                # Risk warning if position risk > 2% of account
+                                if risk_pct > 2.0:
+                                    self.logger.warning(
+                                        f"{signal['symbol']}: High risk trade - {risk_pct:.2f}% of account "
+                                        f"(VaR95: {var_95 * 100:.2f}%, CVaR95: {cvar_95 * 100:.2f}%, Sharpe: {sharpe:.2f})"
+                                    )
 
-                            except Exception as e:
-                                self.logger.error(f"Advanced risk assessment failed for {signal['symbol']}: {e}")
+                                # Log advanced metrics every 50th loop
+                                if loop_count % 50 == 0:
+                                    self.logger.info(
+                                        f"{signal['symbol']} Risk Metrics: "
+                                        f"VaR(95%): {var_95 * 100:.2f}%, "
+                                        f"CVaR(95%): {cvar_95 * 100:.2f}%, "
+                                        f"Sharpe: {sharpe:.2f}, "
+                                        f"Position Risk: {risk_pct:.2f}%"
+                                    )
 
-                        # Check free margin percentage
-                        account_info = mt5.account_info()  # type: ignore
-                        if account_info and account_info.margin_free < 0.20 * account_info.equity:
+                        except Exception as e:
+                            self.logger.error(f"Advanced risk assessment failed for {signal['symbol']}: {e}")
+
+                    # Check free margin percentage
+                    account_info = mt5.account_info()  # type: ignore
+                    if account_info and account_info.margin_free < 0.20 * account_info.equity:
+                        self.logger.warning(
+                            f"Free margin ${
+                                account_info.margin_free:.2f} is " f"less than 20% of equity ${
+                                account_info.equity:.2f}, " f"skipping trade for {
+                                signal['symbol']}")
+                        continue
+
+                    # Calculate stop loss pips from signal
+                    entry_price = signal['entry_price']
+                    stop_loss = signal['stop_loss']
+                    if signal['action'] == 'BUY':
+                        stop_loss_distance = entry_price - stop_loss
+                    else:  # SELL
+                        stop_loss_distance = stop_loss - entry_price
+
+                    # Convert to pips using proper pip size for each symbol
+                    symbol_info = mt5.symbol_info(signal['symbol'])  # type: ignore
+                    if symbol_info:
+                        point = symbol_info.point
+                        digits = symbol_info.digits
+                        # Determine pip size correctly for each symbol type
+                        metal_symbols = ['XAU', 'XAG', 'GOLD']
+                        if any(metal in signal['symbol'] for metal in metal_symbols):
+                            # Metals: 1 pip = 10 points (0.1 for 2-digit
+                            # symbols)
+                            pip_size = point * 10
+                        elif digits == 3 or digits == 5:
+                            pip_size = point * 10  # 3/5 digit brokers: 1 pip = 10 points
+                        else:
+                            pip_size = point  # 2/4 digit brokers: 1 pip = 1 point
+                        stop_loss_pips = stop_loss_distance / pip_size
+                    else:
+                        # Fallback to old logic
+                        if 'JPY' in signal['symbol']:
+                            stop_loss_pips = stop_loss_distance / 0.01
+                        else:
+                            stop_loss_pips = stop_loss_distance / 0.0001
+
+                    # Use optimized stop loss directly without minimum enforcement
+                    # stop_loss_pips already calculated from optimized parameters
+
+                    # Check if minimum lot size would exceed risk limit for
+                    # volatile symbols
+                    min_lot_size = self.config.get(
+                        'trading', {}).get('min_lot_size', 0.01)
+                    metal_symbols = ['XAU', 'XAG', 'GOLD']
+                    if any(metal in signal['symbol'] for metal in metal_symbols):
+                        # Calculate risk with minimum lot size
+                        min_lot_risk = self.risk_manager.calculate_risk_for_lot_size(  # type: ignore
+                            signal['symbol'], min_lot_size, stop_loss_pips)
+
+                        max_risk_limit = self.config.get(
+                            'trading', {}).get('risk_per_trade', 50.0)
+                        if min_lot_risk > max_risk_limit * 1.05:  # Allow 5% tolerance
                             self.logger.warning(
-                                f"Free margin ${
-                                    account_info.margin_free:.2f} is " f"less than 20% of equity ${
-                                    account_info.equity:.2f}, " f"skipping trade for {
-                                    signal['symbol']}")
+                                f"Skipping {signal['symbol']} - even minimum lot size "
+                                f"{min_lot_size} would risk ${min_lot_risk:.2f} "
+                                f"(limit: ${max_risk_limit:.2f})"
+                            )
                             continue
 
-                        # Calculate stop loss pips from signal
-                        entry_price = signal['entry_price']
-                        stop_loss = signal['stop_loss']
-                        if signal['action'] == 'BUY':
-                            stop_loss_distance = entry_price - stop_loss
-                        else:  # SELL
-                            stop_loss_distance = stop_loss - entry_price
+                    # Calculate position size with risk amount adjusted for
+                    # metals
+                    base_risk_amount = 50  # Fixed $50 risk per trade for forex
+                    metal_symbols = ['XAU', 'XAG', 'GOLD']
+                    if any(metal in signal['symbol'] for metal in metal_symbols):
+                        risk_amount = base_risk_amount  # Keep $50 risk for metals
+                        self.logger.debug(
+                            f"Metal detected: {
+                                signal['symbol']}, using $50 risk")
+                    else:
+                        risk_amount = base_risk_amount
+                        self.logger.debug(
+                            f"Forex detected: {
+                                signal['symbol']}, using $50 risk")
 
-                        # Convert to pips using proper pip size for each symbol
-                        symbol_info = mt5.symbol_info(signal['symbol'])  # type: ignore
-                        if symbol_info:
-                            point = symbol_info.point
-                            digits = symbol_info.digits
-                            # Determine pip size correctly for each symbol type
-                            metal_symbols = ['XAU', 'XAG', 'GOLD']
-                            if any(metal in signal['symbol'] for metal in metal_symbols):
-                                # Metals: 1 pip = 10 points (0.1 for 2-digit
-                                # symbols)
-                                pip_size = point * 10
-                            elif digits == 3 or digits == 5:
-                                pip_size = point * 10  # 3/5 digit brokers: 1 pip = 10 points
-                            else:
-                                pip_size = point  # 2/4 digit brokers: 1 pip = 1 point
-                            stop_loss_pips = stop_loss_distance / pip_size
-                        else:
-                            # Fallback to old logic
-                            if 'JPY' in signal['symbol']:
-                                stop_loss_pips = stop_loss_distance / 0.01
-                            else:
-                                stop_loss_pips = stop_loss_distance / 0.0001
+                    position_size = self.risk_manager.calculate_position_size(  # type: ignore
+                        signal['symbol'], stop_loss_pips, risk_amount)
 
-                        # Use optimized stop loss directly without minimum enforcement
-                        # stop_loss_pips already calculated from optimized parameters
+                    # Debug logging
+                    self.logger.info(
+                        f"Position sizing for {signal['symbol']}: "
+                        f"risk_amount=${risk_amount}, "
+                        f"stop_pips={stop_loss_pips}, "
+                        f"lot_size={position_size:.4f}")
 
-                        # Check if minimum lot size would exceed risk limit for
-                        # volatile symbols
-                        min_lot_size = self.config.get(
-                            'trading', {}).get('min_lot_size', 0.01)
-                        metal_symbols = ['XAU', 'XAG', 'GOLD']
-                        if any(metal in signal['symbol'] for metal in metal_symbols):
-                            # Calculate risk with minimum lot size
-                            min_lot_risk = self.risk_manager.calculate_risk_for_lot_size(  # type: ignore
-                                signal['symbol'], min_lot_size, stop_loss_pips)
-
-                            max_risk_limit = self.config.get(
-                                'trading', {}).get('risk_per_trade', 50.0)
-                            if min_lot_risk > max_risk_limit * 1.05:  # Allow 5% tolerance
-                                self.logger.warning(
-                                    f"Skipping {signal['symbol']} - even minimum lot size "
-                                    f"{min_lot_size} would risk ${min_lot_risk:.2f} "
-                                    f"(limit: ${max_risk_limit:.2f})"
-                                )
-                                continue
-
-                        # Calculate position size with risk amount adjusted for
-                        # metals
-                        base_risk_amount = 50  # Fixed $50 risk per trade for forex
-                        metal_symbols = ['XAU', 'XAG', 'GOLD']
-                        if any(metal in signal['symbol'] for metal in metal_symbols):
-                            risk_amount = base_risk_amount  # Keep $50 risk for metals
-                            self.logger.debug(
-                                f"Metal detected: {
-                                    signal['symbol']}, using $50 risk")
-                        else:
-                            risk_amount = base_risk_amount
-                            self.logger.debug(
-                                f"Forex detected: {
-                                    signal['symbol']}, using $50 risk")
-
-                        position_size = self.risk_manager.calculate_position_size(  # type: ignore
-                            signal['symbol'], stop_loss_pips, risk_amount)
-
-                        # Debug logging
-                        self.logger.info(
-                            f"Position sizing for {signal['symbol']}: "
-                            f"risk_amount=${risk_amount}, "
-                            f"stop_pips={stop_loss_pips}, "
-                            f"lot_size={position_size:.4f}")
-
-                        # Execute trade with stop loss
-                        start_time = time_module.time()
-                        try:
-                            trade_result = await self.trading_engine.place_order(  # type: ignore
+                    # Execute trade with stop loss
+                    start_time = time_module.time()
+                    # DEBUG CHECKPOINT 5: About to execute trade
+                    self.logger.info(f"DEBUG CHECKPOINT 5: About to execute trade for {signal['symbol']} {signal['action']} lot_size={position_size:.4f}")
+                    try:
+                        self.logger.info(f"DEBUG: About to call place_order for {signal['symbol']}")
+                        trade_result = await self.trading_engine.place_order(  # type: ignore
                                 signal['symbol'],
                                 signal['action'].lower(),
                                 position_size,
@@ -1246,90 +1248,94 @@ class FXAiApplication:
                                     signal['action']} {
                                     signal['strength']:.3f}"
                             )
-                            response_time = time_module.time() - start_time
-                            success = trade_result.get('success', False)
-                        except Exception as e:
-                            response_time = time_module.time() - start_time
-                            trade_result = {'success': False, 'error': str(e)}
-                            self.logger.error(f"Trade execution failed for {signal['symbol']}: {e}")
+                        response_time = time_module.time() - start_time
+                        success = trade_result.get('success', False)
+                        # DEBUG CHECKPOINT 6: Trade execution result
+                        self.logger.info(f"DEBUG CHECKPOINT 6: Trade execution result for {signal['symbol']}: success={success}, error={trade_result.get('error', 'None')}")
+                    except Exception as e:
+                        response_time = time_module.time() - start_time
+                        trade_result = {'success': False, 'error': str(e)}
+                        self.logger.error(f"Trade execution failed for {signal['symbol']}: {e}")
+                        # DEBUG CHECKPOINT 6A: Trade execution exception
+                        self.logger.info(f"DEBUG CHECKPOINT 6A: Trade execution EXCEPTION for {signal['symbol']}: {e}")
 
-                        if trade_result.get('success', False):
-                            self.session_stats['total_trades'] += 1
+                    if trade_result.get('success', False):
+                        self.session_stats['total_trades'] += 1
 
-                            # Record trade for daily limit tracking (ONE TRADE PER SYMBOL PER DAY)
-                            self.risk_manager.record_trade(signal['symbol'])  # type: ignore
-                            self.logger.info(f"{signal['symbol']}: Trade executed and recorded - no more trades allowed today")
+                        # Record trade for daily limit tracking (ONE TRADE PER SYMBOL PER DAY)
+                        self.risk_manager.record_trade(signal['symbol'])  # type: ignore
+                        self.logger.info(f"{signal['symbol']}: Trade executed and recorded - no more trades allowed today")
 
-                            # Log active positions after successful trade
-                            await self._log_active_positions()
+                        # Log active positions after successful trade
+                        await self._log_active_positions()
 
-                            # ===== REINFORCEMENT LEARNING EXPERIENCE =====
-                            if self.reinforcement_agent and self.reinforcement_agent.enabled:
-                                try:
-                                    # Get regime data (use defaults if not available)
-                                    regime_adx = 25
-                                    regime_type = 'ranging'
-                                    if self.market_regime_detector:
-                                        historical_data = bars_dict.get(signal['symbol'], {}).get('H1')
-                                        if historical_data is not None and len(historical_data) >= 30:
-                                            regime_analysis = self.market_regime_detector.analyze_regime(signal['symbol'], historical_data)
-                                            regime_adx = regime_analysis.adx_value
-                                            regime_type = regime_analysis.primary_regime.value
+                        # ===== REINFORCEMENT LEARNING EXPERIENCE =====
+                        if self.reinforcement_agent and self.reinforcement_agent.enabled:
+                            try:
+                                # Get regime data (use defaults if not available)
+                                regime_adx = 25
+                                regime_type = 'ranging'
+                                if self.market_regime_detector:
+                                    historical_data = bars_dict.get(signal['symbol'], {}).get('H1')
+                                    if historical_data is not None and len(historical_data) >= 30:
+                                        regime_analysis = self.market_regime_detector.analyze_regime(signal['symbol'], historical_data)
+                                        regime_adx = regime_analysis.adx_value
+                                        regime_type = regime_analysis.primary_regime.value
 
-                                    # Record initial state and action for RL learning
-                                    initial_state = {
-                                        'rsi': signal['technical_signals'].get('rsi', {}).get('value', 50),
-                                        'adx': regime_adx,
-                                        'volatility_ratio': signal['technical_signals'].get('atr', {}).get('value', 0) / signal['entry_price'] if signal['entry_price'] > 0 else 0,
-                                        'trend_strength': signal['technical_signals'].get('adx', {}).get('value', 25),
-                                        'market_regime': regime_type,
-                                        'signal_strength': signal['strength'],
-                                        'position_status': 1 if signal['action'] == 'BUY' else -1  # Position opened
-                                    }
-                                    action_taken = signal.get('rl_decision', 'buy' if signal['action'] == 'BUY' else 'sell')
-
-                                    # Store experience for later learning when trade closes
-                                    rl_experience = {
-                                        'ticket': trade_result.get('order', 0),
-                                        'initial_state': initial_state,
-                                        'action': action_taken,
-                                        'entry_price': signal['entry_price'],
-                                        'symbol': signal['symbol'],
-                                        'timestamp': self.get_current_mt5_time(),
-                                        'closure_reason': 'natural_exit'  # Default, will be updated if forced closure
-                                    }
-
-                                    # Store in RL agent for learning when trade closes
-                                    if hasattr(self.reinforcement_agent, 'pending_experiences'):
-                                        self.reinforcement_agent.pending_experiences[trade_result.get('order', 0)] = rl_experience
-
-                                    self.logger.debug(f"RL experience recorded for ticket {trade_result.get('order', 0)}")
-
-                                except Exception as e:
-                                    self.logger.warning(f"Failed to record RL experience: {e}")
-
-                            # Record trade for learning
-                            if self.adaptive_learning:
-                                trade_data = {
-                                    'timestamp': self.get_current_mt5_time(),
-                                    'symbol': signal['symbol'],
-                                    'direction': signal['action'],
-                                    'entry_price': trade_result.get(
-                                        'price',
-                                        0),
+                                # Record initial state and action for RL learning
+                                initial_state = {
+                                    'rsi': signal['technical_signals'].get('rsi', {}).get('value', 50),
+                                    'adx': regime_adx,
+                                    'volatility_ratio': signal['technical_signals'].get('atr', {}).get('value', 0) / signal['entry_price'] if signal['entry_price'] > 0 else 0,
+                                    'trend_strength': signal['technical_signals'].get('adx', {}).get('value', 25),
+                                    'market_regime': regime_type,
                                     'signal_strength': signal['strength'],
-                                    'ml_score': signal['ml_score'],
-                                    'technical_score': signal['technical_score'],
-                                    'sentiment_score': signal['sentiment_score'],
-                                    'model_version': self.ml_predictor.get_model_version(signal['symbol']) if self.ml_predictor else 'disabled'}
+                                    'position_status': 1 if signal['action'] == 'BUY' else -1  # Position opened
+                                }
+                                action_taken = signal.get('rl_decision', 'buy' if signal['action'] == 'BUY' else 'sell')
 
-                                # Start monitoring thread for this trade
-                                threading.Thread(
-                                    target=self.monitor_trade,
-                                    args=(trade_result.get(
-                                        'order', 0), trade_data),
-                                    daemon=True
-                                ).start()
+                                # Store experience for later learning when trade closes
+                                rl_experience = {
+                                    'ticket': trade_result.get('order', 0),
+                                    'initial_state': initial_state,
+                                    'action': action_taken,
+                                    'entry_price': signal['entry_price'],
+                                    'symbol': signal['symbol'],
+                                    'timestamp': self.get_current_mt5_time(),
+                                    'closure_reason': 'natural_exit'  # Default, will be updated if forced closure
+                                }
+
+                                # Store in RL agent for learning when trade closes
+                                if hasattr(self.reinforcement_agent, 'pending_experiences'):
+                                    self.reinforcement_agent.pending_experiences[trade_result.get('order', 0)] = rl_experience
+
+                                self.logger.debug(f"RL experience recorded for ticket {trade_result.get('order', 0)}")
+
+                            except Exception as e:
+                                self.logger.warning(f"Failed to record RL experience: {e}")
+
+                        # Record trade for learning
+                        if self.adaptive_learning:
+                            trade_data = {
+                                'timestamp': self.get_current_mt5_time(),
+                                'symbol': signal['symbol'],
+                                'direction': signal['action'],
+                                'entry_price': trade_result.get(
+                                    'price',
+                                    0),
+                                'signal_strength': signal['strength'],
+                                'ml_score': signal['ml_score'],
+                                'technical_score': signal['technical_score'],
+                                'sentiment_score': signal['sentiment_score'],
+                                'model_version': self.ml_predictor.get_model_version(signal['symbol']) if self.ml_predictor else 'disabled'}
+
+                            # Start monitoring thread for this trade
+                            threading.Thread(
+                                target=self.monitor_trade,
+                                args=(trade_result.get(
+                                    'order', 0), trade_data),
+                                daemon=True
+                            ).start()
 
                 # 5. Monitor and update positions
                 print(f"DEBUG: About to start position monitoring for {len(symbols)} symbols")
@@ -1378,6 +1384,9 @@ class FXAiApplication:
                                 performance['adaptive_params'],
                                 indent=2)}")
 
+                    # Log comprehensive performance summary
+                    self._log_performance_summary()
+
                     self.session_stats['models_retrained'] += 1
 
                     # Save RL model periodically
@@ -1394,6 +1403,25 @@ class FXAiApplication:
                             self.adaptive_learning.auto_learn_from_previous_day_logs()
                         except Exception as e:
                             self.logger.error(f"Error in auto log learning: {e}")
+
+                    # Check learning thread health every hour (360 * 6 * 10 seconds = 1 hour)
+                    if self.adaptive_learning and loop_count % (360 * 6) == 0:
+                        try:
+                            thread_status = self.adaptive_learning.get_thread_status()
+                            self.logger.info(f"Learning thread status: {thread_status}")
+
+                            if not thread_status.get('thread_alive', False):
+                                self.logger.warning("Learning thread is not alive - attempting restart")
+                                self.adaptive_learning.restart_learning_thread()
+                                # Check again after restart
+                                time_module.sleep(0.1)
+                                new_status = self.adaptive_learning.get_thread_status()
+                                if new_status.get('thread_alive', False):
+                                    self.logger.info("Learning thread successfully restarted")
+                                else:
+                                    self.logger.error("Failed to restart learning thread")
+                        except Exception as e:
+                            self.logger.error(f"Error checking learning thread health: {e}")
 
                 # 7. Check for time-based closure (always check after 22:00)
                 try:
@@ -1506,47 +1534,49 @@ class FXAiApplication:
                         if self.reinforcement_agent and self.reinforcement_agent.enabled:
                             try:
                                 # Get the stored experience for this ticket
-                                if hasattr(self.reinforcement_agent, 'pending_experiences') and ticket in self.reinforcement_agent.pending_experiences:
-                                    experience = self.reinforcement_agent.pending_experiences[ticket]
+                                ticket = trade_data.get('ticket', 0)
+                                experience = self.reinforcement_agent.pending_experiences.get(ticket)
+                                if experience is None:
+                                    self.logger.debug(f"No RL experience found for ticket {ticket}")
+                                    continue
 
-                                    # Add closure reason to experience for learning
-                                    closure_reason = getattr(experience, 'closure_reason', 'natural_exit')
+                                # Determine closure reason from trade data
+                                closure_reason = trade_data.get('closure_reason', 'natural_exit')
 
-                                    # Calculate reward based on trade outcome and closure reason
-                                    reward = self.reinforcement_agent.calculate_reward(
-                                        experience['entry_price'],
-                                        exit_price,
-                                        trade_data['direction'],
-                                        trade_data['duration_minutes'],
-                                        closure_reason=closure_reason
-                                    )
+                                reward = self.reinforcement_agent.calculate_reward(
+                                    experience['entry_price'],
+                                    exit_price,
+                                    trade_data['direction'],
+                                    trade_data['duration_minutes'],
+                                    closure_reason=closure_reason
+                                )
 
-                                    # Create next state (position closed)
-                                    next_state = experience['initial_state'].copy()
-                                    next_state['position_status'] = 0  # Position closed
-                                    next_state['closure_reason'] = closure_reason  # Add closure reason to state
+                                # Create next state (position closed)
+                                next_state = experience['initial_state'].copy()
+                                next_state['position_status'] = 0  # Position closed
+                                next_state['closure_reason'] = closure_reason  # Add closure reason to state
 
-                                    # Learn from this experience
-                                    self.reinforcement_agent.update_q_table(
-                                        experience['initial_state'],
-                                        experience['action'],
-                                        reward,
-                                        next_state
-                                    )
+                                # Learn from this experience
+                                self.reinforcement_agent.update_q_table(
+                                    experience['initial_state'],
+                                    experience['action'],
+                                    reward,
+                                    next_state
+                                )
 
-                                    # Save RL model periodically (every 10 trades)
-                                    self.session_stats['rl_models_saved'] += 1
-                                    if self.session_stats['rl_models_saved'] % 10 == 0:
-                                        try:
-                                            self.reinforcement_agent.save_model()
-                                            self.logger.debug(f"RL model saved after {self.session_stats['rl_models_saved']} trades")
-                                        except Exception as e:
-                                            self.logger.error(f"Error saving RL model after trade: {e}")
+                                # Save RL model periodically (every 10 trades)
+                                self.session_stats['rl_models_saved'] += 1
+                                if self.session_stats['rl_models_saved'] % 10 == 0:
+                                    try:
+                                        self.reinforcement_agent.save_model()
+                                        self.logger.debug(f"RL model saved after {self.session_stats['rl_models_saved']} trades")
+                                    except Exception as e:
+                                        self.logger.error(f"Error saving RL model after trade: {e}")
 
-                                    # Remove from pending experiences
-                                    del self.reinforcement_agent.pending_experiences[ticket]
+                                # Remove from pending experiences
+                                del self.reinforcement_agent.pending_experiences[ticket]
 
-                                    self.logger.debug(f"RL updated: action={experience['action']}, reward={reward:.4f}, reason={closure_reason}")
+                                self.logger.debug(f"RL updated: action={experience['action']}, reward={reward:.4f}, reason={closure_reason}")
 
                             except Exception as e:
                                 self.logger.warning(f"Failed to update RL agent: {e}")
@@ -1559,11 +1589,8 @@ class FXAiApplication:
 
                         self.session_stats['total_profit'] += profit_pct
 
-                        self.logger.info(
-                            f"Trade completed - {trade_data['symbol']}: "
-                            f"{'WIN' if profit_pct > 0 else 'LOSS'} {profit_pct:.2f}% "
-                            f"Duration: {trade_data['duration_minutes']} minutes"
-                        )
+                        # Log comprehensive trade outcome
+                        self._log_trade_outcome(trade_data, history, closure_reason)
 
                     break
                 else:
@@ -1672,7 +1699,7 @@ class FXAiApplication:
                                 break
                         elif trade_data['direction'] == 'SELL' and current_price < entry_price:
                             profit_pct = (
-                                (entry_price - current_price) / entry_price) * 100
+                                (entry_price - current_price) / entry_price) *  100
                             if profit_pct > 0.1:  # At least 0.1% profit
                                 self.logger.info(
                                     f"Closing {trade_data['symbol']} position at "
@@ -1685,6 +1712,7 @@ class FXAiApplication:
                                         if close_result:
                                             self.logger.info(
                                                 "Successfully closed position for optimal time exit")
+
                                         else:
                                             self.logger.warning(
                                                 "Failed to close position for optimal time exit")
@@ -1705,6 +1733,7 @@ class FXAiApplication:
         Args:
             symbol: Base symbol
             correlation_action: Action recommended by correlation manager
+       
         """
         try:
             action_type = correlation_action.get('action')
@@ -1715,7 +1744,7 @@ class FXAiApplication:
                 correlation = correlation_action.get('correlation', 0)
                 correlated_symbol = correlation_action.get('correlated_symbol', '')
 
-                if confidence > 0.7:  # High confidence
+                if confidence > 0.7: # High confidence
                     self.logger.info(f"High-confidence correlation exit: Closing {symbol} due to {correlation:.2f} correlation with {correlated_symbol}")
                     # Get position and close it
                     positions = self.mt5.get_positions() if self.mt5 else []
@@ -1897,48 +1926,31 @@ class FXAiApplication:
         self.logger.info("FX-Ai shutdown complete")
 
     def print_session_summary(self):
-        """Print trading session summary"""
+        """Print comprehensive trading session summary"""
         duration = self.get_current_mt5_time() - self.session_stats['start_time']
 
-        self.logger.info("=" * 60)
-        self.logger.info("SESSION SUMMARY")
-        self.logger.info("=" * 60)
-        self.logger.info(f"Duration: {duration}")
-        self.logger.info(f"Total Trades: {self.session_stats['total_trades']}")
-        self.logger.info(
-            f"Winning Trades: {self.session_stats['winning_trades']}")
-        self.logger.info(
-            f"Losing Trades: {self.session_stats['losing_trades']}")
+        self.logger.info("=" * 80)
+        self.logger.info("FINAL SESSION SUMMARY")
+        self.logger.info("=" * 80)
+        self.logger.info(f"Session Duration: {duration}")
 
-        if self.session_stats['total_trades'] > 0:
-            win_rate = self.session_stats['winning_trades'] / \
-                self.session_stats['total_trades'] * 100
-            self.logger.info(f"Win Rate: {win_rate:.1f}%")
+        # Log comprehensive performance summary
+        self._log_performance_summary()
 
-        self.logger.info(
-            f"Total Profit: {self.session_stats['total_profit']:.2f}%")
-
+        # Additional session information
         if self.learning_enabled:
-            self.logger.info(
-                f"Models Retrained: {self.session_stats['models_retrained']}")
-            self.logger.info(
-                f"RL Models Saved: {self.session_stats['rl_models_saved']}")
-            self.logger.info(
-                f"Parameters Optimized: {
-                    self.session_stats['parameters_optimized']}")
+            self.logger.info("LEARNING SYSTEM SUMMARY:")
+            self.logger.info(f"Parameters Optimized: {self.session_stats['parameters_optimized']}")
 
             if self.adaptive_learning:
                 performance = self.adaptive_learning.get_performance_summary()
-                self.logger.info(
-                    f"Final Signal Weights: {
-                        json.dumps(
-                            performance['signal_weights'],
-                            indent=2)}")
-                self.logger.info(
-                    f"Final Adaptive Parameters: {
-                        json.dumps(
-                            performance['adaptive_params'],
-                            indent=2)}")
+                self.logger.info("Final Adaptive Learning State:")
+                self.logger.info(f"Signal Weights: {json.dumps(performance['signal_weights'], indent=2)}")
+                self.logger.info(f"Adaptive Parameters: {json.dumps(performance['adaptive_params'], indent=2)}")
+
+        self.logger.info("=" * 80)
+        self.logger.info("FX-Ai Session Complete")
+        self.logger.info("=" * 80)
 
         self.logger.info("=" * 60)
 
@@ -1964,7 +1976,7 @@ class FXAiApplication:
             self.shutdown()
 
     async def _log_active_positions(self):
-        """Log all currently active positions for monitoring"""
+        """Log all currently active positions with detailed metrics"""
         try:
             # Get all positions from MT5
             positions = mt5.positions_get()
@@ -1977,27 +1989,289 @@ class FXAiApplication:
                     active_fxai_positions.append(position)
 
             if active_fxai_positions:
+                total_unrealized_pnl = 0.0
+                total_risk = 0.0
+
                 self.logger.info(f"ACTIVE POSITIONS ({len(active_fxai_positions)}):")
                 for pos in active_fxai_positions:
                     direction = "LONG" if pos.type == mt5.ORDER_TYPE_BUY else "SHORT"
                     commission = getattr(pos, 'commission', 0.0)
-                    pnl = pos.profit + pos.swap + commission
+                    swap = getattr(pos, 'swap', 0.0)
+                    pnl = pos.profit + swap + commission
+                    total_unrealized_pnl += pnl
+
+                    # Calculate duration
+                    duration_hours = 0
+                    if hasattr(pos, 'time') and pos.time > 0:
+                        duration_hours = (self.get_current_mt5_time().timestamp() - pos.time) / 3600
+
+                    # Calculate P&L percentage
+                    pnl_pct = 0.0
+                    if pos.price_open > 0:
+                        if direction == "LONG":
+                            pnl_pct = ((pos.price_current - pos.price_open) / pos.price_open) * 100
+                        else:
+                            pnl_pct = ((pos.price_open - pos.price_current) / pos.price_open) * 100
+
+                    # Calculate risk metrics
+                    risk_amount = 0.0
+                    if pos.sl > 0:
+                        pip_size = self._get_pip_size(pos.symbol)
+                        if direction == "LONG":
+                            risk_pips = (pos.price_open - pos.sl) / pip_size
+                        else:
+                            risk_pips = (pos.sl - pos.price_open) / pip_size
+                        risk_amount = risk_pips * pos.volume * 10  # Approximate dollar risk
+                        total_risk += risk_amount
+
                     sl_display = f"{pos.sl:.5f}" if pos.sl > 0 else "None"
                     tp_display = f"{pos.tp:.5f}" if pos.tp > 0 else "None"
+
                     self.logger.info(
                         f"  {pos.symbol} {direction} | "
                         f"Size: {pos.volume:.2f} lots | "
                         f"Entry: {pos.price_open:.5f} | "
                         f"Current: {pos.price_current:.5f} | "
-                        f"P&L: ${pnl:.2f} | "
+                        f"P&L: ${pnl:.2f} ({pnl_pct:+.2f}%) | "
+                        f"Duration: {duration_hours:.1f}h | "
+                        f"Risk: ${risk_amount:.2f} | "
                         f"SL: {sl_display} | "
                         f"TP: {tp_display}"
                     )
+
+                # Summary statistics
+                avg_pnl_pct = (total_unrealized_pnl / len(active_fxai_positions)) if active_fxai_positions else 0
+                self.logger.info(f"PORTFOLIO SUMMARY: Total P&L: ${total_unrealized_pnl:.2f} | "
+                               f"Avg P&L: ${avg_pnl_pct:.2f} | Total Risk: ${total_risk:.2f}")
+
             else:
                 self.logger.info("ACTIVE POSITIONS: None")
 
         except Exception as e:
             self.logger.error(f"Error logging active positions: {e}")
+
+    def _get_pip_size(self, symbol: str) -> float:
+        """Get pip size for a symbol"""
+        if 'JPY' in symbol:
+            return 0.01
+        elif 'XAU' in symbol or 'XAG' in symbol:
+            return 0.01 if 'XAG' in symbol else 0.1
+        else:
+            return 0.0001
+
+    def _log_trade_outcome(self, trade_data: dict, history: dict, closure_reason: str = "natural_exit"):
+        """Log comprehensive trade outcome with detailed metrics and analysis"""
+        try:
+            symbol = trade_data['symbol']
+            direction = trade_data['direction']
+            entry_price = trade_data['entry_price']
+            exit_price = trade_data.get('exit_price', history.get('exit_price', 0))
+            volume = trade_data.get('volume', history.get('volume', 0))
+            duration_minutes = trade_data.get('duration_minutes', 0)
+            profit = trade_data.get('profit', history.get('profit', 0))
+            profit_pct = trade_data.get('profit_pct', 0)
+
+            # Calculate pip movement
+            pip_size = self._get_pip_size(symbol)
+            if direction == 'BUY':
+                pip_movement = (exit_price - entry_price) / pip_size
+            else:
+                pip_movement = (entry_price - exit_price) / pip_size
+
+            # Calculate risk metrics
+            risk_amount = 0.0
+            risk_pct = 0.0
+            rr_ratio = 0.0
+            if 'sl' in trade_data and trade_data['sl'] > 0:
+                if direction == 'BUY':
+                    risk_pips = (entry_price - trade_data['sl']) / pip_size
+                else:
+                    risk_pips = (trade_data['sl'] - entry_price) / pip_size
+                risk_amount = abs(risk_pips) * volume * 10  # Approximate dollar risk
+                if risk_amount > 0:
+                    rr_ratio = abs(profit) / risk_amount
+
+            # Determine trade outcome
+            is_win = profit > 0
+            outcome = "WIN" if is_win else "LOSS"
+
+            # Calculate performance metrics
+            duration_hours = duration_minutes / 60
+            profit_per_hour = profit / duration_hours if duration_hours > 0 else 0
+
+            # Log comprehensive trade outcome
+            self.logger.info("=" * 80)
+            self.logger.info(f"TRADE COMPLETED - {outcome}")
+            self.logger.info("=" * 80)
+
+            # Basic trade information
+            self.logger.info(f"Symbol: {symbol} | Direction: {direction} | Volume: {volume:.2f} lots")
+            self.logger.info(f"Entry Price: {entry_price:.5f} | Exit Price: {exit_price:.5f}")
+            self.logger.info(f"Duration: {duration_minutes} minutes ({duration_hours:.1f} hours)")
+
+            # Financial results
+            self.logger.info(f"P&L: ${profit:.2f} ({profit_pct:+.2f}%) | Pips: {pip_movement:+.1f}")
+            self.logger.info(f"Profit/Hour: ${profit_per_hour:.2f}")
+
+            # Risk metrics
+            if risk_amount > 0:
+                self.logger.info(f"Risk Amount: ${risk_amount:.2f} | Risk:Reward Ratio: {rr_ratio:.2f}")
+            else:
+                self.logger.info("Risk Amount: Not set | Risk:Reward Ratio: N/A")
+
+            # Exit analysis
+            self.logger.info(f"Exit Reason: {closure_reason}")
+
+            # Signal analysis (if available)
+            if 'technical_score' in trade_data:
+                self.logger.info(f"Entry Signals - Technical: {trade_data['technical_score']:.2f} | "
+                               f"Sentiment: {trade_data.get('sentiment_score', 0.5):.2f} | "
+                               f"Signal Strength: {trade_data.get('signal_strength', 0.5):.2f}")
+
+            # Performance analysis
+            if is_win:
+                self.logger.info("PERFORMANCE: Excellent trade execution!"                if rr_ratio >= 2.0 else
+                               "PERFORMANCE: Good trade, consider optimizing risk management"                if rr_ratio >= 1.0 else
+                               "PERFORMANCE: Profitable but high risk, review entry criteria")
+            else:
+                self.logger.info("PERFORMANCE: Loss - analyze entry signals and market conditions"                if abs(rr_ratio) <= 1.0 else
+                               "PERFORMANCE: Large loss - review risk management and stop loss placement")
+
+            # Market regime context (if available)
+            if hasattr(self, 'market_regime_detector') and self.market_regime_detector:
+                try:
+                    regime = self.market_regime_detector.get_current_regime(symbol)
+                    if regime:
+                        self.logger.info(f"Market Regime: {regime['regime']} (Volatility: {regime['volatility']:.2f})")
+                except Exception as e:
+                    self.logger.debug(f"Could not get market regime: {e}")
+
+            # Adaptive learning insights (if available)
+            if self.adaptive_learning:
+                try:
+                    insights = self.adaptive_learning.get_trade_insights(symbol, is_win)
+                    if insights:
+                        self.logger.info(f"Learning Insights: {insights}")
+                except Exception as e:
+                    self.logger.debug(f"Could not get learning insights: {e}")
+
+            self.logger.info("=" * 80)
+
+            # Update session performance tracking
+            self._update_performance_metrics(trade_data, is_win, profit, duration_minutes)
+
+        except Exception as e:
+            self.logger.error(f"Error logging trade outcome: {e}")
+
+    def _update_performance_metrics(self, trade_data: dict, is_win: bool, profit: float, duration_minutes: int):
+        """Update session performance metrics for analysis"""
+        try:
+            symbol = trade_data['symbol']
+
+            # Initialize symbol metrics if not exists
+            if symbol not in self.session_stats['symbol_performance']:
+                self.session_stats['symbol_performance'][symbol] = {
+                    'total_trades': 0,
+                    'wins': 0,
+                    'losses': 0,
+                    'total_profit': 0.0,
+                    'avg_duration': 0.0,
+                    'best_trade': float('-inf'),
+                    'worst_trade': float('inf')
+                }
+
+            symbol_stats = self.session_stats['symbol_performance'][symbol]
+            symbol_stats['total_trades'] += 1
+            symbol_stats['wins' if is_win else 'losses'] += 1
+            symbol_stats['total_profit'] += profit
+            symbol_stats['best_trade'] = max(symbol_stats['best_trade'], profit)
+            symbol_stats['worst_trade'] = min(symbol_stats['worst_trade'], profit)
+
+            # Update average duration
+            total_duration = symbol_stats['avg_duration'] * (symbol_stats['total_trades'] - 1) + duration_minutes
+            symbol_stats['avg_duration'] = total_duration / symbol_stats['total_trades']
+
+        except Exception as e:
+            self.logger.error(f"Error updating performance metrics: {e}")
+
+    def _log_performance_summary(self):
+        """Log comprehensive performance summary with key metrics"""
+        try:
+            total_trades = self.session_stats['winning_trades'] + self.session_stats['losing_trades']
+
+            if total_trades == 0:
+                self.logger.info("PERFORMANCE SUMMARY: No trades completed yet")
+                return
+
+            win_rate = self.session_stats['winning_trades'] / total_trades
+            avg_profit = self.session_stats['total_profit'] / total_trades
+            total_profit = self.session_stats['total_profit']
+
+            # Calculate additional metrics
+            profit_factor = 0.0
+            if self.session_stats['losing_trades'] > 0:
+                avg_win = self.session_stats.get('avg_win', 0)
+                avg_loss = self.session_stats.get('avg_loss', 0)
+                if avg_loss != 0:
+                    profit_factor = abs(avg_win / avg_loss) if avg_win > 0 else 0
+
+            # Calculate drawdown metrics (simplified)
+            max_drawdown = self.session_stats.get('max_drawdown', 0)
+
+            self.logger.info("=" * 80)
+            self.logger.info("PERFORMANCE SUMMARY")
+            self.logger.info("=" * 80)
+
+            # Overall statistics
+            self.logger.info(f"Total Trades: {total_trades}")
+            self.logger.info(f"Win Rate: {win_rate:.1%} ({self.session_stats['winning_trades']}W / {self.session_stats['losing_trades']}L)")
+            self.logger.info(f"Total P&L: ${total_profit:.2f}")
+            self.logger.info(f"Average P&L per Trade: ${avg_profit:.2f}")
+
+            # Advanced metrics
+            if profit_factor > 0:
+                self.logger.info(f"Profit Factor: {profit_factor:.2f}")
+            self.logger.info(f"Max Drawdown: ${max_drawdown:.2f}")
+
+            # Symbol performance
+            if self.session_stats['symbol_performance']:
+                self.logger.info("SYMBOL PERFORMANCE:")
+                for symbol, stats in self.session_stats['symbol_performance'].items():
+                    symbol_win_rate = stats['wins'] / stats['total_trades'] if stats['total_trades'] > 0 else 0
+                    self.logger.info(f"  {symbol}: {stats['total_trades']} trades | "
+                                   f"Win Rate: {symbol_win_rate:.1%} | "
+                                   f"P&L: ${stats['total_profit']:.2f} | "
+                                   f"Avg Duration: {stats['avg_duration']:.0f}min")
+
+            # System health metrics
+            self.logger.info("SYSTEM HEALTH:")
+            self.logger.info(f"Models Retrained: {self.session_stats.get('models_retrained', 0)}")
+            self.logger.info(f"RL Models Saved: {self.session_stats.get('rl_models_saved', 0)}")
+            self.logger.info(f"Emergency Stops: {self.session_stats.get('emergency_stops', 0)}")
+
+            # Performance analysis
+            if win_rate >= 0.6:
+                performance_rating = "EXCELLENT"
+            elif win_rate >= 0.5:
+                performance_rating = "GOOD"
+            elif win_rate >= 0.4:
+                performance_rating = "FAIR"
+            else:
+                performance_rating = "NEEDS IMPROVEMENT"
+
+            self.logger.info(f"PERFORMANCE RATING: {performance_rating}")
+
+            if profit_factor >= 2.0:
+                self.logger.info("ANALYSIS: Strong profit factor indicates good risk management")
+            elif profit_factor >= 1.5:
+                self.logger.info("ANALYSIS: Moderate profit factor - consider optimizing win/loss ratio")
+            else:
+                self.logger.info("ANALYSIS: Low profit factor - focus on cutting losses and letting profits run")
+
+            self.logger.info("=" * 80)
+
+        except Exception as e:
+            self.logger.error(f"Error logging performance summary: {e}")
 
     async def fundamental_monitor_loop(self):
         """Background fundamental monitor that checks for breaking news every 5 minutes"""
@@ -2091,4 +2365,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    

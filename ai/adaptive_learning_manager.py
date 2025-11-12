@@ -191,7 +191,7 @@ class AdaptiveLearningManager:
                 'trailing_stop_distance': 20,
                 'stop_loss_atr_multiplier': 2.0,  # ATR multiplier for SL
                 # ATR multiplier for take profit (1:3 ratio)
-                'take_profit_atr_multiplier': 6.0,
+                'take_profit_atr_multiplier': 9.0,
                 # Maximum holding time in minutes (8 hours)
                 'max_holding_minutes': 480,
                 'min_holding_minutes': 15,   # Minimum holding time in minutes
@@ -245,7 +245,15 @@ class AdaptiveLearningManager:
             name="ContinuousLearning"
         )
         self.learning_thread.start()
-        logger.info("Continuous learning thread started")
+
+        # Verify thread started
+        time.sleep(0.1)  # Give thread time to start
+        if self.learning_thread.is_alive():
+            logger.info("Continuous learning thread started successfully")
+        else:
+            logger.error("Continuous learning thread failed to start")
+            # Try to restart
+            self.restart_learning_thread()
 
         # Initialize database for trade and performance tracking
         self.init_database()
@@ -741,13 +749,125 @@ class AdaptiveLearningManager:
     def run_continuous_learning(self):
         """Background thread for continuous learning"""
         logger.info("Starting continuous learning thread")
+        loop_count = 0
+        last_successful_run = time.time()
 
         while True:
             try:
+                loop_count += 1
+
+                # Check if schedule.run_pending() is working
                 schedule.run_pending()
-                threading.Event().wait(60)  # Check every minute
+
+                # Log every 10 minutes to show thread is alive
+                current_time = time.time()
+                if loop_count % 10 == 0:
+                    logger.debug(f"Continuous learning thread alive - loop {loop_count}, {len(schedule.jobs)} scheduled jobs")
+
+                # Check if any jobs should have run recently
+                if current_time - last_successful_run > 3600:  # No successful runs in an hour
+                    logger.warning("No scheduled jobs have run in the last hour - checking scheduler health")
+                    self._check_scheduler_health()
+
+                last_successful_run = current_time
+
+                # Wait 60 seconds, but allow interruption
+                time.sleep(60)
+
             except Exception as e:
-                logger.error(f"Error in continuous learning: {e}")
+                logger.error(f"Error in continuous learning loop {loop_count}: {e}")
+                logger.error(f"Exception type: {type(e).__name__}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+
+                # Don't exit the thread on error - just log and continue
+                try:
+                    time.sleep(30)  # Wait a bit longer after an error
+                except:
+                    pass
+
+    def _check_scheduler_health(self):
+        """Check if the scheduler is working properly"""
+        try:
+            logger.info(f"Scheduler health check: {len(schedule.jobs)} jobs registered")
+
+            # Check if any jobs are due to run soon
+            current_time = time.time()
+            due_jobs = 0
+            for job in schedule.jobs:
+                if job.next_run <= current_time + 300:  # Due within 5 minutes
+                    due_jobs += 1
+                    func_name = getattr(job.job_func, '__name__', str(job.job_func))
+                    logger.info(f"Job due soon: {func_name} at {time.ctime(job.next_run)}")
+
+            if due_jobs == 0:
+                logger.warning("No jobs due to run in the next 5 minutes")
+
+            # Check for overdue jobs (should have run in last hour)
+            overdue_jobs = [job for job in schedule.jobs if job.next_run < current_time - 3600]
+            if overdue_jobs:
+                logger.warning(f"Found {len(overdue_jobs)} jobs that should have run in the last hour")
+
+            # Check if jobs are scheduled too far in the future
+            future_jobs = [job for job in schedule.jobs if job.next_run > current_time + 86400]  # More than 24 hours
+            if len(future_jobs) > len(schedule.jobs) * 0.8:  # Most jobs too far in future
+                logger.warning("Most scheduled jobs are too far in the future - possible scheduling issue")
+
+            # Try to manually run pending jobs
+            logger.info("Manually running pending jobs...")
+            schedule.run_pending()
+            logger.info("Manual run_pending() completed")
+
+        except Exception as e:
+            logger.error(f"Error in scheduler health check: {e}")
+
+    def restart_learning_thread(self):
+        """Restart the continuous learning thread if it's not running"""
+        try:
+            if hasattr(self, 'learning_thread') and self.learning_thread.is_alive():
+                logger.info("Learning thread is already running")
+                return
+
+            logger.info("Restarting continuous learning thread...")
+
+            # Start a new learning thread
+            self.learning_thread = threading.Thread(
+                target=self.run_continuous_learning,
+                daemon=True,
+                name="ContinuousLearning"
+            )
+            self.learning_thread.start()
+            logger.info("Continuous learning thread restarted")
+
+        except Exception as e:
+            logger.error(f"Error restarting learning thread: {e}")
+
+    def get_thread_status(self):
+        """Get status of the continuous learning thread"""
+        try:
+            if hasattr(self, 'learning_thread'):
+                is_alive = self.learning_thread.is_alive()
+                thread_name = self.learning_thread.name
+
+                # If thread is dead, try to restart it
+                if not is_alive:
+                    logger.warning("Continuous learning thread is dead - attempting restart")
+                    self.restart_learning_thread()
+                    # Check again after restart attempt
+                    time.sleep(0.1)
+                    is_alive = self.learning_thread.is_alive() if hasattr(self, 'learning_thread') else False
+
+                return {
+                    'thread_alive': is_alive,
+                    'thread_name': thread_name,
+                    'scheduled_jobs': len(schedule.jobs),
+                    'jobs_due_soon': sum(1 for job in schedule.jobs if job.next_run <= time.time() + 300)
+                }
+            else:
+                return {'thread_alive': False, 'error': 'Thread not initialized'}
+        except Exception as e:
+            logger.error(f"Error getting thread status: {e}")
+            return {'thread_alive': False, 'error': str(e)}
 
     def record_trade(self, trade_data: dict):
         """Record completed trade for learning"""
