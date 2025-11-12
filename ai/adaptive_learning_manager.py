@@ -783,8 +783,8 @@ class AdaptiveLearningManager:
                 # Don't exit the thread on error - just log and continue
                 try:
                     time.sleep(30)  # Wait a bit longer after an error
-                except:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Error during thread sleep: {e}")
 
     def _check_scheduler_health(self):
         """Check if the scheduler is working properly"""
@@ -5161,23 +5161,19 @@ class AdaptiveLearningManager:
 
             if not os.path.exists(log_file_path):
                 logger.warning(f"Log file not found: {log_file_path}")
-                print(f"ERROR: Log file not found: {log_file_path}")
                 return
 
             logger.info(f"Learning from log file: {log_file_path}")
-            print(f"Processing log file: {log_file_path}")
 
             # Parse and learn from the log
             trades_learned = self._parse_and_learn_from_log(log_file_path, log_date)
 
             if trades_learned > 0:
                 logger.info(f"Successfully learned from {trades_learned} trades in {log_date} log")
-                print(f"Successfully learned from {trades_learned} trades in {log_date} log")
                 self.last_processed_log_date = log_date
                 self._save_log_learning_state()
             else:
-                logger.info(f"No new trades found in {log_date} log")
-                print(f"WARNING: No trades found in {log_date} log")
+                logger.warning(f"No new trades found in {log_date} log")
 
         except Exception as e:
             logger.error(f"Error learning from logs: {e}")
@@ -5235,7 +5231,7 @@ class AdaptiveLearningManager:
                     lines_checked += 1
                     trade_data = self._parse_trade_line(line.strip(), log_date)
                     if trade_data:
-                        print(f"Found trade: {trade_data['symbol']} {trade_data['profit_pct']:.2f}% ({trade_data['duration_minutes']} min)")
+                        logger.debug(f"Found trade: {trade_data['symbol']} {trade_data['profit_pct']:.2f}% ({trade_data['duration_minutes']} min)")
                         self._learn_from_parsed_trade(trade_data)
                         trades_learned += 1
                     
@@ -5243,17 +5239,16 @@ class AdaptiveLearningManager:
                     if lines_checked <= 20:
                         # Show more sample lines to understand the format
                         if 'trade' in line.lower() or 'position' in line.lower() or 'profit' in line.lower() or 'loss' in line.lower():
-                            print(f"Trade-related line {lines_checked}: {line.strip()}")
+                            logger.debug(f"Trade-related line {lines_checked}: {line.strip()}")
                         elif lines_checked <= 10:
-                            print(f"Sample line {lines_checked}: {line.strip()[:120]}...")
+                            logger.debug(f"Sample line {lines_checked}: {line.strip()[:120]}...")
                     elif lines_checked % 100000 == 0:
-                        print(f"Processed {lines_checked} lines, found {trades_learned} trades so far...")
+                        logger.info(f"Processed {lines_checked} lines, found {trades_learned} trades so far...")
 
         except Exception as e:
             logger.error(f"Error parsing log file {log_file_path}: {e}")
-            print(f"ERROR: Error parsing log file: {e}")
 
-        print(f"Total lines checked: {lines_checked}, Trades found: {trades_learned}")
+        logger.info(f"Total lines checked: {lines_checked}, Trades found: {trades_learned}")
         return trades_learned
 
     def _parse_trade_line(self, line: str, log_date: str) -> dict:

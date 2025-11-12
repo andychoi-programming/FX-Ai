@@ -1338,10 +1338,10 @@ class FXAiApplication:
                             ).start()
 
                 # 5. Monitor and update positions
-                print(f"DEBUG: About to start position monitoring for {len(symbols)} symbols")
+                self.logger.debug(f"About to start position monitoring for {len(symbols)} symbols")
                 self.logger.info(f"Starting position monitoring for {len(symbols)} symbols")
                 for symbol in symbols:
-                    print(f"DEBUG: Monitoring positions for {symbol}")
+                    self.logger.debug(f"Monitoring positions for {symbol}")
                     self.logger.info(f"Monitoring positions for {symbol}")
                     await self.trading_engine.manage_positions(symbol, self.time_manager, self.adaptive_learning)  # type: ignore
 

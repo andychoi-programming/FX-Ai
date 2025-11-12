@@ -529,31 +529,40 @@ class RiskManager:
             # Method 1: Use MT5 connector if available (preferred)
             if self.mt5_connector:
                 try:
+                    logger.debug(f"RiskManager: Trying MT5 connector for server time")
                     server_time = self.mt5_connector.get_server_time()
                     if server_time:
                         date_str = server_time.strftime('%Y-%m-%d')
                         timestamp = server_time.timestamp()
-                        logger.debug(f"MT5 connector time: {date_str} (timestamp: {timestamp})")
+                        logger.debug(f"RiskManager: MT5 connector time SUCCESS: {date_str} (timestamp: {timestamp})")
                         return (date_str, timestamp, True)
+                    else:
+                        logger.warning(f"RiskManager: MT5 connector returned None")
                 except Exception as e:
-                    logger.warning(f"MT5 connector time failed: {e}")
+                    logger.warning(f"RiskManager: MT5 connector time failed: {e}")
             
             # Method 2: Direct mt5.time_current() - MOST RELIABLE
+            logger.debug(f"RiskManager: Trying direct mt5.time_current()")
             if hasattr(mt5, 'time_current'):
                 server_timestamp = mt5.time_current()  # type: ignore
                 if server_timestamp and server_timestamp > 0:
                     server_time_utc = datetime.fromtimestamp(server_timestamp, tz=UTC)
                     date_str = server_time_utc.strftime('%Y-%m-%d')
-                    logger.debug(f"MT5 time source: mt5.time_current() = {date_str} (timestamp: {server_timestamp})")
+                    logger.debug(f"RiskManager: mt5.time_current() SUCCESS = {date_str} (timestamp: {server_timestamp})")
                     return (date_str, server_timestamp, True)
+                else:
+                    logger.warning(f"RiskManager: mt5.time_current() returned invalid value: {server_timestamp}")
             
             # Method 3: Get tick time from EURUSD (reliable major pair)
+            logger.debug(f"RiskManager: Trying EURUSD tick time")
             tick = mt5.symbol_info_tick('EURUSD')  # type: ignore
             if tick and hasattr(tick, 'time') and tick.time > 0:
                 server_time_utc = datetime.fromtimestamp(tick.time, tz=UTC)
                 date_str = server_time_utc.strftime('%Y-%m-%d')
-                logger.warning(f"MT5 time source: EURUSD tick time = {date_str} (timestamp: {tick.time})")
+                logger.warning(f"RiskManager: EURUSD tick time SUCCESS = {date_str} (timestamp: {tick.time})")
                 return (date_str, tick.time, True)
+            else:
+                logger.warning(f"RiskManager: EURUSD tick failed - tick: {tick}, time: {tick.time if tick else None}")
             
             # CRITICAL: If we can't get MT5 time, DO NOT ALLOW TRADING
             logger.error("CRITICAL: Cannot get MT5 server time - BLOCKING all trades for safety")

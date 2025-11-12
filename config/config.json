@@ -52,7 +52,7 @@
     "min_risk_reward_ratio": 1.9,
     "enable_news_filter": true,
     "enable_session_filter": true,
-    "day_trading_only": true,
+    "day_trading_only": false,
     "close_before_weekend": true,
     "close_on_shutdown": true,
     "prevent_multiple_positions_per_symbol": true,
@@ -68,7 +68,7 @@
       "_comment": "Increased to 3 trades per symbol per day for more active trading"
     },
     "time_restrictions": {
-      "day_trading_only": true,
+      "day_trading_only": false,
       "close_before_weekend": true,
       "close_on_shutdown": true,
       "trading_days_only": [

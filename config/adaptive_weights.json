@@ -14,7 +14,7 @@
     "risk_multiplier": 1.0,
     "trailing_stop_distance": 20,
     "stop_loss_atr_multiplier": 2.0,
-    "take_profit_atr_multiplier": 6.0,
+    "take_profit_atr_multiplier": 9.0,
     "max_holding_minutes": 480,
     "min_holding_minutes": 15,
     "optimal_holding_hours": 4.0
