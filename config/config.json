@@ -65,8 +65,8 @@
       "forex_max_pips": 25,
       "xauusd_min_pips": 50,
       "xauusd_max_pips": 150,
-      "xagusd_min_pips": 20,
-      "xagusd_max_pips": 50,
+      "xagusd_min_pips": 10,
+      "xagusd_max_pips": 25,
       "order_type": "stop",
       "_comment": "Order type: 'limit' (BUY_LIMIT/SELL_LIMIT) or 'stop' (BUY_STOP/SELL_STOP). Pending orders placed at random distance within these ranges from current price"
     },

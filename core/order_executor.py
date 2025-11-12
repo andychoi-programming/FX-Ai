@@ -347,7 +347,8 @@ class OrderExecutor:
                     risk_factor *= 1.1
 
                 # Cap risk factor to prevent excessive stops
-                risk_factor = min(risk_factor, 3.0)
+                max_risk_factor = 2.0 if ('XAU' in symbol or 'GOLD' in symbol or 'XAG' in symbol or 'SILVER' in symbol) else 3.0
+                risk_factor = min(risk_factor, max_risk_factor)
 
                 logger.info(f"[{symbol}] Risk factor: {risk_factor:.2f} (multiplier: {risk_multiplier:.2f}, strength: {signal_strength:.2f}, fund: {fundamental_score:.2f}, sent: {sentiment_score:.2f})")
 
@@ -356,8 +357,10 @@ class OrderExecutor:
             max_pips *= risk_factor
 
             # Calculate pip size
-            if 'XAU' in symbol or 'GOLD' in symbol or 'XAG' in symbol:
-                pip_size = symbol_info.point * 10  # Metals: 1 pip = 10 points
+            if 'XAU' in symbol or 'GOLD' in symbol:
+                pip_size = symbol_info.point * 10  # Gold: 1 pip = 10 points
+            elif 'XAG' in symbol or 'SILVER' in symbol:
+                pip_size = symbol_info.point  # Silver: 1 pip = 1 point
             elif symbol_info.digits == 3 or symbol_info.digits == 5:
                 pip_size = symbol_info.point * 10
             else:
@@ -398,8 +401,10 @@ class OrderExecutor:
                 default_tp_pips = config.get('trading', {}).get('default_tp_pips', 60)
                 
                 # Calculate pip size
-                if "XAU" in symbol or "GOLD" in symbol or "XAG" in symbol:
-                    pip_size = symbol_info.point * 10  # Metals: 1 pip = 10 points
+                if "XAU" in symbol or "GOLD" in symbol:
+                    pip_size = symbol_info.point * 10  # Gold: 1 pip = 10 points
+                elif "XAG" in symbol or "SILVER" in symbol:
+                    pip_size = symbol_info.point  # Silver: 1 pip = 1 point
                 elif symbol_info.digits == 3 or symbol_info.digits == 5:
                     pip_size = symbol_info.point * 10
                 else:
