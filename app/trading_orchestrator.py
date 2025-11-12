@@ -140,7 +140,7 @@ class TradingOrchestrator:
 
             # Get analysis from all analyzers
             technical_score = self.app.technical_analyzer.analyze(symbol, market_data)
-            fundamental_score = self.app.fundamental_collector.analyze(symbol, market_data)
+            fundamental_score = self.app.fundamental_collector.get_news_sentiment(symbol)['score']
             sentiment_score = self.app.sentiment_analyzer.analyze(symbol, market_data)
 
             # Combine signals using adaptive learning weights

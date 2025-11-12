@@ -912,7 +912,7 @@ class RiskManager:
 
             # Check if MT5 connection is lost (this would be a major emergency)
             if hasattr(self, 'mt5_connector') and self.mt5_connector:
-                if not self.mt5_connector.is_connected():
+                if not self.mt5_connector.connected:
                     logger.critical("Emergency stop triggered: MT5 connection lost")
                     return True
 
