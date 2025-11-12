@@ -576,17 +576,11 @@ class RiskManager:
         """
         Check if symbol has already been traded today (MT5 server time)
         FIXED: Now uses consistent MT5 time source with NO fallbacks to local time
-        Also checks for existing open positions
+        Only checks trade count limits, not existing positions
         """
-        # First check if there are any open positions for this symbol
-        try:
-            positions = mt5.positions_get(symbol=symbol)  # type: ignore
-            if positions and len(positions) > 0:
-                logger.info(f"{symbol}: Has {len(positions)} open position(s) - considering as traded today")
-                return True
-        except Exception as e:
-            logger.warning(f"Error checking positions for {symbol}: {e}")
-        
+        # NOTE: Existing open positions don't prevent new trades
+        # The system can manage multiple positions or add to existing ones
+
         current_date, current_timestamp, success = self._get_mt5_server_date_reliable()
         
         if not success:
