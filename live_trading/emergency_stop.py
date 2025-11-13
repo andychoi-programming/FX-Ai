@@ -89,6 +89,10 @@ class EmergencyStop:
 
             logger.info(f"Found {len(positions)} total open positions")
             
+            # Debug: show details of first few positions
+            for i, pos in enumerate(positions[:5]):  # Show first 5 positions
+                logger.info(f"Position {i+1}: ticket={pos.ticket}, symbol={pos.symbol}, type={pos.type}, volume={pos.volume}, profit={pos.profit:.2f}, magic={getattr(pos, 'magic', 'N/A')}")
+            
             # EMERGENCY MODE: Close ALL positions, not just our magic number
             # In emergency situations, we want to close everything
             our_positions = positions  # Close ALL positions in emergency
@@ -96,17 +100,32 @@ class EmergencyStop:
             logger.info(f"EMERGENCY: Will close ALL {len(our_positions)} positions")
 
             closed_count = 0
+            failed_count = 0
             for position in our_positions:
                 try:
                     logger.info(f"EMERGENCY: Closing position: {position.symbol} ticket {position.ticket} (profit: {position.profit:.2f})")
 
+                    # Check if symbol is available
+                    symbol_info = mt5.symbol_info(position.symbol)
+                    if symbol_info is None:
+                        logger.error(f"❌ Symbol {position.symbol} is not available in MT5")
+                        failed_count += 1
+                        continue
+
+                    # Get current price for the symbol
+                    symbol_tick = mt5.symbol_info_tick(position.symbol)
+                    if symbol_tick is None:
+                        logger.error(f"❌ Failed to get tick data for {position.symbol} - symbol may not be available")
+                        failed_count += 1
+                        continue
+
                     # Determine order type for closing
                     if position.type == mt5.ORDER_TYPE_BUY:
                         order_type = mt5.ORDER_TYPE_SELL
-                        price = mt5.symbol_info_tick(position.symbol).bid
+                        price = symbol_tick.bid
                     else:
                         order_type = mt5.ORDER_TYPE_BUY
-                        price = mt5.symbol_info_tick(position.symbol).ask
+                        price = symbol_tick.ask
 
                     # Create close request
                     request = {
@@ -116,9 +135,9 @@ class EmergencyStop:
                         'type': order_type,
                         'position': position.ticket,
                         'price': price,
-                        'deviation': 10,
-                        'magic': self.magic_number,
-                        'comment': 'Emergency stop - close position',
+                        'deviation': 20,  # Increased deviation for emergency
+                        'magic': getattr(position, 'magic', 0),  # Use position's magic number
+                        'comment': 'EMERGENCY STOP - Close All Positions',
                         'type_filling': mt5.ORDER_FILLING_IOC,
                     }
 
@@ -126,16 +145,19 @@ class EmergencyStop:
                     result = mt5.order_send(request)
 
                     if result and result.retcode == mt5.TRADE_RETCODE_DONE:
-                        logger.info(f"Successfully closed {position.symbol} position {position.ticket}")
+                        logger.info(f"✅ Successfully closed {position.symbol} position {position.ticket}")
                         closed_count += 1
                     else:
-                        error_code = result.retcode if result else 'Unknown'
-                        logger.error(f"Failed to close {position.symbol} position {position.ticket}: {error_code}")
+                        error_code = result.retcode if result else 'NO_RESULT'
+                        error_comment = getattr(result, 'comment', 'Unknown error') if result else 'No result returned'
+                        logger.error(f"❌ Failed to close {position.symbol} position {position.ticket}: retcode={error_code}, comment={error_comment}")
+                        failed_count += 1
 
                 except Exception as e:
-                    logger.error(f"Error closing position {position.ticket}: {e}")
+                    logger.error(f"💥 Exception closing position {position.ticket}: {e}")
+                    failed_count += 1
 
-            logger.info(f"Closed {closed_count}/{len(our_positions)} positions")
+            logger.info(f"📊 Close Results: {closed_count} successful, {failed_count} failed out of {len(our_positions)} total positions")
             return closed_count
 
         except Exception as e:
