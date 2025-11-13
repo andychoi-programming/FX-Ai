@@ -109,7 +109,7 @@ class ComponentInitializer:
 
             # Initialize Schedule Manager
             self.app.logger.info("Initializing Schedule Manager...")
-            self.app.schedule_manager = ScheduleManager("config/symbol_schedules.json")
+            self.app.schedule_manager = ScheduleManager(config_data=self.app.config)
             self.app.schedule_manager.log_schedule_status()
 
             # Initialize Clock Synchronizer first (needed for logger timestamps)
