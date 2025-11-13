@@ -48,11 +48,13 @@ python -c "from app.application import FXAiApplication; import asyncio; app = FX
 
 ### Core Capabilities
 
+- **Stop Order Trading**: Uses BUY_STOP and SELL_STOP orders instead of market orders for better entry timing
 - **ML Model Integration**: Trained models for 30+ currency pairs across multiple timeframes (M15, H1)
 - **Adaptive Learning**: Continuous model improvement through reinforcement learning and performance tracking
 - **Real-time Trading**: Automated position management with advanced risk controls
 - **Multi-Timeframe Support**: Optimized parameters for M15 and H1 timeframes
-- **Risk Management**: Dynamic position sizing, 3-trade daily limits per symbol, comprehensive risk controls
+- **Risk Management**: 3:1 minimum risk-reward ratio, dynamic position sizing, 3-trade daily limits per symbol
+- **Stop Order Recording**: Database tracking of stop order placements for AI learning
 - **Fundamental Monitoring**: Real-time news and economic event monitoring during active trades
 - **Performance Monitoring**: Real-time dashboard with system health and P&L tracking
 - **Market Analysis**: Technical, fundamental, sentiment analysis, and correlation management
@@ -70,12 +72,19 @@ python -c "from app.application import FXAiApplication; import asyncio; app = FX
 
 ### Risk Management Settings
 
+- **Order Type**: BUY_STOP/SELL_STOP orders (no market orders)
 - **Max Positions:** 30 concurrent trades
 - **Risk per Trade:** $50 (fixed dollar amount)
 - **Daily Trade Limit:** 3 trades per symbol per day
-- **Default SL/TP:** 20/40 pips
+- **Minimum Risk-Reward Ratio:** 3:1 for all symbols
+- **Stop Order Distances:**
+  - Forex pairs: 5-10 pips from current price
+  - XAUUSD (Gold): 15-40 pips from current price
+  - XAGUSD (Silver): 100-200 pips from current price
+- **SL/TP from Entry:** 20/60 pips (3:1 ratio)
 - **Max Spread:** 3.0 pips
 - **Lot Size Range:** 0.01 - 1.0 lots
+- **Symbol Limits:** Max 1 position per symbol at a time
 
 ### Fundamental Monitoring Settings
 
@@ -308,6 +317,8 @@ learning_manager = AdaptiveLearningManager(config)
 
 ### Safety Features
 
+- **Stop Order System**: Uses pending BUY_STOP/SELL_STOP orders for precise entry timing
+- **3:1 Risk-Reward Ratio**: Minimum required ratio for all trades (profit 3x risk)
 - **Daily Loss Limits**: Automatic shutdown if daily loss exceeded
 - **Position Limits**: Max 30 concurrent positions, 3 trades per symbol daily
 - **Spread Filters**: Only trade when spreads ≤ 3.0 pips
@@ -320,6 +331,7 @@ learning_manager = AdaptiveLearningManager(config)
 - **Portfolio-level Risk**: Cross-symbol correlation analysis
 - **Market Regime Detection**: Adjusts risk based on market conditions
 - **Dynamic Position Sizing**: Adapts to account equity and volatility
+- **Stop Order Validation**: Ensures proper SL/TP placement before order submission
 - **Emergency Circuit Breakers**: Automatic pause during extreme volatility
 
 ### Emergency Controls
@@ -397,11 +409,65 @@ The **FundamentalMonitor** provides real-time fundamental monitoring during acti
 ### Database Integration
 
 All learning data is stored in `data/performance_history.db` with 24+ tables tracking:
+
 - Trade outcomes and performance metrics
+- Stop order placements and execution data
 - Model accuracy and prediction quality
 - Market conditions during trades
 - Risk management effectiveness
 - Adaptive parameter adjustments
+
+---
+
+## Stop Order Trading System
+
+### Overview
+
+FX-Ai v3.0 uses an advanced stop order system that places BUY_STOP and SELL_STOP orders instead of market orders. This approach provides better entry timing and risk management.
+
+### Stop Order Mechanics
+
+**BUY_STOP Order:**
+- Placed above current price (breakout buying)
+- Triggered when price reaches the stop level
+- SL placed below entry, TP above entry
+
+**SELL_STOP Order:**
+- Placed below current price (breakdown selling)
+- Triggered when price reaches the stop level
+- SL placed above entry, TP below entry
+
+### Distance Configuration
+
+Stop orders are placed at calculated distances from current price:
+
+- **Forex Pairs:** 5-10 pips (optimized for major pairs)
+- **XAUUSD (Gold):** 15-40 pips (accounts for higher volatility)
+- **XAGUSD (Silver):** 100-200 pips (matches 3:1 risk-reward requirement)
+
+### Risk-Reward Validation
+
+- **Minimum Ratio:** 3:1 (profit must be 3x the risk)
+- **SL Distance:** 20 pips from entry price
+- **TP Distance:** 60 pips from entry price
+- **Validation:** Orders rejected if ratio < 3.0
+
+### Stop Order Recording
+
+All stop order placements are recorded in the learning database for AI analysis:
+
+- Entry price and stop distance
+- Signal strength and market conditions
+- Order outcome tracking
+- Performance optimization data
+
+### Advantages
+
+- **Precise Entry:** Orders trigger at optimal price levels
+- **Reduced Slippage:** No market order execution risk
+- **Better Timing:** Enters on breakouts/breakdowns
+- **Risk Control:** SL/TP set before order activation
+- **AI Learning:** System learns from stop order performance
 
 ---
 
@@ -474,11 +540,14 @@ All learning data is stored in `data/performance_history.db` with 24+ tables tra
 
 ### Emergency Procedures
 
-1. **Immediate Stop**: Run `live_trading/emergency_stop.bat`
-2. **Check Logs**: Review `logs/crash_log.txt` and recent log files
-3. **Database Check**: Verify `data/performance_history.db` integrity
-4. **Restart System**: After resolving issues, restart with `python main.py`
-5. **Demo Testing**: Always test fixes on demo account first
+1. **Immediate Stop**: Run `live_trading/emergency_stop.bat` or `python live_trading/emergency_stop.py`
+2. **System Validation**: Script verifies MT5 connection and trading permissions before attempting closures
+3. **Complete Shutdown**: Closes all open positions AND cancels all pending orders
+4. **Failure Detection**: Reports if any positions cannot be closed (may require manual intervention)
+5. **Check Logs**: Review `logs/crash_log.txt` and recent log files for details
+6. **Database Check**: Verify `data/performance_history.db` integrity
+7. **Restart System**: After resolving issues, restart with `python main.py`
+8. **Demo Testing**: Always test fixes on demo account first
 
 ---
 
