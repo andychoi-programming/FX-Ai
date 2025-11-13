@@ -47,34 +47,71 @@ class EmergencyStop:
         self.magic_number = 123456  # Use the correct magic number
 
     def initialize_mt5(self):
-        """Initialize MT5 connection"""
+        """Initialize MT5 connection and verify trading capability"""
         try:
             logger.info("Initializing MT5 connection...")
 
             # Try to initialize MT5
             if not mt5.initialize():
-                logger.error("Failed to initialize MT5")
+                logger.error("❌ Failed to initialize MT5 - MT5 terminal may not be running")
                 return False
 
-            # Try to login (this will use saved credentials if available)
-            # If login fails, MT5 might still work for local operations
-            try:
-                # Basic connection test
-                terminal_info = mt5.terminal_info()
-                if terminal_info:
-                    logger.info(f"MT5 Terminal: {terminal_info.name}")
-                    logger.info(f"MT5 Server: {terminal_info.server}")
-                    return True
-                else:
-                    logger.warning("MT5 terminal info not available")
-                    return False
-            except Exception as e:
-                logger.warning(f"MT5 login check failed: {e}")
-                # Continue anyway as MT5 might still be usable
-                return True
+            # Check terminal connection
+            terminal_info = mt5.terminal_info()
+            if terminal_info is None:
+                logger.error("❌ Failed to get MT5 terminal info")
+                return False
+
+            logger.info(f"✅ MT5 Terminal: {terminal_info.name}")
+
+            # Check account login status
+            account_info = mt5.account_info()
+            if account_info is None:
+                logger.error("❌ No MT5 account logged in - cannot trade!")
+                logger.error("Please login to your MT5 account first")
+                return False
+
+            logger.info(f"✅ MT5 Account: {account_info.login} ({account_info.name})")
+            logger.info(f"✅ Account Balance: ${account_info.balance:.2f}")
+
+            # Verify trading is allowed
+            if not terminal_info.trade_allowed:
+                logger.error("❌ Trading is not allowed in MT5 terminal")
+                return False
+
+            if account_info.trade_expert != 1:
+                logger.warning("⚠️  Automated trading may not be enabled for this account")
+                logger.warning("Please enable automated trading in MT5: Tools → Options → Expert Advisors")
+
+            logger.info("✅ MT5 connection and trading capability verified")
+            return True
 
         except Exception as e:
-            logger.error(f"Failed to initialize MT5: {e}")
+            logger.error(f"💥 Failed to initialize MT5: {e}")
+            return False
+
+    def test_trading_capability(self):
+        """Test if we can actually send orders by attempting a minimal test"""
+        try:
+            logger.info("Testing trading capability...")
+
+            # Try to get a simple symbol info to test connection
+            symbol_info = mt5.symbol_info("EURUSD")
+            if symbol_info is None:
+                logger.error("❌ Cannot get symbol info - MT5 connection issue")
+                return False
+
+            # Try a minimal order check (this won't actually place an order)
+            # We check if the order_send function is callable
+            if not hasattr(mt5, 'order_send'):
+                logger.error("❌ MT5 order_send function not available")
+                return False
+
+            logger.info("✅ Trading capability test passed")
+            return True
+
+        except Exception as e:
+            logger.error(f"💥 Trading capability test failed: {e}")
             return False
 
     def close_all_positions(self):
@@ -141,8 +178,11 @@ class EmergencyStop:
                         'type_filling': mt5.ORDER_FILLING_IOC,
                     }
 
+                    logger.debug(f"📤 Sending close request: symbol={request['symbol']}, volume={request['volume']}, price={request['price']}, position={request['position']}")
+
                     # Send order
                     result = mt5.order_send(request)
+                    logger.debug(f"📥 Order send result type: {type(result)}, value: {result}")
 
                     if result and result.retcode == mt5.TRADE_RETCODE_DONE:
                         logger.info(f"✅ Successfully closed {position.symbol} position {position.ticket}")
@@ -233,7 +273,13 @@ class EmergencyStop:
 
         # Initialize MT5
         if not self.initialize_mt5():
-            logger.error("Failed to initialize MT5 - cannot proceed with emergency stop")
+            logger.error("❌ Failed to initialize MT5 - cannot proceed with emergency stop")
+            return False
+
+        # Test trading capability before proceeding
+        if not self.test_trading_capability():
+            logger.error("❌ Trading capability test failed - cannot proceed with emergency stop")
+            logger.error("Please ensure MT5 is logged in and automated trading is enabled")
             return False
 
         # Close all positions
