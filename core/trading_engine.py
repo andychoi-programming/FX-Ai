@@ -256,14 +256,14 @@ class TradingEngine:
             take_profit = signal.get('take_profit')
             entry_price = signal.get('entry_price')
 
-            # Place the order
-            result = await self.place_order(
+            # Use OrderManager for hybrid order placement
+            result = await self.order_executor.order_manager.place_order(
                 symbol=symbol,
-                order_type=direction,
+                signal=direction,
+                entry_strategy="stop",  # Default to stop orders
                 volume=volume,
                 stop_loss=stop_loss,
                 take_profit=take_profit,
-                price=entry_price,
                 signal_data={
                     'technical_score': signal.get('technical_score', 0.5),
                     'fundamental_score': signal.get('fundamental_score', 0.5),

@@ -1,8 +1,3 @@
-"""
-FX-Ai Order Executor Module
-Handles order placement and execution through MT5
-"""
-
 import logging
 import asyncio
 from datetime import datetime
@@ -11,6 +6,552 @@ import MetaTrader5 as mt5
 from ai.learning_database import LearningDatabase
 
 logger = logging.getLogger(__name__)
+
+
+class OrderManager:
+    """Hybrid order manager supporting multiple entry strategies"""
+
+    def __init__(self, order_executor):
+        self.order_executor = order_executor
+        self.mt5 = order_executor.mt5
+        self.config = order_executor.config
+
+        # Load order management settings
+        order_mgmt_config = self.config.get('trading', {}).get('order_management', {})
+        self.default_entry_strategy = order_mgmt_config.get('default_entry_strategy', 'stop')
+        self.order_expiration_hours = order_mgmt_config.get('order_expiration_hours', 24)
+
+        pending_config = order_mgmt_config.get('pending_order_management', {})
+        self.pending_mgmt_enabled = pending_config.get('enabled', True)
+        self.stale_threshold_hours = pending_config.get('stale_order_threshold_hours', 1)
+        self.price_movement_threshold = pending_config.get('price_movement_cancel_threshold', 0.02)
+        self.max_pending_orders = pending_config.get('max_pending_orders', 10)
+
+        validation_config = order_mgmt_config.get('validation', {})
+        self.pre_place_validation = validation_config.get('pre_place_validation', True)
+
+    async def place_order(self, symbol: str, signal: str, entry_strategy: str = None,
+                         volume: Optional[float] = None, stop_loss: Optional[float] = None,
+                         take_profit: Optional[float] = None, signal_data: Optional[Dict] = None) -> Dict:
+        """
+        Place order using specified strategy
+
+        entry_strategy options:
+        - "stop": Use stop orders (default)
+        - "market": Use market orders (fallback)
+        - "limit": Use limit orders (advanced)
+
+        Args:
+            symbol: Trading symbol
+            signal: "BUY" or "SELL"
+            entry_strategy: Entry strategy to use (optional, uses config default)
+            volume: Order volume (optional)
+            stop_loss: Stop loss price (optional)
+            take_profit: Take profit price (optional)
+            signal_data: Additional signal data
+
+        Returns:
+            dict: Order result
+        """
+
+        if entry_strategy is None:
+            entry_strategy = self.default_entry_strategy
+
+        if entry_strategy == "stop":
+            return await self._place_stop_order(symbol, signal, volume, stop_loss, take_profit, signal_data)
+        elif entry_strategy == "market":
+            return await self._place_market_order(symbol, signal, volume, stop_loss, take_profit, signal_data)
+        elif entry_strategy == "limit":
+            return await self._place_limit_order(symbol, signal, volume, stop_loss, take_profit, signal_data)
+        else:
+            return {
+                'success': False,
+                'error': f'Unknown entry strategy: {entry_strategy}'
+            }
+
+    async def _place_stop_order(self, symbol: str, signal: str, volume: Optional[float] = None,
+                               stop_loss: Optional[float] = None, take_profit: Optional[float] = None,
+                               signal_data: Optional[Dict] = None) -> Dict:
+        """Place stop order with ATR-based distance calculation"""
+
+        try:
+            # Get current price and ATR
+            tick = mt5.symbol_info_tick(symbol)
+            if tick is None:
+                return {'success': False, 'error': f'Failed to get tick data for {symbol}'}
+
+            current_price = tick.ask if signal == "BUY" else tick.bid
+            atr = self._get_atr(symbol)
+
+            # Calculate optimal stop distance
+            stop_distance = self._calculate_stop_distance(symbol, signal, atr, signal_data)
+
+            # Calculate stop order price
+            if signal == "BUY":
+                stop_price = current_price + stop_distance
+            else:  # SELL
+                stop_price = current_price - stop_distance
+
+            # Validate stop order before placing
+            is_valid, validation_error = self._validate_stop_order(symbol, signal, stop_price, current_price)
+            if not is_valid:
+                return {'success': False, 'error': validation_error}
+
+            # Calculate volume if not provided
+            if volume is None:
+                volume = self._calculate_position_size(symbol, stop_price, stop_loss or (stop_price - stop_distance))
+
+            # Calculate SL/TP if not provided
+            if stop_loss is None or take_profit is None:
+                sl_price, tp_price = self._calculate_sl_tp(symbol, signal, stop_price, atr)
+                if stop_loss is None:
+                    stop_loss = sl_price
+                if take_profit is None:
+                    take_profit = tp_price
+
+            # Set order expiration
+            expiration = self._calculate_order_expiration()
+
+            # Place the stop order
+            return await self.order_executor.place_order(
+                symbol=symbol,
+                order_type=f"{signal.lower()}_stop",
+                volume=volume,
+                stop_loss=stop_loss,
+                take_profit=take_profit,
+                price=stop_price,
+                comment=f"FX-Ai Stop Order ({signal})",
+                signal_data=signal_data
+            )
+
+        except Exception as e:
+            logger.error(f"Error placing stop order for {symbol}: {e}")
+            return {'success': False, 'error': str(e)}
+
+    async def _place_market_order(self, symbol: str, signal: str, volume: Optional[float] = None,
+                                 stop_loss: Optional[float] = None, take_profit: Optional[float] = None,
+                                 signal_data: Optional[Dict] = None) -> Dict:
+        """Place market order as fallback"""
+
+        try:
+            # Get current price
+            tick = mt5.symbol_info_tick(symbol)
+            if tick is None:
+                return {'success': False, 'error': f'Failed to get tick data for {symbol}'}
+
+            current_price = tick.ask if signal == "BUY" else tick.bid
+            atr = self._get_atr(symbol)
+
+            # Calculate volume if not provided
+            if volume is None:
+                # For market orders, estimate SL distance for position sizing
+                estimated_sl_distance = atr * 2  # Conservative estimate
+                volume = self._calculate_position_size(symbol, current_price, current_price - estimated_sl_distance)
+
+            # Calculate SL/TP if not provided
+            if stop_loss is None or take_profit is None:
+                sl_price, tp_price = self._calculate_sl_tp(symbol, signal, current_price, atr)
+                if stop_loss is None:
+                    stop_loss = sl_price
+                if take_profit is None:
+                    take_profit = tp_price
+
+            # Place market order
+            return await self.order_executor.place_order(
+                symbol=symbol,
+                order_type=signal.lower(),
+                volume=volume,
+                stop_loss=stop_loss,
+                take_profit=take_profit,
+                comment=f"FX-Ai Market Order ({signal})",
+                signal_data=signal_data
+            )
+
+        except Exception as e:
+            logger.error(f"Error placing market order for {symbol}: {e}")
+            return {'success': False, 'error': str(e)}
+
+    async def _place_limit_order(self, symbol: str, signal: str, volume: Optional[float] = None,
+                                stop_loss: Optional[float] = None, take_profit: Optional[float] = None,
+                                signal_data: Optional[Dict] = None) -> Dict:
+        """Place limit order (advanced strategy)"""
+
+        # For now, fall back to market order - limit orders require more sophisticated logic
+        logger.info(f"Limit orders not fully implemented, using market order for {symbol}")
+        return await self._place_market_order(symbol, signal, volume, stop_loss, take_profit, signal_data)
+
+    def _get_atr(self, symbol: str, period: int = 14) -> float:
+        """Get ATR value for symbol"""
+
+        try:
+            # Get recent price data
+            rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_H1, 0, period + 1)
+            if rates is None or len(rates) < period + 1:
+                # Fallback to config-based ATR estimate
+                return self._get_fallback_atr(symbol)
+
+            # Calculate ATR manually
+            highs = [rate.high for rate in rates]
+            lows = [rate.low for rate in rates]
+            closes = [rate.close for rate in rates]
+
+            tr_values = []
+            for i in range(1, len(closes)):
+                tr = max(
+                    highs[i] - lows[i],  # Current high - current low
+                    abs(highs[i] - closes[i-1]),  # Current high - previous close
+                    abs(lows[i] - closes[i-1])   # Current low - previous close
+                )
+                tr_values.append(tr)
+
+            # Simple ATR calculation (average of TR values)
+            atr = sum(tr_values) / len(tr_values)
+            return atr
+
+        except Exception as e:
+            logger.warning(f"Error calculating ATR for {symbol}: {e}")
+            return self._get_fallback_atr(symbol)
+
+    def _get_fallback_atr(self, symbol: str) -> float:
+        """Get fallback ATR estimate based on symbol type"""
+
+        symbol_info = mt5.symbol_info(symbol)
+        if symbol_info is None:
+            return 0.001  # Very conservative fallback
+
+        # Estimate ATR based on symbol type and current price
+        current_price = symbol_info.ask
+
+        if 'XAU' in symbol or 'GOLD' in symbol:
+            # Gold ATR estimate: ~0.5-1.5% of price
+            return current_price * 0.01
+        elif 'XAG' in symbol or 'SILVER' in symbol:
+            # Silver ATR estimate: ~1-2% of price
+            return current_price * 0.015
+        else:
+            # Forex ATR estimate: ~0.1-0.3% of price
+            return current_price * 0.002
+
+    def _calculate_stop_distance(self, symbol: str, signal: str, atr: float,
+                               signal_data: Optional[Dict] = None) -> float:
+        """Calculate optimal stop distance from current price"""
+
+        # Base distance on ATR
+        base_distance = atr * 0.2  # 20% of ATR as base
+
+        # Adjust based on volatility
+        volatility = self._get_volatility(symbol)
+        if volatility > 0.015:  # High volatility
+            distance = atr * 0.3  # Further away
+        elif volatility < 0.005:  # Low volatility
+            distance = atr * 0.1  # Closer
+        else:  # Normal
+            distance = base_distance
+
+        # Apply risk adjustments from signal data
+        if signal_data:
+            risk_multiplier = signal_data.get('risk_multiplier', 1.0)
+            signal_strength = signal_data.get('signal_strength', 0.5)
+
+            # Increase distance for weaker signals
+            if signal_strength < 0.4:
+                risk_multiplier *= 1.5
+            elif signal_strength < 0.6:
+                risk_multiplier *= 1.2
+
+            distance *= risk_multiplier
+
+        # Ensure minimum distances based on symbol type
+        symbol_info = mt5.symbol_info(symbol)
+        if symbol_info:
+            min_distance = self.order_executor._calculate_min_stop_distance(symbol, symbol_info)
+            distance = max(distance, min_distance)
+
+        return distance
+
+    def _get_volatility(self, symbol: str) -> float:
+        """Get volatility estimate for symbol"""
+
+        try:
+            # Get recent price data
+            rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_H1, 0, 20)
+            if rates is None or len(rates) < 20:
+                return 0.01  # Default volatility
+
+            # Calculate price range volatility
+            closes = [rate.close for rate in rates]
+            if len(closes) < 2:
+                return 0.01
+
+            # Calculate standard deviation of returns
+            returns = []
+            for i in range(1, len(closes)):
+                ret = (closes[i] - closes[i-1]) / closes[i-1]
+                returns.append(ret)
+
+            if not returns:
+                return 0.01
+
+            mean_return = sum(returns) / len(returns)
+            variance = sum((r - mean_return) ** 2 for r in returns) / len(returns)
+            volatility = variance ** 0.5
+
+            return volatility
+
+        except Exception as e:
+            logger.warning(f"Error calculating volatility for {symbol}: {e}")
+            return 0.01
+
+    def _validate_stop_order(self, symbol: str, signal: str, stop_price: float, current_price: float) -> tuple[bool, str]:
+        """Validate stop order before placing"""
+
+        try:
+            symbol_info = mt5.symbol_info(symbol)
+            if symbol_info is None:
+                return False, f"Symbol {symbol} not found"
+
+            min_distance = self.order_executor._calculate_min_stop_distance(symbol, symbol_info)
+
+            if signal == "BUY":
+                # Buy stop must be above current price
+                if stop_price <= current_price:
+                    return False, f"Buy stop ({stop_price:.5f}) must be above current price ({current_price:.5f})"
+
+                # Must be minimum distance away
+                if stop_price - current_price < min_distance:
+                    return False, f"Buy stop too close (min: {min_distance:.5f} price units)"
+
+            elif signal == "SELL":
+                # Sell stop must be below current price
+                if stop_price >= current_price:
+                    return False, f"Sell stop ({stop_price:.5f}) must be below current price ({current_price:.5f})"
+
+                if current_price - stop_price < min_distance:
+                    return False, f"Sell stop too close (min: {min_distance:.5f} price units)"
+
+            return True, "Valid"
+
+        except Exception as e:
+            logger.error(f"Error validating stop order for {symbol}: {e}")
+            return False, f"Validation error: {str(e)}"
+
+    def _calculate_position_size(self, symbol: str, entry_price: float, stop_loss_price: float) -> float:
+        """Calculate position size based on risk management"""
+
+        try:
+            # Calculate stop loss distance in pips
+            symbol_info = mt5.symbol_info(symbol)
+            if symbol_info is None:
+                return 0.01
+
+            stop_distance = abs(entry_price - stop_loss_price)
+            pip_size = symbol_info.point * 10  # Assuming 5-digit broker
+            stop_pips = stop_distance / pip_size
+
+            # Use risk manager for position sizing if available
+            if hasattr(self.order_executor, 'risk_manager') and self.order_executor.risk_manager:
+                return self.order_executor.risk_manager.calculate_position_size(symbol, stop_pips)
+
+            # Fallback calculation
+            risk_amount = self.config.get('trading', {}).get('risk_per_trade', 50.0)
+
+            # Simple pip value calculation
+            tick = mt5.symbol_info_tick(symbol)
+            if tick is None:
+                return 0.01
+
+            if symbol.endswith("USD"):
+                pip_value_per_lot = 10.0  # $10 per pip for 1 lot
+            elif "JPY" in symbol:
+                pip_value_per_lot = (0.01 * 100000) / tick.bid
+            else:
+                pip_value_per_lot = (0.0001 * 100000) / tick.bid
+
+            if pip_value_per_lot > 0 and stop_pips > 0:
+                position_size = risk_amount / (pip_value_per_lot * stop_pips)
+                # Apply lot size limits
+                min_lot = self.config.get('trading', {}).get('min_lot_size', 0.01)
+                max_lot = self.config.get('trading', {}).get('max_lot_size', 1.0)
+                position_size = max(min_lot, min(max_lot, position_size))
+                return round(position_size, 2)
+
+            return 0.01
+
+        except Exception as e:
+            logger.error(f"Error calculating position size for {symbol}: {e}")
+            return 0.01
+
+    def _calculate_sl_tp(self, symbol: str, signal: str, entry_price: float, atr: float) -> tuple[float, float]:
+        """Calculate stop loss and take profit prices"""
+
+        default_sl_pips = self.config.get('trading', {}).get('default_sl_pips', 20)
+        default_tp_pips = self.config.get('trading', {}).get('default_tp_pips', 60)
+
+        # Get pip size
+        symbol_info = mt5.symbol_info(symbol)
+        if symbol_info is None:
+            pip_size = 0.0001  # Default forex pip size
+        else:
+            pip_size = symbol_info.point * 10  # 5-digit broker
+
+        if signal == "BUY":
+            stop_loss = entry_price - (default_sl_pips * pip_size)
+            take_profit = entry_price + (default_tp_pips * pip_size)
+        else:  # SELL
+            stop_loss = entry_price + (default_sl_pips * pip_size)
+            take_profit = entry_price - (default_tp_pips * pip_size)
+
+        return stop_loss, take_profit
+
+    def _calculate_order_expiration(self) -> int:
+        """Calculate order expiration timestamp"""
+
+        # Expire after configured hours
+        expiration = datetime.now().replace(hour=23, minute=59, second=0, microsecond=0)
+        # For orders placed during trading hours, expire at end of day
+        # For orders placed outside hours, expire after configured hours
+        return int(expiration.timestamp())
+
+    def manage_pending_orders(self) -> Dict:
+        """Monitor and manage pending stop orders"""
+
+        if not self.pending_mgmt_enabled:
+            return {'managed': 0, 'cancelled': 0, 'errors': 0}
+
+        try:
+            orders = mt5.orders_get()
+            if orders is None:
+                return {'managed': 0, 'cancelled': 0, 'errors': 0}
+
+            total_pending = len(orders)
+            managed = 0
+            cancelled = 0
+            errors = 0
+
+            # Check for too many pending orders
+            if total_pending > self.max_pending_orders:
+                logger.warning(f"Too many pending orders: {total_pending} (max: {self.max_pending_orders})")
+                # Cancel oldest orders to reduce count
+                orders_to_cancel = sorted(orders, key=lambda x: getattr(x, 'time_setup', 0))[:total_pending - self.max_pending_orders]
+                for order in orders_to_cancel:
+                    if self._cancel_order(order.ticket):
+                        cancelled += 1
+                        logger.info(f"Cancelled excess pending order: {order.ticket}")
+
+            for order in orders:
+                try:
+                    managed += 1
+
+                    # Check if order is stale
+                    if self._is_order_stale(order):
+                        self._cancel_order(order.ticket)
+                        cancelled += 1
+                        logger.info(f"Cancelled stale order: {order.ticket}")
+                        continue
+
+                    # Check if conditions still valid
+                    if not self._is_signal_still_valid(order.symbol, order):
+                        self._cancel_order(order.ticket)
+                        cancelled += 1
+                        logger.info(f"Cancelled invalid order: {order.ticket}")
+                        continue
+
+                    # Check if price moved too far
+                    if self._price_moved_too_far(order):
+                        self._cancel_order(order.ticket)
+                        cancelled += 1
+                        logger.info(f"Cancelled order due to price movement: {order.ticket}")
+                        continue
+
+                except Exception as e:
+                    logger.error(f"Error managing order {order.ticket}: {e}")
+                    errors += 1
+
+            return {
+                'managed': managed,
+                'cancelled': cancelled,
+                'errors': errors
+            }
+
+        except Exception as e:
+            logger.error(f"Error in pending order management: {e}")
+            return {'managed': 0, 'cancelled': 0, 'errors': 1}
+
+    def _is_order_stale(self, order) -> bool:
+        """Check if order is stale"""
+
+        current_time = datetime.now().timestamp()
+        order_time = getattr(order, 'time_setup', 0)
+        stale_seconds = self.stale_threshold_hours * 3600
+        return (current_time - order_time) > stale_seconds
+
+    def _is_signal_still_valid(self, symbol: str, order) -> bool:
+        """Check if signal conditions are still valid"""
+
+        # This is a simplified check - in practice, you'd want to re-evaluate
+        # the original signal conditions
+        try:
+            # Get current price
+            tick = mt5.symbol_info_tick(symbol)
+            if tick is None:
+                return False
+
+            current_price = tick.ask if order.type == mt5.ORDER_TYPE_BUY_STOP else tick.bid
+            order_price = getattr(order, 'price', 0)
+
+            # Check if price has moved significantly away from order
+            price_diff = abs(current_price - order_price)
+            symbol_info = mt5.symbol_info(symbol)
+            if symbol_info:
+                # If price has moved more than 5% away from order price, reconsider
+                if price_diff / current_price > 0.05:
+                    return False
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Error checking signal validity for {symbol}: {e}")
+            return False
+
+    def _price_moved_too_far(self, order) -> bool:
+        """Check if price has moved too far from order"""
+
+        try:
+            symbol = getattr(order, 'symbol', '')
+            tick = mt5.symbol_info_tick(symbol)
+            if tick is None:
+                return False
+
+            current_price = tick.ask if order.type == mt5.ORDER_TYPE_BUY_STOP else tick.bid
+            order_price = getattr(order, 'price', 0)
+
+            return abs(current_price - order_price) / order_price > self.price_movement_threshold
+
+        except Exception:
+            return False
+
+    def _cancel_order(self, ticket: int) -> bool:
+        """Cancel a pending order"""
+
+        try:
+            request = {
+                "action": mt5.TRADE_ACTION_REMOVE,
+                "order": ticket
+            }
+
+            result = mt5.order_send(request)
+            return result is not None and result.retcode == mt5.TRADE_RETCODE_DONE
+
+        except Exception as e:
+            logger.error(f"Error cancelling order {ticket}: {e}")
+            return False
+
+    def _modify_or_cancel_order(self, order) -> None:
+        """Modify order or cancel if modification not possible"""
+
+        # For now, just cancel - modification logic would be more complex
+        self._cancel_order(order.ticket)
+        logger.info(f"Cancelled order {order.ticket} due to price movement")
 
 
 class OrderExecutor:
@@ -24,9 +565,63 @@ class OrderExecutor:
         self.max_slippage = config.get('trading', {}).get('max_slippage')
         self.min_risk_reward_ratio = config.get('trading', {}).get('min_risk_reward_ratio')
         self.dry_run = config.get('trading', {}).get('dry_run')
-        
+
         # Initialize learning database for recording stop orders
         self.learning_db = LearningDatabase()
+
+        # Initialize order manager
+        self.order_manager = OrderManager(self)
+
+    def check_pending_orders_health(self) -> Dict:
+        """Check health of pending orders for monitoring system"""
+
+        try:
+            orders = mt5.orders_get()
+            if orders is None:
+                return {
+                    'total_pending': 0,
+                    'issues': [],
+                    'cancel_rate': 0.0,
+                    'fill_rate': 0.0
+                }
+
+            total_pending = len(orders)
+            issues = []
+
+            # Check for too many pending orders
+            if total_pending > 10:
+                issues.append(f"Too many pending orders: {total_pending}")
+
+            # Check for stale orders (>1 hour old)
+            current_time = datetime.now().timestamp()
+            stale_count = 0
+            for order in orders:
+                order_time = getattr(order, 'time_setup', 0)
+                if (current_time - order_time) > 3600:  # 1 hour
+                    stale_count += 1
+
+            if stale_count > 0:
+                issues.append(f"Stale orders found: {stale_count}")
+
+            # Calculate rates (simplified - would need historical data for accurate rates)
+            cancel_rate = 0.0  # Placeholder
+            fill_rate = 0.0    # Placeholder
+
+            return {
+                'total_pending': total_pending,
+                'issues': issues,
+                'cancel_rate': cancel_rate,
+                'fill_rate': fill_rate
+            }
+
+        except Exception as e:
+            logger.error(f"Error checking pending orders health: {e}")
+            return {
+                'total_pending': 0,
+                'issues': [f"Error checking orders: {str(e)}"],
+                'cancel_rate': 0.0,
+                'fill_rate': 0.0
+            }
 
     def get_filling_mode(self, symbol):
         """Get appropriate filling mode for symbol"""
@@ -662,7 +1257,8 @@ class OrderExecutor:
                         "price": price,
                         "magic": self.magic_number,
                         "comment": comment or "FX-Ai",
-                        "type_time": mt5.ORDER_TIME_GTC,
+                        "type_time": mt5.ORDER_TIME_DAY,  # Expire at end of trading day
+                        "type_filling": mt5.ORDER_FILLING_IOC,
                     }
 
                     # Add deviation only for market orders

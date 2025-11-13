@@ -333,12 +333,33 @@ class TradingOrchestrator:
     async def _monitor_positions_and_learning(self, loop_count: int):
         """Monitor existing positions and maintain learning systems."""
         try:
+            # Manage pending orders every 6 loops (60 seconds)
+            if loop_count % 6 == 0:
+                await self._manage_pending_orders()
+
             # Check learning thread health every hour
             if self.adaptive_learning and loop_count % (360 * 6) == 0:
                 await self._check_learning_thread_health()
 
         except Exception as e:
             self.logger.error(f"Error in position and learning monitoring: {e}")
+
+    async def _manage_pending_orders(self):
+        """Manage pending stop orders - cancel stale/invalid orders."""
+        try:
+            management_result = self.trading_engine.order_executor.order_manager.manage_pending_orders()
+
+            managed = management_result.get('managed', 0)
+            cancelled = management_result.get('cancelled', 0)
+            errors = management_result.get('errors', 0)
+
+            if cancelled > 0 or errors > 0:
+                self.logger.info(f"Pending order management: {managed} checked, {cancelled} cancelled, {errors} errors")
+            elif managed > 0 and managed % 10 == 0:  # Log every 10th check when no action taken
+                self.logger.debug(f"Pending order management: {managed} orders monitored")
+
+        except Exception as e:
+            self.logger.error(f"Error managing pending orders: {e}")
 
     async def _process_correlation_actions(self):
         """Process correlation-based trading actions."""
@@ -968,6 +989,19 @@ class TradingOrchestrator:
                 health_indicators.append("System: Running")
             else:
                 health_indicators.append("System: Stopped")
+
+            # Check pending orders health
+            pending_health = self.trading_engine.order_executor.check_pending_orders_health()
+            total_pending = pending_health.get('total_pending', 0)
+            issues = pending_health.get('issues', [])
+
+            health_indicators.append(f"Pending Orders: {total_pending}")
+
+            if issues:
+                health_indicators.append(f"Issues: {len(issues)}")
+                # Log issues separately for visibility
+                for issue in issues:
+                    self.logger.warning(f"PENDING ORDER ISSUE: {issue}")
 
             self.logger.info(f"SYSTEM HEALTH: {' | '.join(health_indicators)}")
 

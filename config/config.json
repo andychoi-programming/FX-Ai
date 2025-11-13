@@ -81,6 +81,29 @@
       "order_type": "stop",
       "_comment": "Distance type: 'pips' or 'percentage'. If distance exceeds reanalysis threshold, analysis folder performs re-evaluation"
     },
+    "order_management": {
+      "default_entry_strategy": "stop",
+      "order_expiration_hours": 24,
+      "pending_order_management": {
+        "enabled": true,
+        "check_interval_seconds": 60,
+        "stale_order_threshold_hours": 1,
+        "price_movement_cancel_threshold": 0.02,
+        "max_pending_orders": 10,
+        "cancel_stale_orders": true,
+        "cancel_on_signal_change": true
+      },
+      "validation": {
+        "pre_place_validation": true,
+        "min_stop_distance_check": true,
+        "price_position_validation": true
+      },
+      "fallback_strategies": {
+        "market_fallback_enabled": true,
+        "limit_fallback_enabled": false
+      },
+      "_comment": "Order management settings for stop orders, validation, and pending order monitoring"
+    },
     "_comment_rules": "===== TRADING RULES - AI-DRIVEN TIMING ====="
   },
   "trading_rules": {
