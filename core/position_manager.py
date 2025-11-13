@@ -50,7 +50,7 @@ class PositionManager:
                                     continue
 
                         # SECOND: Validate position integrity before management
-                        validation = RiskValidator.comprehensive_position_check(position)
+                        validation = RiskValidator.comprehensive_position_check(position, self.config)
                         if not validation['overall_valid']:
                             logger.error(
                                 f"[ERROR] POSITION VALIDATION FAILED for "

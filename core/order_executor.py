@@ -20,10 +20,10 @@ class OrderExecutor:
         """Initialize order executor"""
         self.mt5 = mt5_connector
         self.config = config
-        self.magic_number = config.get('trading', {}).get('magic_number', 123456)
-        self.max_slippage = config.get('trading', {}).get('max_slippage', 3)
-        self.min_risk_reward_ratio = config.get('trading', {}).get('min_risk_reward_ratio', 3.0)
-        self.dry_run = config.get('trading', {}).get('dry_run', False)
+        self.magic_number = config.get('trading', {}).get('magic_number')
+        self.max_slippage = config.get('trading', {}).get('max_slippage')
+        self.min_risk_reward_ratio = config.get('trading', {}).get('min_risk_reward_ratio')
+        self.dry_run = config.get('trading', {}).get('dry_run')
         
         # Initialize learning database for recording stop orders
         self.learning_db = LearningDatabase()
@@ -348,14 +348,14 @@ class OrderExecutor:
             if distance_type == 'percentage':
                 # Percentage-based distance calculation
                 if 'XAU' in symbol or 'GOLD' in symbol:
-                    min_percent = pending_config.get('xauusd_min_percent', 0.05)
-                    max_percent = pending_config.get('xauusd_max_percent', 0.15)
+                    min_percent = pending_config.get('xauusd_min_percent')
+                    max_percent = pending_config.get('xauusd_max_percent')
                 elif 'XAG' in symbol or 'SILVER' in symbol:
-                    min_percent = pending_config.get('xagusd_min_percent', 0.05)
-                    max_percent = pending_config.get('xagusd_max_percent', 0.15)
+                    min_percent = pending_config.get('xagusd_min_percent')
+                    max_percent = pending_config.get('xagusd_max_percent')
                 else:
-                    min_percent = pending_config.get('forex_min_percent', 0.05)
-                    max_percent = pending_config.get('forex_max_percent', 0.15)
+                    min_percent = pending_config.get('forex_min_percent')
+                    max_percent = pending_config.get('forex_max_percent')
 
                 # Adjust stop distance based on signal analysis
                 risk_factor = 1.0
@@ -407,14 +407,14 @@ class OrderExecutor:
                 # Pip-based distance calculation (original logic)
                 # Determine pip ranges based on symbol
                 if 'XAU' in symbol or 'GOLD' in symbol:
-                    min_pips = pending_config.get('xauusd_min_pips', 15)  # Reduced from 50
-                    max_pips = pending_config.get('xauusd_max_pips', 40)  # Reduced from 150
+                    min_pips = pending_config.get('xauusd_min_pips')
+                    max_pips = pending_config.get('xauusd_max_pips')
                 elif 'XAG' in symbol or 'SILVER' in symbol:
-                    min_pips = pending_config.get('xagusd_min_pips', 100)  # Increased from 50
-                    max_pips = pending_config.get('xagusd_max_pips', 200)  # Increased from 100
+                    min_pips = pending_config.get('xagusd_min_pips')
+                    max_pips = pending_config.get('xagusd_max_pips')
                 else:
-                    min_pips = pending_config.get('forex_min_pips', 5)   # Reduced from 10
-                    max_pips = pending_config.get('forex_max_pips', 10)  # Reduced from 25
+                    min_pips = pending_config.get('forex_min_pips')
+                    max_pips = pending_config.get('forex_max_pips')
 
                 # Adjust stop distance based on signal analysis
                 risk_factor = 1.0
@@ -524,8 +524,8 @@ class OrderExecutor:
             if stop_loss is not None and price is not None:
                 # Get default pips from config
                 config = getattr(self, 'config', {})
-                default_sl_pips = config.get('trading', {}).get('default_sl_pips', 20)
-                default_tp_pips = config.get('trading', {}).get('default_tp_pips', 60)
+                default_sl_pips = config.get('trading', {}).get('default_sl_pips')
+                default_tp_pips = config.get('trading', {}).get('default_tp_pips')
                 
                 # Calculate pip size
                 if "XAU" in symbol or "GOLD" in symbol:
@@ -660,11 +660,14 @@ class OrderExecutor:
                         "volume": volume,
                         "type": mt5_order_type,
                         "price": price,
-                        "deviation": self.max_slippage,
                         "magic": self.magic_number,
                         "comment": comment or "FX-Ai",
                         "type_time": mt5.ORDER_TIME_GTC,
                     }
+
+                    # Add deviation only for market orders
+                    if trade_action == mt5.TRADE_ACTION_DEAL:
+                        request["deviation"] = self.max_slippage
 
                     # Add SL/TP for pending orders (they are applied when order fills)
                     if trade_action == mt5.TRADE_ACTION_PENDING:

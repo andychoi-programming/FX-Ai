@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class RiskValidator:
     @staticmethod
-    def validate_risk_calculation(position, symbol: str) -> Tuple[bool, str, float]:
+    def validate_risk_calculation(position, symbol: str, config: dict) -> Tuple[bool, str, float]:
         """
         Validate risk calculation for a position
         Returns: (is_valid, error_message, calculated_risk_pips)
@@ -43,12 +43,13 @@ class RiskValidator:
                 return False, f"Invalid risk calculation: {risk_pips:.1f} pips", risk_pips
 
             # Different risk limits for different asset classes
+            risk_validation = config.get('risk_management', {}).get('risk_validation', {})
             if 'XAU' in symbol or 'XAG' in symbol:  # Metals
-                min_risk = 50   # 50 pips minimum for metals
-                max_risk = 5000 # 5000 pips maximum for metals (reasonable for high-volatility assets)
+                min_risk = risk_validation.get('metals_min_risk_pips')
+                max_risk = risk_validation.get('metals_max_risk_pips')
             else:  # Forex pairs
-                min_risk = 5    # 5 pips minimum
-                max_risk = 500  # 500 pips maximum
+                min_risk = risk_validation.get('forex_min_risk_pips')
+                max_risk = risk_validation.get('forex_max_risk_pips')
 
             if risk_pips < min_risk:
                 return False, f"Risk too tight: {risk_pips:.1f} pips (minimum {min_risk} pips)", risk_pips
@@ -120,7 +121,7 @@ class RiskValidator:
             return False, f"Broker limits check error: {e}"
 
     @staticmethod
-    def comprehensive_position_check(position) -> dict:
+    def comprehensive_position_check(position, config: dict) -> dict:
         """
         Run all validations on a position
         Returns dict with validation results
@@ -135,7 +136,7 @@ class RiskValidator:
         }
 
         # Risk calculation validation
-        valid, message, risk_pips = RiskValidator.validate_risk_calculation(position, symbol)
+        valid, message, risk_pips = RiskValidator.validate_risk_calculation(position, symbol, config)
         results['validations']['risk_calculation'] = {'valid': valid, 'message': message, 'risk_pips': risk_pips}
         if not valid:
             results['overall_valid'] = False

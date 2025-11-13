@@ -18,7 +18,7 @@ class StopLossManager:
         """Initialize stop loss manager"""
         self.mt5 = mt5_connector
         self.config = config
-        self.magic_number = config.get('trading', {}).get('magic_number', 20241029)
+        self.magic_number = config.get('trading', {}).get('magic_number')
 
     async def update_trailing_stop(self, position) -> None:
         """Update trailing stop for a position with adaptive logic - ASYNC"""

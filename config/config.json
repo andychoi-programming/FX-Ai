@@ -61,21 +61,25 @@
     "magic_number": 123456,
     "order_type": "pending",
     "pending_order_distances": {
-      "distance_type": "percentage",
-      "forex_min_percent": 0.5,
-      "forex_max_percent": 1.5,
-      "xauusd_min_percent": 0.5,
-      "xauusd_max_percent": 1.5,
-      "xagusd_min_percent": 0.5,
-      "xagusd_max_percent": 1.5,
+      "distance_type": "pips",
       "forex_min_pips": 10,
-      "forex_max_pips": 25,
+      "forex_max_pips": 20,
       "xauusd_min_pips": 25,
-      "xauusd_max_pips": 75,
+      "xauusd_max_pips": 50,
       "xagusd_min_pips": 10,
-      "xagusd_max_pips": 25,
+      "xagusd_max_pips": 20,
+      "reanalysis_thresholds": {
+        "forex_pips": 30,
+        "xauusd_pips": 75,
+        "xagusd_pips": 30
+      },
+      "reanalysis_actions": [
+        "readjust_entry_sl_tp",
+        "change_direction",
+        "cancel_and_wait"
+      ],
       "order_type": "stop",
-      "_comment": "Distance type: 'pips' or 'percentage'. Percentage gives proportional stops across all assets"
+      "_comment": "Distance type: 'pips' or 'percentage'. If distance exceeds reanalysis threshold, analysis folder performs re-evaluation"
     },
     "_comment_rules": "===== TRADING RULES - AI-DRIVEN TIMING ====="
   },
@@ -146,6 +150,7 @@
       "default_tp_pips": 60,
       "tp_adjustment_sentiment": true,
       "tp_adjustment_fundamental": true,
+      "extension_min_improvement_pips": 20,
       "_comment": "TP calculated from ATR, adjusted by sentiment/fundamentals"
     },
     "exit_rules": {
@@ -220,6 +225,12 @@
       "max_consecutive_losses": 3,
       "pause_after_losses": true,
       "max_daily_trades": 10
+    },
+    "risk_validation": {
+      "metals_min_risk_pips": 50,
+      "metals_max_risk_pips": 5000,
+      "forex_min_risk_pips": 5,
+      "forex_max_risk_pips": 500
     },
     "advanced_risk": {
       "enabled": true,

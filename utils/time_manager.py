@@ -447,7 +447,7 @@ class TimeManager:
         try:
             current_session = self.get_current_session()
             session_config = config.get('trading_rules', {}).get('session_filter', {})
-            preferred_sessions = session_config.get('preferred_sessions', [])
+            preferred_sessions = session_config.get('preferred_sessions')
 
             return current_session in preferred_sessions
 
@@ -467,11 +467,11 @@ class TimeManager:
         """
         try:
             current_session = self.get_current_session()
-            base_threshold = config.get('trading', {}).get('min_signal_strength', 0.600)
+            base_threshold = config.get('trading', {}).get('min_signal_strength')
 
             # Try to get session-specific thresholds from config first
             session_config = config.get('trading_rules', {}).get('session_filter', {})
-            config_thresholds = session_config.get('signal_thresholds', {})
+            config_thresholds = session_config.get('signal_thresholds')
 
             # Default session-specific thresholds (can be overridden by config)
             default_thresholds = {
@@ -491,7 +491,7 @@ class TimeManager:
 
         except Exception as e:
             logger.warning(f"Error getting session threshold: {e}")
-            return config.get('trading', {}).get('min_signal_strength', 0.600)
+            return config.get('trading', {}).get('min_signal_strength')
 
     def is_optimal_trading_hour(self, config: dict) -> bool:
         """

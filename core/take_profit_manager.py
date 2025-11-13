@@ -18,7 +18,7 @@ class TakeProfitManager:
         """Initialize take profit manager"""
         self.mt5 = mt5_connector
         self.config = config
-        self.magic_number = config.get('trading', {}).get('magic_number', 20241029)
+        self.magic_number = config.get('trading', {}).get('magic_number')
 
     async def update_take_profit(self, position) -> bool:
         """Update take profit based on new market analysis - ASYNC
@@ -337,7 +337,8 @@ class TakeProfitManager:
                     if 'JPY' in position.symbol:
                         improvement /= 100
 
-                    if improvement >= 20:  # At least 20 pips improvement
+                    min_improvement = self.config.get('trading_rules', {}).get('take_profit_rules', {}).get('extension_min_improvement_pips', 20)
+                    if improvement >= min_improvement:
                         request = {
                             "action": mt5.TRADE_ACTION_SLTP,
                             "symbol": position.symbol,
@@ -360,7 +361,8 @@ class TakeProfitManager:
                     if 'JPY' in position.symbol:
                         improvement /= 100
 
-                    if improvement >= 20:  # At least 20 pips improvement
+                    min_improvement = self.config.get('trading_rules', {}).get('take_profit_rules', {}).get('extension_min_improvement_pips', 20)
+                    if improvement >= min_improvement:
                         request = {
                             "action": mt5.TRADE_ACTION_SLTP,
                             "symbol": position.symbol,

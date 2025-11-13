@@ -31,23 +31,24 @@ class RiskManager:
         
         # Risk parameters (prefer trading_rules, fallback to legacy)
         risk_limits = trading_rules.get('risk_limits', {})
-        self.risk_per_trade = risk_limits.get('risk_per_trade', trading_config.get('risk_per_trade', 50.0))
-        self.max_daily_loss = risk_limits.get('max_daily_loss', trading_config.get('max_daily_loss', 200.0))
+        self.risk_per_trade = risk_limits.get('risk_per_trade') or trading_config.get('risk_per_trade')
+        self.max_daily_loss = risk_limits.get('max_daily_loss') or trading_config.get('max_daily_loss')
         
         # Position limits
         position_limits = trading_rules.get('position_limits', {})
-        self.max_positions = position_limits.get('max_positions', trading_config.get('max_positions', 3))
-        self.max_trades_per_symbol_per_day = position_limits.get('max_trades_per_symbol_per_day', 25)
+        self.max_positions = position_limits.get('max_positions') or trading_config.get('max_positions')
+        self.max_trades_per_symbol_per_day = position_limits.get('max_trades_per_symbol_per_day')
         
         # Entry rules
         entry_rules = trading_rules.get('entry_rules', {})
-        self.max_spread = entry_rules.get('max_spread', trading_config.get('max_spread', 3.0))
+        self.max_spread = entry_rules.get('max_spread') or trading_config.get('max_spread')
         
         # Cooldown rules
         cooldown_rules = trading_rules.get('cooldown_rules', {})
-        self.cooldown_minutes = cooldown_rules.get('symbol_cooldown_minutes', risk_config.get('symbol_cooldown_minutes', 5))
+        self.cooldown_minutes = cooldown_rules.get('symbol_cooldown_minutes') or risk_config.get('symbol_cooldown_minutes')
         
-        # Position tracking
+        # Magic number for order identification
+        self.magic_number = trading_config.get('magic_number', 20241029)
         self.open_positions = {}
         self.daily_loss = 0.0
         
@@ -142,7 +143,7 @@ class RiskManager:
 
     def calculate_position_size(self, 
                                symbol: str, 
-                               stop_loss_pips: float = 20,
+                               stop_loss_pips: Optional[float] = None,
                                risk_override: Optional[float] = None) -> float:
         """
         Calculate position size based on fixed dollar risk
@@ -210,18 +211,25 @@ class RiskManager:
                     conversion_symbol = f"{quote_currency}USD"
                     conversion_tick = mt5.symbol_info_tick(conversion_symbol)  # type: ignore
                     
-                    if conversion_tick:
+                    if conversion_tick and conversion_tick.bid > 0:
                         # EURGBP pip value = 10 GBP x GBPUSD rate
                         pip_value_per_lot = 10.0 * conversion_tick.bid
                     else:
-                        # Fallback if can't get conversion
+                        # Fallback if can't get conversion - use reasonable estimates
                         logger.warning(f"Can't get {conversion_symbol} rate, using estimate")
-                        pip_value_per_lot = 13.0  # Rough estimate
+                        if quote_currency == "CAD":
+                            pip_value_per_lot = 7.5  # CADUSD ~1.35, so 10 CAD * 1.35 = ~13.5, but use conservative estimate
+                        elif quote_currency == "CHF":
+                            pip_value_per_lot = 11.0  # CHFUSD ~0.85, so 10 CHF * 0.85 = ~8.5, but use conservative estimate
+                        elif quote_currency == "GBP":
+                            pip_value_per_lot = 13.0  # GBPUSD ~1.30
+                        else:
+                            pip_value_per_lot = 10.0  # Default estimate
             
             # Calculate lot size
-            if stop_loss_pips <= 0:
-                logger.warning(f"Invalid stop loss pips: {stop_loss_pips}, using default 20")
-                stop_loss_pips = 20
+            if stop_loss_pips is None or stop_loss_pips <= 0:
+                logger.warning(f"Invalid stop loss pips: {stop_loss_pips}, using default")
+                stop_loss_pips = self.config.get('trading', {}).get('default_sl_pips')
                 
             lot_size = risk_amount / (stop_loss_pips * pip_value_per_lot)
             
@@ -274,6 +282,10 @@ class RiskManager:
     def calculate_position_size_metals(self, symbol, stop_loss_pips, risk_amount=50):
         """Special calculation for Gold and Silver"""
         
+        if stop_loss_pips is None or stop_loss_pips <= 0:
+            logger.warning(f"Invalid stop_loss_pips for {symbol}: {stop_loss_pips}, using default")
+            stop_loss_pips = self.config.get('trading', {}).get('default_sl_pips', 20)
+        
         symbol_info = mt5.symbol_info(symbol)  # type: ignore
         tick = mt5.symbol_info_tick(symbol)  # type: ignore
         
@@ -320,12 +332,15 @@ class RiskManager:
                                  symbol: str, 
                                  order_type: str,
                                  entry_price: float,
-                                 stop_loss_pips: float = 20) -> float:
+                                 stop_loss_pips: Optional[float] = None) -> float:
         """Calculate stop loss price based on pips - Fixed for JPY pairs and metals"""
         try:
             symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
                 return 0.0
+            
+            if stop_loss_pips is None:
+                stop_loss_pips = self.config.get('trading', {}).get('default_sl_pips')
             
             # Correct pip size for different symbol types
             if "XAU" in symbol:
@@ -356,12 +371,15 @@ class RiskManager:
                                    symbol: str,
                                    order_type: str,
                                    entry_price: float,
-                                   take_profit_pips: float = 40) -> float:
+                                   take_profit_pips: Optional[float] = None) -> float:
         """Calculate take profit price based on pips - Fixed for metals"""
         try:
             symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
                 return 0.0
+            
+            if take_profit_pips is None:
+                take_profit_pips = self.config.get('trading', {}).get('default_tp_pips')
             
             # Correct pip size for different symbol types
             if "XAU" in symbol:
@@ -395,8 +413,8 @@ class RiskManager:
         """Calculate stop loss and take profit levels for a trade"""
         try:
             # Get default SL/TP pips from config
-            sl_pips = self.config.get('trading', {}).get('default_sl_pips', 20)
-            tp_pips = self.config.get('trading', {}).get('default_tp_pips', 60)
+            sl_pips = self.config.get('trading', {}).get('default_sl_pips')
+            tp_pips = self.config.get('trading', {}).get('default_tp_pips')
             
             # Calculate SL and TP prices
             sl_price = self.calculate_stop_loss_price(symbol, direction, entry_price, sl_pips)
@@ -783,8 +801,8 @@ class RiskManager:
                 return False, reason
 
             # Check if we already have a position on this symbol (only for market orders)
-            prevent_multiple = self.config.get('trading', {}).get('prevent_multiple_positions_per_symbol', True)
-            order_type_config = self.config.get('trading', {}).get('order_type', 'market')
+            prevent_multiple = self.config.get('trading', {}).get('prevent_multiple_positions_per_symbol')
+            order_type_config = self.config.get('trading', {}).get('order_type')
             is_pending_order = order_type_config == 'pending'
             
             logger.debug(f"Order type config: {order_type_config}, is_pending: {is_pending_order}")
@@ -949,7 +967,7 @@ class RiskManager:
                 return {'approved': False, 'max_volume': 0.0}
             
             # Calculate maximum position size based on risk per trade
-            stop_loss_pips = 20  # Conservative 20 pip stop loss
+            stop_loss_pips = self.config.get('trading', {}).get('default_sl_pips')
             max_volume = self.calculate_position_size(symbol, stop_loss_pips, self.risk_per_trade)
             
             # Limit volume based on current capital (max 2% of capital per trade)
@@ -1022,8 +1040,8 @@ class RiskManager:
         """
         try:
             # Get default pips from config
-            default_sl_pips = self.config.get('trading', {}).get('default_sl_pips', 20)
-            default_tp_pips = self.config.get('trading', {}).get('default_tp_pips', 60)
+            default_sl_pips = self.config.get('trading', {}).get('default_sl_pips')
+            default_tp_pips = self.config.get('trading', {}).get('default_tp_pips')
             
             # Get symbol info for pip calculation
             symbol_info = mt5.symbol_info(symbol)  # type: ignore

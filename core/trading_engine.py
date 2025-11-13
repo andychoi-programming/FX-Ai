@@ -47,7 +47,7 @@ class TradingEngine:
         self.config = getattr(risk_manager, 'config', {}) if risk_manager else {}
 
         # Store magic number for easy access
-        self.magic_number = self.config.get('trading', {}).get('magic_number', 20241029)
+        self.magic_number = self.config.get('trading', {}).get('magic_number')
 
         # Initialize modular components
         self.order_executor = OrderExecutor(mt5_connector, self.config)
