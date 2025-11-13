@@ -1,11 +1,13 @@
 @echo off
-REM Emergency Stop Batch Script for FX-Ai
-REM Closes ALL open positions AND cancels ALL pending orders immediately
+REM *** EMERGENCY STOP *** - USE WITH EXTREME CAUTION
+REM *** Closes ALL open positions AND cancels ALL pending orders ***
+REM *** Affects ALL EAs and manual trades in MT5 - NOT just FX-Ai ***
 
 echo.
 echo ============================================================================
-echo                FX-Ai EMERGENCY STOP
-echo        IMMEDIATELY CLOSING ALL POSITIONS AND CANCELING ALL ORDERS
+echo                *** FX-AI EMERGENCY STOP ***
+echo        *** IMMEDIATELY CLOSING ALL POSITIONS AND CANCELING ALL ORDERS ***
+echo        *** THIS AFFECTS ALL TRADING SYSTEMS AND MANUAL TRADES ***
 echo ============================================================================
 echo.
 

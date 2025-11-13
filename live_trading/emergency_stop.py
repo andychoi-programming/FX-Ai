@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 """
-FX-Ai Emergency Stop Script
-Immediately closes ALL open positions AND cancels ALL pending orders
+FX-Ai EMERGENCY STOP Script
+*** DANGER: Closes ALL open positions AND cancels ALL pending orders ***
+*** This affects ALL EAs and manual trades in MT5 - USE WITH EXTREME CAUTION ***
+
+This script performs a complete emergency shutdown of ALL trading activity in MT5.
+It will close every open position and cancel every pending order, regardless of
+which system or person placed them.
+
+USE ONLY IN TRUE EMERGENCIES when you need to stop ALL trading immediately.
 """
 
 import sys
@@ -29,7 +36,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class EmergencyStop:
-    """Emergency stop functionality to close ALL open positions and cancel ALL pending orders"""
+    """EMERGENCY STOP: Closes ALL open positions AND cancels ALL pending orders
+    
+    WARNING: This script closes ALL positions and cancels ALL orders in MT5,
+    regardless of which EA or system placed them. Use with extreme caution!
+    """
 
     def __init__(self):
         self.mt5 = None
@@ -67,24 +78,27 @@ class EmergencyStop:
             return False
 
     def close_all_positions(self):
-        """Close all open positions"""
+        """Close all open positions (EMERGENCY: closes ALL positions regardless of magic number)"""
         try:
             logger.info("Getting all open positions...")
 
-            # Get all positions
+            # Get all positions - EMERGENCY MODE: close ALL positions
             positions = mt5.positions_get()
             if positions is None:
                 positions = []
 
-            # Filter positions by our magic number
-            our_positions = [p for p in positions if hasattr(p, 'magic') and p.magic == self.magic_number]
+            logger.info(f"Found {len(positions)} total open positions")
+            
+            # EMERGENCY MODE: Close ALL positions, not just our magic number
+            # In emergency situations, we want to close everything
+            our_positions = positions  # Close ALL positions in emergency
 
-            logger.info(f"Found {len(our_positions)} positions with magic number {self.magic_number}")
+            logger.info(f"EMERGENCY: Will close ALL {len(our_positions)} positions")
 
             closed_count = 0
             for position in our_positions:
                 try:
-                    logger.info(f"Closing position: {position.symbol} ticket {position.ticket} (profit: {position.profit:.2f})")
+                    logger.info(f"EMERGENCY: Closing position: {position.symbol} ticket {position.ticket} (profit: {position.profit:.2f})")
 
                     # Determine order type for closing
                     if position.type == mt5.ORDER_TYPE_BUY:
@@ -129,19 +143,22 @@ class EmergencyStop:
             return 0
 
     def cancel_pending_orders(self):
-        """Cancel all pending orders"""
+        """Cancel all pending orders (EMERGENCY: cancels ALL orders regardless of magic number)"""
         try:
             logger.info("Getting all pending orders...")
 
-            # Get all orders
+            # Get all orders - EMERGENCY MODE: cancel ALL orders
             orders = mt5.orders_get()
             if orders is None:
                 orders = []
 
-            # Filter orders by our magic number
-            our_orders = [o for o in orders if hasattr(o, 'magic') and o.magic == self.magic_number]
+            logger.info(f"Found {len(orders)} total pending orders")
+            
+            # EMERGENCY MODE: Cancel ALL pending orders, not just our magic number
+            # In emergency situations, we want to cancel everything
+            our_orders = orders  # Cancel ALL orders in emergency
 
-            logger.info(f"Found {len(our_orders)} orders with magic number {self.magic_number} out of {len(orders)} total orders")
+            logger.info(f"EMERGENCY: Will cancel ALL {len(our_orders)} pending orders")
 
             # Debug: show details of first few orders
             for i, order in enumerate(our_orders[:3]):
@@ -150,7 +167,7 @@ class EmergencyStop:
             cancelled_count = 0
             for order in our_orders:
                 try:
-                    logger.info(f"Cancelling order: {order.symbol} ticket {order.ticket} (type: {order.type}, price: {getattr(order, 'price_open', 'N/A')}, state: {getattr(order, 'state', 'N/A')})")
+                    logger.info(f"EMERGENCY: Cancelling order: {order.symbol} ticket {order.ticket} (type: {order.type}, price: {getattr(order, 'price_open', 'N/A')}, state: {getattr(order, 'state', 'N/A')})")
 
                     # Check if order is in a cancellable state
                     if hasattr(order, 'state') and order.state != mt5.ORDER_STATE_PLACED:
@@ -219,9 +236,10 @@ class EmergencyStop:
             logger.warning(f"Error closing MT5 connection: {e}")
 
         logger.info("=" * 60)
-        logger.info("EMERGENCY STOP COMPLETED")
-        logger.info(f"Positions closed: {positions_closed}")
-        logger.info(f"Orders cancelled: {orders_cancelled}")
+        logger.info("*** FX-AI EMERGENCY STOP COMPLETED ***")
+        logger.info("*** ALL POSITIONS CLOSED AND ALL ORDERS CANCELLED ***")
+        logger.info(f"Total positions closed: {positions_closed}")
+        logger.info(f"Total orders cancelled: {orders_cancelled}")
         logger.info("=" * 60)
 
         return success
