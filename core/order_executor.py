@@ -484,6 +484,12 @@ class OrderExecutor:
 
                 logger.info(f"[{symbol}] Pip distance: {random_pips:.1f} pips = {distance:.5f}")
 
+            # Store distance parameters for recording
+            self._last_min_pips = min_pips
+            self._last_max_pips = max_pips
+            self._last_actual_pips = random_pips if 'random_pips' in locals() else random_pips
+            self._last_risk_factor = risk_factor
+
             # Calculate stop order price based on direction
             if order_type.lower() == 'buy_stop':
                 # BUY STOP: place above current price (breakout buying)
@@ -797,6 +803,10 @@ class OrderExecutor:
                     # Calculate spread
                     spread = (tick.ask - tick.bid) if tick else None
                     
+                    # Ensure signal_data is valid
+                    if signal_data is None:
+                        signal_data = {}
+                    
                     logger.info(f"[{symbol}] Recording stop order: ticket={result.order}, type={order_type_str}, price={price:.5f}")
                     
                     # Record the stop order
@@ -809,10 +819,10 @@ class OrderExecutor:
                         take_profit=take_profit,
                         volume=volume,
                         signal_data=signal_data,
-                        min_pips=min_pips if 'min_pips' in locals() else None,
-                        max_pips=max_pips if 'max_pips' in locals() else None,
-                        actual_pips=random_pips if 'random_pips' in locals() else None,
-                        risk_factor=risk_factor if 'risk_factor' in locals() else None,
+                        min_pips=getattr(self, '_last_min_pips', None),
+                        max_pips=getattr(self, '_last_max_pips', None),
+                        actual_pips=getattr(self, '_last_actual_pips', None),
+                        risk_factor=getattr(self, '_last_risk_factor', None),
                         market_price=current_price,
                         spread=spread,
                         placement_reason="AI generated stop order"
@@ -822,6 +832,7 @@ class OrderExecutor:
                     logger.error(f"[{symbol}] Failed to record stop order in learning database: {e}")
                     import traceback
                     logger.error(f"[{symbol}] Recording traceback: {traceback.format_exc()}")
+                    logger.error(f"[{symbol}] Recording parameters: ticket={result.order}, symbol={symbol}, order_type={order_type_str}, price={price}, signal_data_keys={list(signal_data.keys()) if signal_data else None}")
 
                 return {
                     'success': True,
