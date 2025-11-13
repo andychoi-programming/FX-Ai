@@ -1,5 +1,11 @@
 ﻿# FX-Ai Trading System v3.0
 
+![Status](https://img.shields.io/badge/status-operational-brightgreen)
+![Version](https://img.shields.io/badge/version-3.0-blue)
+![Python](https://img.shields.io/badge/python-3.8+-blue)
+![License](https://img.shields.io/badge/license-proprietary-red)
+![Trades](https://img.shields.io/badge/trades-494+-success)
+
 ## Advanced ML-Powered Forex Trading System
 
 FX-Ai is a comprehensive machine learning-based forex trading system that combines trained ML models with advanced risk management for automated trading across multiple currency pairs and timeframes.
@@ -15,8 +21,11 @@ FX-Ai is a comprehensive machine learning-based forex trading system that combin
 ### 1. Launch Main Application
 
 ```bash
-# Activate virtual environment (Windows)
+# Activate virtual environment
+# Windows
 venv\Scripts\activate
+# Linux/Mac
+source venv/bin/activate
 
 # Run the main application
 python main.py
@@ -44,7 +53,65 @@ python -c "from app.application import FXAiApplication; import asyncio; app = FX
 
 ---
 
+## 🚀 Why FX-Ai?
+
+### Key Differentiators
+
+- **Live Learning Philosophy**: Unlike traditional systems that rely on backtesting, FX-Ai learns exclusively from live trading performance, continuously adapting to real market conditions
+- **Stop Order Precision**: Advanced BUY_STOP/SELL_STOP system for optimal entry timing (not market orders)
+- **30+ Currency Pairs**: Comprehensive coverage with symbol-specific optimization
+- **3:1 Risk-Reward Minimum**: Disciplined risk management on every trade
+- **Real-time Fundamental Monitoring**: Automated protection during news events
+- **Adaptive ML Models**: Self-improving system based on actual trade outcomes
+- **24-Hour Trading Capability**: Symbol-specific optimal hour scheduling
+
+---
+
 ## System Architecture
+
+### 🧠 Live Learning vs Backtesting
+
+FX-Ai makes a **deliberate architectural decision** to focus on live learning rather than historical backtesting:
+
+- **No Historical Backtesting**: The system doesn't train on simulated past data
+- **Real Market Adaptation**: Models learn solely from actual trading performance
+- **Continuous Improvement**: Adaptive learning from real wins/losses in live conditions
+- **Market Reality**: Avoids overfitting to historical patterns that may not repeat
+
+This approach ensures the system adapts to current market dynamics rather than optimizing for past conditions.
+
+### System Flow
+
+```
+┌─────────────────┐
+│   MT5 Platform  │
+│   (Live Data)   │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐      ┌──────────────────┐
+│  MT5 Connector  │◄────►│  Market Data     │
+│  (Clock Sync)   │      │  Manager         │
+└────────┬────────┘      └──────────────────┘
+         │
+         ▼
+┌─────────────────┐      ┌──────────────────┐
+│ Trading Engine  │◄────►│  ML Predictor    │
+│ (Stop Orders)   │      │  (30+ Models)    │
+└────────┬────────┘      └──────────────────┘
+         │
+         ▼
+┌─────────────────┐      ┌──────────────────┐
+│  Risk Manager   │◄────►│  Fundamental     │
+│  (3:1 R:R)      │      │  Monitor         │
+└────────┬────────┘      └──────────────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Performance DB │
+│  (Learning)     │
+└─────────────────┘
+```
 
 ### Core Capabilities
 
@@ -242,10 +309,19 @@ FX-Ai/
 
 ### Prerequisites
 
-- Python 3.8+
-- MetaTrader 5 terminal installed and running
-- Valid MT5 trading account (demo or live)
-- Windows/Linux/Mac OS
+- **Python**: 3.8 or higher (3.9-3.10 recommended, tested)
+- **MetaTrader 5**: Terminal installed and running
+  - Enable Algo Trading in MT5 Tools → Options → Expert Advisors
+  - Allow DLL imports and external expert imports
+- **MT5 Account**: Valid trading account (TIOMarkets demo recommended for testing)
+- **Operating System**:
+  - Windows 10/11 (primary development platform)
+  - Linux/Mac (supported with minor path adjustments)
+- **Hardware**:
+  - RAM: 8GB minimum, 16GB recommended
+  - CPU: Multi-core processor (4+ cores recommended)
+  - Storage: 5GB free space (for logs and models)
+  - Internet: Stable connection for MT5 and real-time data
 
 ### Installation Steps
 
@@ -308,6 +384,34 @@ FX-Ai/
    ```bash
    python -c "from core.mt5_connector import MT5Connector; import os; mc = MT5Connector(os.getenv('MT5_LOGIN'), os.getenv('MT5_PASSWORD'), os.getenv('MT5_SERVER')); print('MT5 Connection:', 'SUCCESS' if mc.initialize() else 'FAILED')"
    ```
+
+---
+
+## 💻 Development Workflow
+
+### Recommended Setup
+
+- **IDE**: Visual Studio Code with GitHub Copilot integration
+- **Python Version**: 3.8+ (tested extensively on 3.9 and 3.10)
+- **Operating System**: Windows 10/11 (primary), Linux/Mac supported
+- **External Storage**: Consider using external drive for logs (e.g., `D:\FX-Ai-Data\`)
+
+### VS Code Configuration
+
+The `.vscode/` directory includes:
+
+- **settings.json**: Optimized editor configuration
+- **Extensions.json**: Recommended extensions (Python, GitHub Copilot)
+
+**Performance Tip**: Exclude large directories from VS Code indexing:
+
+```json
+"files.watcherExclude": {
+  "**/logs/**": true,
+  "**/data/**": true,
+  "**/models/**": true
+}
+```
 
 ---
 
@@ -533,6 +637,33 @@ All stop order placements are recorded in the learning database for AI analysis:
 
 ---
 
+## 🧪 Testing & Validation
+
+### Pre-Deployment Checklist
+
+- [ ] MT5 connection successful
+- [ ] All 30 symbols loading correctly
+- [ ] ML models present in `models/` directory
+- [ ] Configuration files validated
+- [ ] Demo account configured in `.env`
+- [ ] Test with single symbol first (e.g., EURUSD)
+- [ ] Monitor for 24 hours on demo before live
+
+### Test Commands
+
+```bash
+# Test MT5 Connection
+python -c "from core.mt5_connector import MT5Connector; import os; from dotenv import load_dotenv; load_dotenv(); mc = MT5Connector(os.getenv('MT5_LOGIN'), os.getenv('MT5_PASSWORD'), os.getenv('MT5_SERVER')); print('Connection:', 'OK' if mc.initialize() else 'FAILED')"
+
+# Test Model Loading
+python -c "from ai.ml_predictor import MLPredictor; from utils.config_loader import ConfigLoader; config = ConfigLoader().load_config(); print('Models:', 'OK')"
+
+# Validate Configuration
+python -c "from utils.config_loader import ConfigLoader; config = ConfigLoader().load_config(); print('Config loaded:', len(config.keys()), 'sections')"
+```
+
+---
+
 ## Troubleshooting
 
 ### Common Issues & Solutions
@@ -592,6 +723,31 @@ All stop order placements are recorded in the learning database for AI analysis:
 6. **Database Check**: Verify `data/performance_history.db` integrity
 7. **Restart System**: After resolving issues, restart with `python main.py`
 8. **Demo Testing**: Always test fixes on demo account first
+
+---
+
+## ❓ Frequently Asked Questions
+
+**Q: Why no backtesting?**
+A: FX-Ai deliberately focuses on live learning to avoid overfitting to historical data and adapt to current market conditions.
+
+**Q: Can I use this on a live account?**
+A: Only after extensive testing on demo. We recommend at least 1-2 months of demo trading first.
+
+**Q: How much capital do I need?**
+A: Minimum $1000 for proper risk management with $50 per trade. $5000+ recommended.
+
+**Q: Does this work with all brokers?**
+A: Works with any MT5 broker. Tested extensively with TIOMarkets.
+
+**Q: Can I modify the ML models?**
+A: Yes! See `ai/ml_predictor.py` for model architecture. System supports custom models.
+
+**Q: How often are models retrained?**
+A: Automatically when performance degrades or weekly optimization cycles.
+
+**Q: What happens during weekends?**
+A: System automatically pauses. Positions closed Friday 23:45 GMT.
 
 ---
 
