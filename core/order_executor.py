@@ -194,7 +194,6 @@ class OrderExecutor:
                                    stop_loss: float, take_profit: float) -> bool:
         """Validate risk-reward ratio meets minimum requirements"""
         # All stop orders require 1:3 risk-reward ratio
-        # Analysis folder will handle adjustments to ongoing trades
         min_ratio = self.min_risk_reward_ratio  # 3.0 for all stop orders
 
         risk_distance = abs(stop_loss - price)
@@ -526,7 +525,7 @@ class OrderExecutor:
                 if "XAU" in symbol or "GOLD" in symbol:
                     pip_size = symbol_info.point * 10  # Gold: 1 pip = 10 points
                 elif "XAG" in symbol or "SILVER" in symbol:
-                    pip_size = symbol_info.point  # Silver: 1 pip = 1 point
+                    pip_size = symbol_info.point * 10  # Silver: 1 pip = 10 points (0.1 price units)
                 elif symbol_info.digits == 3 or symbol_info.digits == 5:
                     pip_size = symbol_info.point * 10
                 else:

@@ -80,8 +80,9 @@ class EmergencyStop:
                 return False
 
             if account_info.trade_expert != 1:
-                logger.warning("⚠️  Automated trading may not be enabled for this account")
-                logger.warning("Please enable automated trading in MT5: Tools → Options → Expert Advisors")
+                logger.error("❌ Automated trading is not enabled for this account")
+                logger.error("Please enable automated trading in MT5: Tools → Options → Expert Advisors → Allow automated trading")
+                return False
 
             logger.info("✅ MT5 connection and trading capability verified")
             return True
@@ -149,6 +150,12 @@ class EmergencyStop:
                         failed_count += 1
                         continue
 
+                    # Select the symbol for trading
+                    if not mt5.symbol_select(position.symbol, True):
+                        logger.error(f"❌ Failed to select symbol {position.symbol} for trading")
+                        failed_count += 1
+                        continue
+
                     # Get current price for the symbol
                     symbol_tick = mt5.symbol_info_tick(position.symbol)
                     if symbol_tick is None:
@@ -172,17 +179,30 @@ class EmergencyStop:
                         'type': order_type,
                         'position': position.ticket,
                         'price': price,
-                        'deviation': 20,  # Increased deviation for emergency
-                        'magic': getattr(position, 'magic', 0),  # Use position's magic number
+                        'deviation': 50,  # Increased deviation for emergency
+                        'magic': position.magic,  # Use position's magic number
                         'comment': 'EMERGENCY STOP - Close All Positions',
-                        'type_filling': mt5.ORDER_FILLING_IOC,
                     }
 
-                    logger.debug(f"📤 Sending close request: symbol={request['symbol']}, volume={request['volume']}, price={request['price']}, position={request['position']}")
+                    # Create close request
+                    request = {
+                        'action': mt5.TRADE_ACTION_DEAL,
+                        'symbol': position.symbol,
+                        'volume': position.volume,
+                        'type': order_type,
+                        'price': price,
+                        'deviation': 50,  # Increased deviation for emergency
+                        'magic': 0,  # Use 0 for emergency close
+                        'comment': 'EMERGENCY STOP - Close All Positions',
+                        'type_filling': mt5.ORDER_FILLING_IOC,
+                        'type_time': mt5.ORDER_TIME_GTC,
+                    }
+
+                    logger.info(f"📤 Sending close request: symbol={request['symbol']}, volume={request['volume']}, price={request['price']}")
 
                     # Send order
                     result = mt5.order_send(request)
-                    logger.debug(f"📥 Order send result type: {type(result)}, value: {result}")
+                    logger.info(f"📥 Order send result: {result}")
 
                     if result and result.retcode == mt5.TRADE_RETCODE_DONE:
                         logger.info(f"✅ Successfully closed {position.symbol} position {position.ticket}")
@@ -284,10 +304,13 @@ class EmergencyStop:
 
         # Close all positions
         positions_closed = self.close_all_positions()
-        if positions_closed == 0:
-            logger.info("No positions to close")
-        else:
+        if positions_closed == 0 and len(mt5.positions_get() or []) > 0:
+            logger.error("❌ Failed to close all positions - emergency stop incomplete")
+            return False
+        elif positions_closed > 0:
             logger.info(f"Emergency stop: Closed {positions_closed} positions")
+        else:
+            logger.info("No positions to close")
 
         # Cancel pending orders
         orders_cancelled = self.cancel_pending_orders()
@@ -322,7 +345,8 @@ def main():
             print("\n[SUCCESS] Emergency stop completed successfully")
             sys.exit(0)
         else:
-            print("\n[ERROR] Emergency stop failed")
+            print("\n[ERROR] Emergency stop failed - some positions may still be open")
+            print("Please close remaining positions manually in MT5 terminal")
             sys.exit(1)
 
     except KeyboardInterrupt:
