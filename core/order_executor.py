@@ -190,10 +190,10 @@ class OrderManager:
                 # Fallback to config-based ATR estimate
                 return self._get_fallback_atr(symbol)
 
-            # Calculate ATR manually
-            highs = [rate.high for rate in rates]
-            lows = [rate.low for rate in rates]
-            closes = [rate.close for rate in rates]
+            # Calculate ATR manually - rates is a numpy structured array
+            highs = [rate['high'] for rate in rates]
+            lows = [rate['low'] for rate in rates]
+            closes = [rate['close'] for rate in rates]
 
             tr_values = []
             for i in range(1, len(closes)):
@@ -205,8 +205,14 @@ class OrderManager:
                 tr_values.append(tr)
 
             # Simple ATR calculation (average of TR values)
-            atr = sum(tr_values) / len(tr_values)
-            return atr
+            if tr_values:
+                atr = sum(tr_values) / len(tr_values)
+                # Ensure ATR is reasonable (not too small)
+                if atr <= 0:
+                    return self._get_fallback_atr(symbol)
+                return atr
+            else:
+                return self._get_fallback_atr(symbol)
 
         except Exception as e:
             logger.warning(f"Error calculating ATR for {symbol}: {e}")
@@ -236,15 +242,27 @@ class OrderManager:
                                signal_data: Optional[Dict] = None) -> float:
         """Calculate optimal stop distance from current price"""
 
+        # Get broker minimum distance first
+        symbol_info = mt5.symbol_info(symbol)
+        if symbol_info is None:
+            return 0.001  # Conservative fallback
+
+        min_distance = self.order_executor._calculate_min_stop_distance(symbol, symbol_info)
+        broker_min_distance = min_distance * 1.5  # 1.5x broker minimum for safety
+
         # Base distance on ATR
-        base_distance = atr * 0.2  # 20% of ATR as base
+        if atr is None or atr <= 0:
+            # If ATR fails, use broker minimum as base
+            base_distance = broker_min_distance
+        else:
+            base_distance = atr * 0.5  # 50% of ATR as base (more conservative)
 
         # Adjust based on volatility
         volatility = self._get_volatility(symbol)
         if volatility > 0.015:  # High volatility
-            distance = atr * 0.3  # Further away
+            distance = max(base_distance, atr * 0.7) if atr else base_distance
         elif volatility < 0.005:  # Low volatility
-            distance = atr * 0.1  # Closer
+            distance = max(base_distance, atr * 0.3) if atr else base_distance
         else:  # Normal
             distance = base_distance
 
@@ -261,11 +279,18 @@ class OrderManager:
 
             distance *= risk_multiplier
 
-        # Ensure minimum distances based on symbol type
-        symbol_info = mt5.symbol_info(symbol)
-        if symbol_info:
-            min_distance = self.order_executor._calculate_min_stop_distance(symbol, symbol_info)
-            distance = max(distance, min_distance)
+        # CRITICAL: Ensure distance is at least 1.5x broker minimum
+        distance = max(distance, broker_min_distance)
+
+        # Additional safety: ensure minimum pip distance based on symbol
+        if 'JPY' in symbol:
+            min_pip_distance = 0.03  # 3 pips for JPY
+        elif 'XAU' in symbol or 'XAG' in symbol:
+            min_pip_distance = symbol_info.point * 100  # 1 pip for metals
+        else:
+            min_pip_distance = symbol_info.point * 30  # 3 pips for forex
+
+        distance = max(distance, min_pip_distance)
 
         return distance
 
@@ -278,8 +303,8 @@ class OrderManager:
             if rates is None or len(rates) < 20:
                 return 0.01  # Default volatility
 
-            # Calculate price range volatility
-            closes = [rate.close for rate in rates]
+            # Calculate price range volatility - rates is numpy structured array
+            closes = [rate['close'] for rate in rates]
             if len(closes) < 2:
                 return 0.01
 
@@ -413,7 +438,7 @@ class OrderManager:
         return int(expiration.timestamp())
 
     def manage_pending_orders(self) -> Dict:
-        """Monitor and manage pending stop orders"""
+        """Monitor and manage pending stop orders - LESS AGGRESSIVE"""
 
         if not self.pending_mgmt_enabled:
             return {'managed': 0, 'cancelled': 0, 'errors': 0}
@@ -428,40 +453,35 @@ class OrderManager:
             cancelled = 0
             errors = 0
 
-            # Check for too many pending orders
-            if total_pending > self.max_pending_orders:
-                logger.warning(f"Too many pending orders: {total_pending} (max: {self.max_pending_orders})")
+            # Only cancel if we have WAY too many pending orders (emergency cleanup)
+            if total_pending > self.max_pending_orders * 2:  # Double the limit
+                logger.warning(f"Emergency: Too many pending orders: {total_pending} (max: {self.max_pending_orders})")
                 # Cancel oldest orders to reduce count
                 orders_to_cancel = sorted(orders, key=lambda x: getattr(x, 'time_setup', 0))[:total_pending - self.max_pending_orders]
                 for order in orders_to_cancel:
                     if self._cancel_order(order.ticket):
                         cancelled += 1
-                        logger.info(f"Cancelled excess pending order: {order.ticket}")
+                        logger.info(f"Emergency cancelled excess pending order: {order.ticket}")
+
+            # Only check a subset of orders to avoid overwhelming the system
+            # Check orders that are older than 2 hours (very stale)
+            current_time = datetime.now().timestamp()
+            very_stale_threshold = 2 * 3600  # 2 hours
 
             for order in orders:
                 try:
                     managed += 1
+                    order_time = getattr(order, 'time_setup', 0)
 
-                    # Check if order is stale
-                    if self._is_order_stale(order):
+                    # Only cancel VERY stale orders (>2 hours old)
+                    if (current_time - order_time) > very_stale_threshold:
                         self._cancel_order(order.ticket)
                         cancelled += 1
-                        logger.info(f"Cancelled stale order: {order.ticket}")
+                        logger.info(f"Cancelled very stale order: {order.ticket} (age: {(current_time - order_time)/3600:.1f}h)")
                         continue
 
-                    # Check if conditions still valid
-                    if not self._is_signal_still_valid(order.symbol, order):
-                        self._cancel_order(order.ticket)
-                        cancelled += 1
-                        logger.info(f"Cancelled invalid order: {order.ticket}")
-                        continue
-
-                    # Check if price moved too far
-                    if self._price_moved_too_far(order):
-                        self._cancel_order(order.ticket)
-                        cancelled += 1
-                        logger.info(f"Cancelled order due to price movement: {order.ticket}")
-                        continue
+                    # Don't check signal validity or price movement every cycle
+                    # This was causing the death loop
 
                 except Exception as e:
                     logger.error(f"Error managing order {order.ticket}: {e}")

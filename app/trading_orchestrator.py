@@ -118,6 +118,18 @@ class TradingOrchestrator:
                         self.logger.debug(f"[{symbol}] Cannot trade: {reason}")
                         continue
 
+                    # Check for existing pending orders - prevent duplicates
+                    existing_orders = mt5.orders_get(symbol=symbol)
+                    if existing_orders and len(existing_orders) > 0:
+                        self.logger.debug(f"[{symbol}] Skipping - already has {len(existing_orders)} pending order(s)")
+                        continue
+
+                    # Check for existing positions - prevent multiple positions per symbol
+                    existing_positions = mt5.positions_get(symbol=symbol)
+                    if existing_positions and len(existing_positions) > 0:
+                        self.logger.debug(f"[{symbol}] Skipping - already has {len(existing_positions)} open position(s)")
+                        continue
+
                     # Generate trading signal
                     signal = await self._generate_trading_signal(symbol)
                     if signal:
@@ -333,8 +345,8 @@ class TradingOrchestrator:
     async def _monitor_positions_and_learning(self, loop_count: int):
         """Monitor existing positions and maintain learning systems."""
         try:
-            # Manage pending orders every 6 loops (60 seconds)
-            if loop_count % 6 == 0:
+            # Manage pending orders every 60 loops (10 minutes) - less aggressive
+            if loop_count % 60 == 0:
                 await self._manage_pending_orders()
 
             # Check learning thread health every hour
