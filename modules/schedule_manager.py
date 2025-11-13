@@ -16,50 +16,22 @@ class ScheduleManager:
     All times in SERVER time only - what MT5 shows!
     """
 
-    def __init__(self, config_data=None, config_path="config/config.json"):
+    def __init__(self, config_path="config/symbol_schedules.json"):
         """
         Initialize schedule manager
 
         Args:
-            config_data: Direct config data dict, or None to load from file
-            config_path: Path to main config file if config_data is None
+            config_path: Path to JSON config file with schedules
         """
         self.logger = logging.getLogger(__name__)
         self.config_path = config_path
         self.schedules = {}
         self.global_settings = {}
 
-        # Load schedules from config
-        if config_data:
-            self._load_from_config_data(config_data)
-        else:
-            self._load_schedules()
+        # Load schedules from config file
+        self._load_schedules()
 
         self.logger.info(f"ScheduleManager initialized with {len(self.schedules)} symbol schedules")
-
-    def _load_from_config_data(self, config_data):
-        """Load schedules from config data dict"""
-        try:
-            symbol_schedules = config_data.get('symbol_schedules', {})
-            if not symbol_schedules:
-                self.logger.error("No symbol_schedules section found in config")
-                self._use_default_schedules()
-                return
-
-            self.global_settings = {
-                'enable_24hour_trading': symbol_schedules.get('enabled', True),
-                'force_close_hour': symbol_schedules.get('force_close_hour', 23),
-                'force_close_minute': symbol_schedules.get('force_close_minute', 55)
-            }
-            self.schedules = symbol_schedules.get('schedules', {})
-
-            if not self.schedules:
-                self.logger.warning("No symbol schedules found, using defaults")
-                self._use_default_schedules()
-
-        except Exception as e:
-            self.logger.error(f"Error loading from config data: {e}")
-            self._use_default_schedules()
 
     def _load_schedules(self):
         """Load schedules from JSON config file"""
@@ -74,19 +46,15 @@ class ScheduleManager:
             with open(config_file, 'r') as f:
                 config = json.load(f)
 
-            # Load from symbol_schedules section
-            symbol_schedules = config.get('symbol_schedules', {})
-            if symbol_schedules:
-                self._load_from_config_data(config)
-            else:
-                # Fallback to old format
-                self.global_settings = config.get('global_settings', {})
-                self.schedules = config.get('symbol_schedules', {})
-                if not self.schedules:
-                    self._use_default_schedules()
+            self.global_settings = config.get('global_settings', {})
+            self.schedules = config.get('symbol_schedules', {})
+
+            if not self.schedules:
+                self.logger.warning("No symbol schedules found, using defaults")
+                self._use_default_schedules()
 
         except Exception as e:
-            self.logger.error(f"Error loading schedules from file: {e}")
+            self.logger.error(f"Error loading schedules: {e}")
             self._use_default_schedules()
 
             self.logger.info(f"Loaded schedules for {len(self.schedules)} symbols")
