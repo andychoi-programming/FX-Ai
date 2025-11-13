@@ -421,18 +421,20 @@ All learning data is stored in `data/performance_history.db` with 24+ tables tra
 
 ## Stop Order Trading System
 
-### Overview
+### System Overview
 
 FX-Ai v3.0 uses an advanced stop order system that places BUY_STOP and SELL_STOP orders instead of market orders. This approach provides better entry timing and risk management.
 
 ### Stop Order Mechanics
 
 **BUY_STOP Order:**
+
 - Placed above current price (breakout buying)
 - Triggered when price reaches the stop level
 - SL placed below entry, TP above entry
 
 **SELL_STOP Order:**
+
 - Placed below current price (breakdown selling)
 - Triggered when price reaches the stop level
 - SL placed above entry, TP below entry
