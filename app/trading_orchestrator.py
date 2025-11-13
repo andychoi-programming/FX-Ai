@@ -10,7 +10,7 @@ import json
 import time as time_module
 from typing import Dict, Any, Optional
 import MetaTrader5 as mt5
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from core.trading_engine import TradingEngine
 from core.risk_manager import RiskManager
@@ -834,12 +834,6 @@ class TradingOrchestrator:
         try:
             # Get current MT5 time
             current_time = self.time_manager.get_current_time()
-            current_time_only = current_time.time()
-            closure_time = self.time_manager.MT5_IMMEDIATE_CLOSE_TIME
-
-            # Only check if we're past closure time
-            if current_time_only < closure_time:
-                return
 
             # Get all positions
             positions = mt5.positions_get()
@@ -847,18 +841,41 @@ class TradingOrchestrator:
                 positions = []
 
             orphaned_positions = []
+            now = datetime.now()
+
+            # Today's closure time (22:00)
+            today_closure = now.replace(hour=22, minute=0, second=0, microsecond=0)
+
+            # Yesterday's closure time (22:00 yesterday)
+            yesterday_closure = today_closure - timedelta(days=1)
+
             for position in positions:
                 if hasattr(position, 'magic') and position.magic == self.magic_number:
-                    # Check if position was opened before closure time
                     open_time = datetime.fromtimestamp(position.time)
-                    if open_time.time() < closure_time:
-                        orphaned_positions.append(position)
+
+                    # Determine if this position is orphaned
+                    is_orphaned = False
+
+                    if now.hour >= 22:
+                        # After 22:00 today - close anything opened before 22:00 today
+                        if open_time < today_closure:
+                            is_orphaned = True
+                            reason = f"opened at {open_time.strftime('%H:%M:%S')}, past today's 22:00 closure"
+                    else:
+                        # Before 22:00 today - close anything from yesterday or earlier
+                        if open_time < yesterday_closure:
+                            is_orphaned = True
+                            age_hours = (now - open_time).total_seconds() / 3600
+                            reason = f"opened {age_hours:.1f}h ago, missed yesterday's 22:00 closure"
+
+                    if is_orphaned:
+                        orphaned_positions.append((position, reason))
 
             if orphaned_positions:
-                self.logger.warning(f"Found {len(orphaned_positions)} orphaned positions that missed 22:00 closure")
-                
-                for pos in orphaned_positions:
-                    self.logger.info(f"Force closing orphaned position: {pos.symbol} ticket {pos.ticket}")
+                self.logger.warning(f"Found {len(orphaned_positions)} orphaned positions")
+
+                for pos, reason in orphaned_positions:
+                    self.logger.info(f"Force closing orphaned position: {pos.symbol} ticket {pos.ticket} ({reason})")
                     close_result = await self.trading_engine.close_position_by_ticket(pos.ticket)
                     if close_result:
                         self.logger.info(f"Successfully closed orphaned position {pos.symbol} ticket {pos.ticket}")
@@ -1299,35 +1316,54 @@ class TradingOrchestrator:
             positions = mt5.positions_get()
             if not positions:
                 return
-            
+
             current_time = self.time_manager.get_current_time()
-            current_time_only = current_time.time()
-            closure_time = self.time_manager.MT5_IMMEDIATE_CLOSE_TIME
             current_session = self.time_manager.get_current_session()
-            
+
             orphaned_positions = []
-            
+            now = datetime.now()
+
+            # Today's closure time (22:00)
+            today_closure = now.replace(hour=22, minute=0, second=0, microsecond=0)
+
+            # Yesterday's closure time (22:00 yesterday)
+            yesterday_closure = today_closure - timedelta(days=1)
+
             for pos in positions:
-                # Check if this position was opened before closure time
                 open_time = datetime.fromtimestamp(pos.time)
-                if open_time.time() < closure_time:
-                    # This position should have been closed at 22:00, BUT only if we're not in an active session
-                    # (Sydney and Tokyo sessions are active after 22:00)
-                    if current_session not in ['sydney', 'tokyo']:
-                        orphaned_positions.append(pos)
-            
+
+                # Determine if this position is orphaned
+                is_orphaned = False
+                reason = ""
+
+                if now.hour >= 22:
+                    # After 22:00 today - close anything opened before 22:00 today
+                    # But respect active sessions (Sydney/Tokyo trade after 22:00)
+                    if open_time < today_closure and current_session not in ['sydney', 'tokyo']:
+                        is_orphaned = True
+                        reason = f"opened at {open_time.strftime('%H:%M:%S')}, past today's 22:00 closure"
+                else:
+                    # Before 22:00 today - close anything from yesterday or earlier
+                    if open_time < yesterday_closure:
+                        is_orphaned = True
+                        age_hours = (now - open_time).total_seconds() / 3600
+                        reason = f"opened {age_hours:.1f}h ago, missed yesterday's 22:00 closure"
+
+                if is_orphaned:
+                    orphaned_positions.append((pos, reason))
+
             if orphaned_positions:
-                self.logger.warning(f"Found {len(orphaned_positions)} orphaned positions that missed 22:00 closure")
-                
-                for pos in orphaned_positions:
-                    self.logger.info(f"Force closing orphaned position: {pos.symbol} ticket {pos.ticket} (opened {datetime.fromtimestamp(pos.time).strftime('%H:%M:%S')})")
-                    
+                self.logger.warning(f"Found {len(orphaned_positions)} orphaned positions")
+
+                for pos, reason in orphaned_positions:
+                    self.logger.info(f"Force closing orphaned position: {pos.symbol} ticket {pos.ticket} ({reason})")
+
                     # Close the position
                     close_result = await self.trading_engine.close_position_by_ticket(pos.ticket)
                     if close_result:
                         self.logger.info(f"Successfully closed orphaned position {pos.symbol} ticket {pos.ticket}")
                     else:
                         self.logger.error(f"Failed to close orphaned position {pos.symbol} ticket {pos.ticket}")
-        
+
         except Exception as e:
             self.logger.error(f"Error checking orphaned positions: {e}")
