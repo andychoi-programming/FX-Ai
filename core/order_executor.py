@@ -193,13 +193,9 @@ class OrderExecutor:
     def _validate_risk_reward_ratio(self, symbol: str, order_type: str, price: float,
                                    stop_loss: float, take_profit: float) -> bool:
         """Validate risk-reward ratio meets minimum requirements"""
-        # For pending orders, be more lenient since actual execution depends on market movement
-        if order_type in ['buy_stop', 'sell_stop']:
-            min_ratio = 1.0  # Very lenient for pending orders
-        elif "XAU" in symbol or "GOLD" in symbol or "XAG" in symbol or "SILVER" in symbol:
-            min_ratio = 1.5  # Lower requirement for metals due to higher volatility
-        else:
-            min_ratio = self.min_risk_reward_ratio  # Configurable requirement for forex
+        # All stop orders require 1:3 risk-reward ratio
+        # Analysis folder will handle adjustments to ongoing trades
+        min_ratio = self.min_risk_reward_ratio  # 3.0 for all stop orders
 
         risk_distance = abs(stop_loss - price)
         reward_distance = abs(take_profit - price)
