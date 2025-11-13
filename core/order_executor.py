@@ -8,6 +8,7 @@ import asyncio
 from datetime import datetime
 from typing import Dict, Optional
 import MetaTrader5 as mt5
+from ai.learning_database import LearningDatabase
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,11 @@ class OrderExecutor:
         self.config = config
         self.magic_number = config.get('trading', {}).get('magic_number', 123456)
         self.max_slippage = config.get('trading', {}).get('max_slippage', 3)
+        self.min_risk_reward_ratio = config.get('trading', {}).get('min_risk_reward_ratio', 3.0)
         self.dry_run = config.get('trading', {}).get('dry_run', False)
+        
+        # Initialize learning database for recording stop orders
+        self.learning_db = LearningDatabase()
 
     def get_filling_mode(self, symbol):
         """Get appropriate filling mode for symbol"""
@@ -89,8 +94,8 @@ class OrderExecutor:
             # Gold: ensure minimum 0.5 price units (5 pips * 0.10) - reasonable for metals
             min_stop_price_distance = max(min_stop_price_distance, 0.5)
         elif 'XAG' in symbol or 'SILVER' in symbol:
-            # Silver: ensure minimum 0.05 price units (5 pips * 0.01)
-            min_stop_price_distance = max(min_stop_price_distance, 0.05)
+            # Silver: ensure minimum 0.20 price units (20 pips * 0.01) - increased for XAGUSD
+            min_stop_price_distance = max(min_stop_price_distance, 0.20)
         else:
             # For forex pairs, ensure minimum 2 pips stop distance
             # Most brokers require at least 2-3 pips for stops
@@ -107,7 +112,7 @@ class OrderExecutor:
 
     def _adjust_stop_loss(self, symbol: str, order_type: str, price: float,
                          stop_loss: float, symbol_info) -> float:
-        """Adjust stop loss to meet broker requirements"""
+        """Adjust stop loss to meet broker requirements - ensure minimum distance"""
         min_stop_distance = self._calculate_min_stop_distance(symbol, symbol_info)
 
         logger.info(
@@ -118,19 +123,47 @@ class OrderExecutor:
         if order_type.lower() in ['buy', 'buy_limit', 'buy_stop']:
             # For buy orders, stop loss should be below price
             required_sl = price - min_stop_distance
-            if stop_loss >= required_sl:
+            if stop_loss >= required_sl:  # SL is too close to price
                 logger.info(
-                    f"Adjusting BUY stop loss from {stop_loss} to {required_sl}")
+                    f"Adjusting BUY stop loss from {stop_loss} to {required_sl} (moving further away)")
                 return required_sl
         else:
             # For sell orders, stop loss should be above price
             required_sl = price + min_stop_distance
-            if stop_loss <= required_sl:
+            if stop_loss <= required_sl:  # SL is too close to price
                 logger.info(
-                    f"Adjusting SELL stop loss from {stop_loss} to {required_sl}")
+                    f"Adjusting SELL stop loss from {stop_loss} to {required_sl} (moving further away)")
                 return required_sl
 
         return stop_loss
+
+    def _adjust_stop_order_price(self, symbol: str, order_type: str, current_price: float,
+                                order_price: float, symbol_info) -> float:
+        """Adjust stop order price to meet broker minimum distance requirements"""
+        min_stop_distance = self._calculate_min_stop_distance(symbol, symbol_info)
+
+        logger.info(
+            f"[{symbol}] Checking stop order price: current_price={current_price:.5f}, "
+            f"order_price={order_price:.5f}, min_distance={min_stop_distance:.5f}")
+
+        if order_type.lower() == 'buy_stop':
+            # BUY STOP must be above current price
+            min_allowed_price = current_price + min_stop_distance
+            if order_price <= min_allowed_price:
+                logger.info(
+                    f"[{symbol}] Adjusting BUY STOP price from {order_price:.5f} to {min_allowed_price:.5f} "
+                    f"(must be at least {min_stop_distance:.5f} above current price)")
+                return min_allowed_price
+        elif order_type.lower() == 'sell_stop':
+            # SELL STOP must be below current price
+            max_allowed_price = current_price - min_stop_distance
+            if order_price >= max_allowed_price:
+                logger.info(
+                    f"[{symbol}] Adjusting SELL STOP price from {order_price:.5f} to {max_allowed_price:.5f} "
+                    f"(must be at least {min_stop_distance:.5f} below current price)")
+                return max_allowed_price
+
+        return order_price
 
     def _adjust_take_profit(self, symbol: str, order_type: str, price: float,
                            take_profit: float, symbol_info) -> float:
@@ -160,17 +193,25 @@ class OrderExecutor:
     def _validate_risk_reward_ratio(self, symbol: str, order_type: str, price: float,
                                    stop_loss: float, take_profit: float) -> bool:
         """Validate risk-reward ratio meets minimum requirements"""
+        # For pending orders, be more lenient since actual execution depends on market movement
+        if order_type in ['buy_stop', 'sell_stop']:
+            min_ratio = 1.0  # Very lenient for pending orders
+        elif "XAU" in symbol or "GOLD" in symbol or "XAG" in symbol or "SILVER" in symbol:
+            min_ratio = 1.5  # Lower requirement for metals due to higher volatility
+        else:
+            min_ratio = self.min_risk_reward_ratio  # Configurable requirement for forex
+
         risk_distance = abs(stop_loss - price)
         reward_distance = abs(take_profit - price)
         ratio = reward_distance / risk_distance if risk_distance > 0 else 0
 
         # Allow for small floating point precision errors
-        if ratio < 2.95:  # Slightly below 3.0 to account for precision
+        if ratio < (min_ratio - 0.05):  # Slightly below minimum to account for precision
             logger.error(
-                f"Order rejected: insufficient risk-reward ratio {ratio:.2f}:1 (required: 3.0:1)")
+                f"Order rejected: insufficient risk-reward ratio {ratio:.2f}:1 (required: {min_ratio}:1 for {order_type})")
             return False
 
-        logger.info(f"Order validated: {ratio:.1f}:1 risk-reward ratio")
+        logger.info(f"Order validated: {ratio:.1f}:1 risk-reward ratio (min: {min_ratio}:1 for {order_type})")
         return True
 
     def _round_prices_to_symbol_precision(self, symbol: str, price: float = None,
@@ -226,6 +267,8 @@ class OrderExecutor:
                     take_profit = price + min_stop_distance
                 else:
                     take_profit = price - min_stop_distance
+
+
                 take_profit = round(take_profit, symbol_info.digits)
                 logger.debug(f"Adjusted TP to: {take_profit}")
 
@@ -303,83 +346,166 @@ class OrderExecutor:
             # Calculate stop order price based on direction and current market
             current_price = (tick.ask + tick.bid) / 2  # Use mid price as reference
 
-            # Get stop order distance configuration
+            # Get stop order distance configuration - FORCE PIP-BASED
             pending_config = self.config.get('trading', {}).get('pending_order_distances', {})
+            distance_type = 'pips'  # Force pip-based distances
 
-            # Determine pip ranges based on symbol
-            if 'XAU' in symbol or 'GOLD' in symbol:
-                min_pips = pending_config.get('xauusd_min_pips', 50)
-                max_pips = pending_config.get('xauusd_max_pips', 150)
-            elif 'XAG' in symbol or 'SILVER' in symbol:
-                min_pips = pending_config.get('xagusd_min_pips', 20)
-                max_pips = pending_config.get('xagusd_max_pips', 50)
+            if distance_type == 'percentage':
+                # Percentage-based distance calculation
+                if 'XAU' in symbol or 'GOLD' in symbol:
+                    min_percent = pending_config.get('xauusd_min_percent', 0.05)
+                    max_percent = pending_config.get('xauusd_max_percent', 0.15)
+                elif 'XAG' in symbol or 'SILVER' in symbol:
+                    min_percent = pending_config.get('xagusd_min_percent', 0.05)
+                    max_percent = pending_config.get('xagusd_max_percent', 0.15)
+                else:
+                    min_percent = pending_config.get('forex_min_percent', 0.05)
+                    max_percent = pending_config.get('forex_max_percent', 0.15)
+
+                # Adjust stop distance based on signal analysis
+                risk_factor = 1.0
+                if signal_data:
+                    # Apply fundamental risk multiplier
+                    risk_multiplier = signal_data.get('risk_multiplier', 1.0)
+                    risk_factor *= risk_multiplier
+
+                    # Increase stop distance for low signal strength (higher risk)
+                    signal_strength = signal_data.get('signal_strength', 0.5)
+                    if signal_strength < 0.4:
+                        risk_factor *= 1.5
+                    elif signal_strength < 0.6:
+                        risk_factor *= 1.2
+
+                    # Adjust based on fundamental analysis
+                    fundamental_score = signal_data.get('fundamental_score', 0.5)
+                    if order_type.lower() == 'buy_stop' and fundamental_score < 0.4:
+                        # Bearish fundamental for buy signal - increase stop
+                        risk_factor *= 1.2
+                    elif order_type.lower() == 'sell_stop' and fundamental_score > 0.6:
+                        # Bullish fundamental for sell signal - increase stop
+                        risk_factor *= 1.2
+
+                    # Adjust based on sentiment analysis
+                    sentiment_score = signal_data.get('sentiment_score', 0.5)
+                    if sentiment_score < 0.4:
+                        # Negative sentiment - increase stop distance
+                        risk_factor *= 1.1
+
+                    # Cap risk factor to prevent excessive stops
+                    max_risk_factor = 2.0 if ('XAU' in symbol or 'GOLD' in symbol or 'XAG' in symbol or 'SILVER' in symbol) else 3.0
+                    risk_factor = min(risk_factor, max_risk_factor)
+
+                    logger.info(f"[{symbol}] Risk factor: {risk_factor:.2f} (multiplier: {risk_multiplier:.2f}, strength: {signal_strength:.2f}, fund: {fundamental_score:.2f}, sent: {sentiment_score:.2f})")
+
+                # Apply risk factor to percentage ranges
+                min_percent *= risk_factor
+                max_percent *= risk_factor
+
+                # Generate random percentage within range
+                import random
+                random_percent = random.uniform(min_percent, max_percent)
+                distance = current_price * (random_percent / 100.0)
+
+                logger.info(f"[{symbol}] Percentage distance: {random_percent:.2f}% of {current_price:.5f} = {distance:.5f}")
+
             else:
-                min_pips = pending_config.get('forex_min_pips', 10)
-                max_pips = pending_config.get('forex_max_pips', 25)
+                # Pip-based distance calculation (original logic)
+                # Determine pip ranges based on symbol
+                if 'XAU' in symbol or 'GOLD' in symbol:
+                    min_pips = pending_config.get('xauusd_min_pips', 15)  # Reduced from 50
+                    max_pips = pending_config.get('xauusd_max_pips', 40)  # Reduced from 150
+                elif 'XAG' in symbol or 'SILVER' in symbol:
+                    min_pips = pending_config.get('xagusd_min_pips', 100)  # Increased from 50
+                    max_pips = pending_config.get('xagusd_max_pips', 200)  # Increased from 100
+                else:
+                    min_pips = pending_config.get('forex_min_pips', 5)   # Reduced from 10
+                    max_pips = pending_config.get('forex_max_pips', 10)  # Reduced from 25
 
-            # Adjust stop distance based on signal analysis
-            risk_factor = 1.0
-            if signal_data:
-                # Apply fundamental risk multiplier
-                risk_multiplier = signal_data.get('risk_multiplier', 1.0)
-                risk_factor *= risk_multiplier
+                # Adjust stop distance based on signal analysis
+                risk_factor = 1.0
+                if signal_data:
+                    # Apply fundamental risk multiplier
+                    risk_multiplier = signal_data.get('risk_multiplier', 1.0)
+                    risk_factor *= risk_multiplier
 
-                # Increase stop distance for low signal strength (higher risk)
-                signal_strength = signal_data.get('signal_strength', 0.5)
-                if signal_strength < 0.4:
-                    risk_factor *= 1.5
-                elif signal_strength < 0.6:
-                    risk_factor *= 1.2
+                    # Increase stop distance for low signal strength (higher risk)
+                    signal_strength = signal_data.get('signal_strength', 0.5)
+                    if signal_strength < 0.4:
+                        risk_factor *= 1.5
+                    elif signal_strength < 0.6:
+                        risk_factor *= 1.2
 
-                # Adjust based on fundamental analysis
-                fundamental_score = signal_data.get('fundamental_score', 0.5)
-                if order_type.lower() == 'buy_stop' and fundamental_score < 0.4:
-                    # Bearish fundamental for buy signal - increase stop
-                    risk_factor *= 1.2
-                elif order_type.lower() == 'sell_stop' and fundamental_score > 0.6:
-                    # Bullish fundamental for sell signal - increase stop
-                    risk_factor *= 1.2
+                    # Adjust based on fundamental analysis
+                    fundamental_score = signal_data.get('fundamental_score', 0.5)
+                    if order_type.lower() == 'buy_stop' and fundamental_score < 0.4:
+                        # Bearish fundamental for buy signal - increase stop
+                        risk_factor *= 1.2
+                    elif order_type.lower() == 'sell_stop' and fundamental_score > 0.6:
+                        # Bullish fundamental for sell signal - increase stop
+                        risk_factor *= 1.2
 
-                # Adjust based on sentiment analysis
-                sentiment_score = signal_data.get('sentiment_score', 0.5)
-                if sentiment_score < 0.4:
-                    # Negative sentiment - increase stop distance
-                    risk_factor *= 1.1
+                    # Adjust based on sentiment analysis
+                    sentiment_score = signal_data.get('sentiment_score', 0.5)
+                    if sentiment_score < 0.4:
+                        # Negative sentiment - increase stop distance
+                        risk_factor *= 1.1
 
-                # Cap risk factor to prevent excessive stops
-                max_risk_factor = 2.0 if ('XAU' in symbol or 'GOLD' in symbol or 'XAG' in symbol or 'SILVER' in symbol) else 3.0
-                risk_factor = min(risk_factor, max_risk_factor)
+                    # Cap risk factor to prevent excessive stops
+                    max_risk_factor = 5.0  # Allow higher risk factors, readjustment will handle excessive distances
+                    risk_factor = min(risk_factor, max_risk_factor)
 
-                logger.info(f"[{symbol}] Risk factor: {risk_factor:.2f} (multiplier: {risk_multiplier:.2f}, strength: {signal_strength:.2f}, fund: {fundamental_score:.2f}, sent: {sentiment_score:.2f})")
+                    logger.info(f"[{symbol}] Risk factor: {risk_factor:.2f} (multiplier: {risk_multiplier:.2f}, strength: {signal_strength:.2f}, fund: {fundamental_score:.2f}, sent: {sentiment_score:.2f})")
 
-            # Apply risk factor to pip ranges
-            min_pips *= risk_factor
-            max_pips *= risk_factor
+                # Apply risk factor to pip ranges
+                min_pips *= risk_factor
+                max_pips *= risk_factor
 
-            # Calculate pip size
-            if 'XAU' in symbol or 'GOLD' in symbol:
-                pip_size = symbol_info.point * 10  # Gold: 1 pip = 10 points
-            elif 'XAG' in symbol or 'SILVER' in symbol:
-                pip_size = symbol_info.point  # Silver: 1 pip = 1 point
-            elif symbol_info.digits == 3 or symbol_info.digits == 5:
-                pip_size = symbol_info.point * 10
-            else:
-                pip_size = symbol_info.point
+                # Readjust stop distances if they exceed threshold levels
+                if 'XAU' in symbol or 'GOLD' in symbol:
+                    if max_pips > 110:
+                        max_pips = 55  # Readjust gold stops if over 110 pips
+                        logger.info(f"[{symbol}] Readjusted gold stop distance from >110 to 55 pips")
+                elif 'XAG' in symbol or 'SILVER' in symbol:
+                    if max_pips > 600:
+                        max_pips = 300  # Readjust silver stops if over 600 pips
+                        logger.info(f"[{symbol}] Readjusted silver stop distance from >600 to 300 pips")
+                else:
+                    if max_pips > 30:
+                        max_pips = 15  # Readjust forex stops if over 30 pips
+                        logger.info(f"[{symbol}] Readjusted forex stop distance from >30 to 15 pips")
 
-            # Generate random distance within range for stop order placement
-            import random
-            random_pips = random.uniform(min_pips, max_pips)
-            distance = random_pips * pip_size
+                # Calculate pip size
+                if 'XAU' in symbol or 'GOLD' in symbol:
+                    pip_size = symbol_info.point * 10  # Gold: 1 pip = 10 points
+                elif symbol_info.digits == 3 or symbol_info.digits == 5:
+                    pip_size = symbol_info.point * 10
+                else:
+                    pip_size = symbol_info.point
+
+                # Generate random distance within range for stop order placement
+                import random
+                random_pips = random.uniform(min_pips, max_pips)
+                distance = random_pips * pip_size
+
+                logger.info(f"[{symbol}] Pip distance: {random_pips:.1f} pips = {distance:.5f}")
 
             # Calculate stop order price based on direction
             if order_type.lower() == 'buy_stop':
                 # BUY STOP: place above current price (breakout buying)
                 price = current_price + distance
-                logger.info(f"[{symbol}] BUY STOP: {random_pips:.1f} pips above current price {current_price:.5f} -> {price:.5f}")
+                if distance_type == 'percentage':
+                    distance_display = f"{random_percent:.2f}%"
+                else:
+                    distance_display = f"{random_pips:.1f} pips"
+                logger.info(f"[{symbol}] BUY STOP: {distance_display} above current price {current_price:.5f} -> {price:.5f}")
             elif order_type.lower() == 'sell_stop':
                 # SELL STOP: place below current price (breakdown selling)
                 price = current_price - distance
-                logger.info(f"[{symbol}] SELL STOP: {random_pips:.1f} pips below current price {current_price:.5f} -> {price:.5f}")
+                if distance_type == 'percentage':
+                    distance_display = f"{random_percent:.2f}%"
+                else:
+                    distance_display = f"{random_pips:.1f} pips"
+                logger.info(f"[{symbol}] SELL STOP: {distance_display} below current price {current_price:.5f} -> {price:.5f}")
             else:
                 return {'success': False,
                         'error': f'Invalid order type for stop-only system: {order_type}'}
@@ -430,6 +556,10 @@ class OrderExecutor:
                 tp_display = f"{take_profit:.5f}" if take_profit is not None else "None"
                 logger.info(f"[{symbol}] SL/TP for {order_type} @ {price:.5f}: SL={stop_loss:.5f}, TP={tp_display}")
 
+            # Adjust stop order price to meet broker minimum distance requirements
+            if price is not None and current_price is not None:
+                price = self._adjust_stop_order_price(symbol, order_type, current_price, price, symbol_info)
+
             # Adjust stop loss to meet minimum broker requirements
             if stop_loss is not None and price is not None:
                 stop_loss = self._adjust_stop_loss(symbol, order_type, price, stop_loss, symbol_info)
@@ -451,6 +581,41 @@ class OrderExecutor:
                 sl_display = f"{stop_loss:.5f}" if stop_loss is not None else "None"
                 logger.info(f"[DRY RUN] Would place STOP ORDER for {symbol}: {order_type} @ {price:.5f}")
                 logger.info(f"[DRY RUN] SL: {sl_display}, TP: {tp_display}, Volume: {volume}")
+                
+                # Record dry run stop order in learning database for AI improvement
+                try:
+                    # Convert MT5 order type to string
+                    order_type_str = 'BUY_STOP' if mt5_order_type == mt5.ORDER_TYPE_BUY_STOP else 'SELL_STOP'
+                    
+                    # Calculate spread
+                    spread = (tick.ask - tick.bid) if tick else None
+                    
+                    logger.info(f"[{symbol}] Recording dry run stop order: ticket=999999, type={order_type_str}, price={price:.5f}")
+                    
+                    # Record the dry run stop order
+                    self.learning_db.record_stop_order(
+                        ticket=999999,  # Fake ticket for dry run
+                        symbol=symbol,
+                        order_type=order_type_str,
+                        order_price=price,
+                        stop_loss=stop_loss,
+                        take_profit=take_profit,
+                        volume=volume,
+                        signal_data=signal_data,
+                        min_pips=min_pips if 'min_pips' in locals() else None,
+                        max_pips=max_pips if 'max_pips' in locals() else None,
+                        actual_pips=random_pips if 'random_pips' in locals() else None,
+                        risk_factor=risk_factor if 'risk_factor' in locals() else None,
+                        market_price=current_price,
+                        spread=spread,
+                        placement_reason="AI generated stop order (DRY RUN)"
+                    )
+                    logger.info(f"[{symbol}] Successfully recorded dry run stop order in learning database")
+                except Exception as e:
+                    logger.error(f"[{symbol}] Failed to record dry run stop order in learning database: {e}")
+                    import traceback
+                    logger.error(f"[{symbol}] Dry run recording traceback: {traceback.format_exc()}")
+                
                 return {
                     'success': True,
                     'order': 999999,  # Fake order ticket
@@ -541,15 +706,17 @@ class OrderExecutor:
                     logger.debug(f"Error with filling mode {filling_mode}: {e}")
                     continue
             
-            # If all filling modes failed, try pending orders as fallback
+            # If all filling modes failed, try pending orders as fallback (only for market orders)
             if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
-                logger.info(f"Market orders failed for {symbol}, trying pending orders as fallback")
-                pending_result = await self._place_pending_order(
-                    symbol, order_type, volume, stop_loss, take_profit, price, comment
-                )
-                if pending_result and pending_result.get('success', False):
-                    logger.info(f"Pending order placed successfully for {symbol}")
-                    return pending_result
+                # Only try pending fallback for market orders, not for stop orders that failed as pending
+                if trade_action != mt5.TRADE_ACTION_PENDING:
+                    logger.info(f"Market orders failed for {symbol}, trying pending orders as fallback")
+                    pending_result = await self._place_pending_order(
+                        symbol, order_type, volume, stop_loss, take_profit, price, comment
+                    )
+                    if pending_result and pending_result.get('success', False):
+                        logger.info(f"Pending order placed successfully for {symbol}")
+                        return pending_result
             
             # If both market and pending orders failed, return the last error
             if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
@@ -627,6 +794,40 @@ class OrderExecutor:
                             logger.debug(
                                 f"[WARNING] TP mismatch! Expected {take_profit}, got {actual_tp}")
 
+                # Record stop order in learning database for AI improvement
+                try:
+                    # Convert MT5 order type to string
+                    order_type_str = 'BUY_STOP' if mt5_order_type == mt5.ORDER_TYPE_BUY_STOP else 'SELL_STOP'
+                    
+                    # Calculate spread
+                    spread = (tick.ask - tick.bid) if tick else None
+                    
+                    logger.info(f"[{symbol}] Recording stop order: ticket={result.order}, type={order_type_str}, price={price:.5f}")
+                    
+                    # Record the stop order
+                    self.learning_db.record_stop_order(
+                        ticket=result.order,
+                        symbol=symbol,
+                        order_type=order_type_str,
+                        order_price=price,
+                        stop_loss=stop_loss,
+                        take_profit=take_profit,
+                        volume=volume,
+                        signal_data=signal_data,
+                        min_pips=min_pips if 'min_pips' in locals() else None,
+                        max_pips=max_pips if 'max_pips' in locals() else None,
+                        actual_pips=random_pips if 'random_pips' in locals() else None,
+                        risk_factor=risk_factor if 'risk_factor' in locals() else None,
+                        market_price=current_price,
+                        spread=spread,
+                        placement_reason="AI generated stop order"
+                    )
+                    logger.info(f"[{symbol}] Successfully recorded stop order in learning database: ticket {result.order}")
+                except Exception as e:
+                    logger.error(f"[{symbol}] Failed to record stop order in learning database: {e}")
+                    import traceback
+                    logger.error(f"[{symbol}] Recording traceback: {traceback.format_exc()}")
+
                 return {
                     'success': True,
                     'order': result.order,
@@ -645,6 +846,35 @@ class OrderExecutor:
                 'success': False,
                 'error': str(e)
             }
+
+    def record_stop_order_change(self, ticket: int, symbol: str, change_type: str,
+                                old_order_price: float = None, new_order_price: float = None,
+                                old_sl: float = None, new_sl: float = None,
+                                old_tp: float = None, new_tp: float = None,
+                                change_reason: str = None, market_price: float = None,
+                                signal_update: dict = None, performance_impact: float = None,
+                                was_filled: bool = False):
+        """Record stop order changes for AI learning"""
+        try:
+            self.learning_db.record_stop_order_change(
+                original_ticket=ticket,
+                symbol=symbol,
+                change_type=change_type,
+                old_order_price=old_order_price,
+                new_order_price=new_order_price,
+                old_sl=old_sl,
+                new_sl=new_sl,
+                old_tp=old_tp,
+                new_tp=new_tp,
+                change_reason=change_reason,
+                market_price=market_price,
+                signal_update=signal_update,
+                performance_impact=performance_impact,
+                was_filled=was_filled
+            )
+            logger.debug(f"Recorded stop order change: {symbol} ticket {ticket} - {change_type}")
+        except Exception as e:
+            logger.warning(f"Failed to record stop order change: {e}")
 
     async def _place_pending_order(self, symbol: str, order_type: str, volume: float,
                                    stop_loss: Optional[float] = None, take_profit: Optional[float] = None,

@@ -536,7 +536,7 @@ class TradeAnalyzer:
             )
 
             for _, row in daily_performance.iterrows():
-                if row['total_trades'] >= 3:  # Minimum trades per day
+                if row['total_trades'] >= 25:  # Minimum trades per day
                     cursor.execute('''
                         INSERT OR REPLACE INTO daily_temporal_analysis
                         (symbol, day_of_month, month_of_year, year, total_trades,

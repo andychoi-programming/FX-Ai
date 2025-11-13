@@ -298,7 +298,7 @@ class LearningAlgorithms:
 
             for day_name in day_names:
                 day_trades = df[df['day_of_week'] == day_name]
-                if len(day_trades) >= 3:  # Minimum trades for meaningful analysis
+                if len(day_trades) >= 25:  # Minimum trades for meaningful analysis
                     win_rate = (day_trades['profit_pct'] > 0).mean()
                     avg_profit = (day_trades['profit_pct'] * day_trades.get('weight', 1)).mean()
                     total_trades = len(day_trades)

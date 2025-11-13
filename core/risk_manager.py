@@ -37,7 +37,7 @@ class RiskManager:
         # Position limits
         position_limits = trading_rules.get('position_limits', {})
         self.max_positions = position_limits.get('max_positions', trading_config.get('max_positions', 3))
-        self.max_trades_per_symbol_per_day = position_limits.get('max_trades_per_symbol_per_day', 3)
+        self.max_trades_per_symbol_per_day = position_limits.get('max_trades_per_symbol_per_day', 25)
         
         # Entry rules
         entry_rules = trading_rules.get('entry_rules', {})
@@ -54,7 +54,7 @@ class RiskManager:
         # Cooldown tracking to prevent immediate reopening after losses
         self.symbol_cooldowns = {}  # symbol -> cooldown_end_time
         
-        # Daily trade tracking per symbol (up to 3 trades per symbol per day)
+        # Daily trade tracking per symbol (up to 25 trades per symbol per day)
         self.daily_trades_per_symbol = {}  # symbol -> {'date': 'YYYY-MM-DD', 'count': N}
         
         # Daily loss reset tracking
@@ -473,8 +473,10 @@ class RiskManager:
             digits = symbol_info.digits
 
             # Determine pip size based on symbol type
-            if "XAU" in symbol or "GOLD" in symbol or "XAG" in symbol:
-                pip_size = point * 10  # Metals: 1 pip = 10 points
+            if "XAU" in symbol or "GOLD" in symbol:
+                pip_size = point * 10  # Gold: 1 pip = 10 points
+            elif "XAG" in symbol or "SILVER" in symbol:
+                pip_size = point  # Silver: 1 pip = 1 point
             elif digits == 3 or digits == 5:
                 pip_size = point * 10
             else:
@@ -717,7 +719,7 @@ class RiskManager:
         
         logger.debug(f"Checking if can trade {symbol}: daily_loss={self.daily_loss}, max_daily_loss={self.max_daily_loss}")
         
-        # CHECK #1: Daily trade limit per symbol (up to 3 trades per day)
+        # CHECK #1: Daily trade limit per symbol (up to 25 trades per day)
         if self.has_traded_today(symbol):
             reason = f"{symbol}: Daily trade limit reached - {self.max_trades_per_symbol_per_day} trades per symbol per day maximum"
             logger.warning(reason)
@@ -841,8 +843,10 @@ class RiskManager:
             digits = symbol_info.digits
             
             # Determine pip size
-            if "XAU" in symbol or "GOLD" in symbol or "XAG" in symbol:
-                pip_size = point * 10  # Metals: 1 pip = 10 points
+            if "XAU" in symbol or "GOLD" in symbol:
+                pip_size = point * 10  # Gold: 1 pip = 10 points
+            elif "XAG" in symbol or "SILVER" in symbol:
+                pip_size = point  # Silver: 1 pip = 1 point
             elif digits == 3 or digits == 5:
                 pip_size = point * 10
             else:
@@ -1028,8 +1032,10 @@ class RiskManager:
                 return {'stop_loss': current_price * 0.98, 'take_profit': current_price * 1.02}  # Fallback
             
             # Calculate pip size
-            if "XAU" in symbol or "GOLD" in symbol or "XAG" in symbol:
-                pip_size = symbol_info.point * 10  # Metals: 1 pip = 10 points
+            if "XAU" in symbol or "GOLD" in symbol:
+                pip_size = symbol_info.point * 10  # Gold: 1 pip = 10 points
+            elif "XAG" in symbol or "SILVER" in symbol:
+                pip_size = symbol_info.point  # Silver: 1 pip = 1 point
             elif symbol_info.digits == 3 or symbol_info.digits == 5:
                 pip_size = symbol_info.point * 10
             else:

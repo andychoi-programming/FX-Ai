@@ -5,6 +5,7 @@ Handles all database operations for the adaptive learning system
 
 import os
 import sqlite3
+import json
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, Optional
@@ -307,6 +308,62 @@ class LearningDatabase:
                 new_tp REAL,
                 adjustment_reason TEXT,
                 adjustment_timestamp TEXT NOT NULL
+            )
+        ''')
+
+        # Stop order tracking for AI learning
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS stop_orders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME NOT NULL,
+                ticket INTEGER NOT NULL,
+                symbol TEXT NOT NULL,
+                order_type TEXT NOT NULL,  -- 'BUY_STOP' or 'SELL_STOP'
+                order_price REAL NOT NULL,
+                stop_loss REAL,
+                take_profit REAL,
+                volume REAL NOT NULL,
+                signal_strength REAL,
+                ml_score REAL,
+                technical_score REAL,
+                sentiment_score REAL,
+                fundamental_score REAL,
+                risk_multiplier REAL,
+                min_pips REAL,
+                max_pips REAL,
+                actual_pips REAL,
+                risk_factor REAL,
+                market_price_at_placement REAL,
+                spread_at_placement REAL,
+                market_regime TEXT,
+                session TEXT,
+                day_of_week TEXT,
+                hour_of_day INTEGER,
+                model_version TEXT,
+                placement_reason TEXT,
+                expected_fill_probability REAL
+            )
+        ''')
+
+        # Stop order changes tracking for AI learning
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS stop_order_changes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME NOT NULL,
+                original_ticket INTEGER NOT NULL,
+                symbol TEXT NOT NULL,
+                change_type TEXT NOT NULL,  -- 'PRICE_CHANGE', 'SL_CHANGE', 'TP_CHANGE', 'CANCEL'
+                old_order_price REAL,
+                new_order_price REAL,
+                old_sl REAL,
+                new_sl REAL,
+                old_tp REAL,
+                new_tp REAL,
+                change_reason TEXT,
+                market_price_at_change REAL,
+                signal_update TEXT,  -- JSON string of updated signal data
+                performance_impact REAL,  -- Profit/loss impact of the change
+                was_filled BOOLEAN DEFAULT 0  -- Whether order was filled after change
             )
         ''')
 
@@ -968,6 +1025,92 @@ class LearningDatabase:
 
         except Exception as e:
             logger.error(f"Error recording parameter change: {e}")
+
+    def record_stop_order(self, ticket: int, symbol: str, order_type: str, order_price: float,
+                         stop_loss: float = None, take_profit: float = None, volume: float = None,
+                         signal_data: dict = None, min_pips: float = None, max_pips: float = None,
+                         actual_pips: float = None, risk_factor: float = None,
+                         market_price: float = None, spread: float = None,
+                         market_regime: str = None, session: str = None,
+                         model_version: str = None, placement_reason: str = None,
+                         expected_fill_probability: float = None):
+        """Record stop order placement for AI learning"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Extract signal data
+            signal_strength = signal_data.get('signal_strength') if signal_data else None
+            ml_score = signal_data.get('ml_score') if signal_data else None
+            technical_score = signal_data.get('technical_score') if signal_data else None
+            sentiment_score = signal_data.get('sentiment_score') if signal_data else None
+            fundamental_score = signal_data.get('fundamental_score') if signal_data else None
+            risk_multiplier = signal_data.get('risk_multiplier') if signal_data else None
+
+            # Get current time info
+            now = datetime.now()
+            day_of_week = now.strftime('%A')
+            hour_of_day = now.hour
+
+            cursor.execute('''
+                INSERT INTO stop_orders (
+                    timestamp, ticket, symbol, order_type, order_price, stop_loss, take_profit,
+                    volume, signal_strength, ml_score, technical_score, sentiment_score,
+                    fundamental_score, risk_multiplier, min_pips, max_pips, actual_pips,
+                    risk_factor, market_price_at_placement, spread_at_placement,
+                    market_regime, session, day_of_week, hour_of_day, model_version,
+                    placement_reason, expected_fill_probability
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                now, ticket, symbol, order_type, order_price, stop_loss, take_profit,
+                volume, signal_strength, ml_score, technical_score, sentiment_score,
+                fundamental_score, risk_multiplier, min_pips, max_pips, actual_pips,
+                risk_factor, market_price, spread, market_regime, session, day_of_week,
+                hour_of_day, model_version, placement_reason, expected_fill_probability
+            ))
+
+            conn.commit()
+            conn.close()
+
+            logger.debug(f"Recorded stop order: {symbol} {order_type} ticket {ticket}")
+
+        except Exception as e:
+            logger.error(f"Error recording stop order: {e}")
+
+    def record_stop_order_change(self, original_ticket: int, symbol: str, change_type: str,
+                                old_order_price: float = None, new_order_price: float = None,
+                                old_sl: float = None, new_sl: float = None,
+                                old_tp: float = None, new_tp: float = None,
+                                change_reason: str = None, market_price: float = None,
+                                signal_update: dict = None, performance_impact: float = None,
+                                was_filled: bool = False):
+        """Record stop order changes for AI learning"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Convert signal_update dict to JSON string
+            signal_json = json.dumps(signal_update) if signal_update else None
+
+            cursor.execute('''
+                INSERT INTO stop_order_changes (
+                    timestamp, original_ticket, symbol, change_type, old_order_price,
+                    new_order_price, old_sl, new_sl, old_tp, new_tp, change_reason,
+                    market_price_at_change, signal_update, performance_impact, was_filled
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                datetime.now(), original_ticket, symbol, change_type, old_order_price,
+                new_order_price, old_sl, new_sl, old_tp, new_tp, change_reason,
+                market_price, signal_json, performance_impact, was_filled
+            ))
+
+            conn.commit()
+            conn.close()
+
+            logger.debug(f"Recorded stop order change: {symbol} ticket {original_ticket} - {change_type}")
+
+        except Exception as e:
+            logger.error(f"Error recording stop order change: {e}")
 
     def clean_old_data(self):
         """Clean old data from database"""

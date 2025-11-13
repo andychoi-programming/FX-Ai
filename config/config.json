@@ -50,7 +50,7 @@
     "max_lot_size": 1.0,
     "min_signal_strength": 0.050,
     "max_daily_loss": 500.0,
-    "min_risk_reward_ratio": 1.9,
+    "min_risk_reward_ratio": 3.0,
     "enable_news_filter": true,
     "enable_session_filter": true,
     "day_trading_only": false,
@@ -61,6 +61,13 @@
     "magic_number": 123456,
     "order_type": "pending",
     "pending_order_distances": {
+      "distance_type": "percentage",
+      "forex_min_percent": 0.5,
+      "forex_max_percent": 1.5,
+      "xauusd_min_percent": 0.5,
+      "xauusd_max_percent": 1.5,
+      "xagusd_min_percent": 0.5,
+      "xagusd_max_percent": 1.5,
       "forex_min_pips": 10,
       "forex_max_pips": 25,
       "xauusd_min_pips": 25,
@@ -68,7 +75,7 @@
       "xagusd_min_pips": 10,
       "xagusd_max_pips": 25,
       "order_type": "stop",
-      "_comment": "Order type: 'limit' (BUY_LIMIT/SELL_LIMIT) or 'stop' (BUY_STOP/SELL_STOP). Pending orders placed at random distance within these ranges from current price"
+      "_comment": "Distance type: 'pips' or 'percentage'. Percentage gives proportional stops across all assets"
     },
     "_comment_rules": "===== TRADING RULES - AI-DRIVEN TIMING ====="
   },
@@ -78,8 +85,8 @@
       "max_positions": 30,
       "max_positions_per_symbol": 1,
       "prevent_multiple_positions_per_symbol": true,
-      "max_trades_per_symbol_per_day": 3,
-      "_comment": "Increased to 3 trades per symbol per day for more active trading"
+      "max_trades_per_symbol_per_day": 25,
+      "_comment": "Increased to 25 trades per symbol per day for more active trading"
     },
     "time_restrictions": {
       "day_trading_only": false,
@@ -117,7 +124,7 @@
     "entry_rules": {
       "min_signal_strength": 0.35,
       "max_spread": 3.0,
-      "min_risk_reward_ratio": 1.9,
+      "min_risk_reward_ratio": 3.0,
       "require_ml_confirmation": true,
       "require_technical_confirmation": false,
       "_comment": "Signal must be >0.35 strength, spread <3 pips, RR >2:1, ML confirmation required"
