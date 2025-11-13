@@ -82,7 +82,7 @@ This approach ensures the system adapts to current market dynamics rather than o
 
 ### System Flow
 
-```
+```text
 ┌─────────────────┐
 │   MT5 Platform  │
 │   (Live Data)   │
