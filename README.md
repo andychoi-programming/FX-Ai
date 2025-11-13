@@ -5,8 +5,8 @@
 FX-Ai is a comprehensive machine learning-based forex trading system that combines trained ML models with advanced risk management for automated trading across multiple currency pairs and timeframes.
 
 **Version:** 3.0
-**Date:** November 12, 2025
-**Status:** OPERATIONAL - System running normally
+**Date:** November 13, 2025
+**Status:** OPERATIONAL - System running normally with 24-hour optimal trading enabled
 
 ---
 
@@ -66,9 +66,42 @@ python -c "from app.application import FXAiApplication; import asyncio; app = FX
 **Cross Pairs:** EURGBP, EURJPY, GBPJPY, AUDJPY, EURCAD, GBPAUD, EURNZD, GBPNZD, etc.
 **Metals:** XAUUSD (Gold), XAGUSD (Silver)
 
----
-
 ## Configuration
+
+### Main Configuration Files
+
+- **`config/config.json`**: Main system configuration (risk management, trading limits, component settings)
+- **`config/symbol_schedules.json`**: Symbol-specific trading schedules and optimal hours (30+ currency pairs)
+- **`models/parameter_optimization/optimal_parameters.json`**: ML model parameters (auto-generated)
+
+### Symbol Schedules Configuration
+
+The system uses separate configuration for trading hours to enable optimal 24-hour trading:
+
+```json
+{
+  "global_settings": {
+    "enable_24hour_trading": true,
+    "force_close_hour": 23,
+    "force_close_minute": 45
+  },
+  "symbol_schedules": {
+    "EURUSD": {
+      "enabled": true,
+      "optimal_hours": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+      "session_filters": {"overlap_required": false}
+    }
+    // ... 29 more symbols with optimized schedules
+  }
+}
+```
+
+**Key Features:**
+
+- **Symbol-Specific Hours**: Each currency pair has optimized trading windows
+- **24-Hour Support**: Continuous trading capability across all sessions
+- **Force Close**: All positions closed at 23:45 GMT daily
+- **Session Flexibility**: No overlap requirements for single-session trading
 
 ### Risk Management Settings
 
@@ -97,6 +130,9 @@ python -c "from app.application import FXAiApplication; import asyncio; app = FX
 
 - **Market Open:** Monday 00:00 GMT (Sunday close)
 - **Market Close:** Friday 23:59 GMT
+- **24-Hour Optimal Trading:** System supports continuous trading with symbol-specific optimal hours
+- **Symbol-Specific Schedules:** Individual trading windows optimized for each currency pair
+- **Force Close Time:** All positions automatically closed at 23:45 GMT daily
 - **No Trading:** Weekend hours (Saturday 00:00 - Monday 00:00 GMT)
 
 ---
@@ -139,6 +175,7 @@ FX-Ai/
 │   └── Extensions.json              # Recommended extensions
 ├── config/
 │   ├── config.json                  # Main system configuration
+│   ├── symbol_schedules.json        # Symbol-specific trading schedules (30+ pairs)
 │   └── adaptive_weights.json        # Adaptive learning weights (auto-generated)
 ├── ai/                              # Machine Learning components
 │   ├── ml_predictor.py              # ML model predictions & training
@@ -257,8 +294,13 @@ FX-Ai/
    # Edit config/config.json for your preferences
    # Key settings to review:
    # - Risk management parameters
-   # - Trading symbols
+   # - Trading symbols and limits
    # - Fundamental monitoring settings
+
+   # Review config/symbol_schedules.json for trading hours
+   # - Symbol-specific optimal trading windows
+   # - 24-hour trading schedules for 30+ pairs
+   # - Force close times and session management
    ```
 
 6. **Test System Connection**
@@ -638,4 +680,4 @@ For technical support or questions:
 
 ---
 
-Last Updated: November 12, 2025
+Last Updated: November 13, 2025
