@@ -22,37 +22,67 @@ class TimeManager:
     - Consistent time source usage
     """
 
-    # Trading Hours Configuration
-    MT5_CLOSE_TIME = time(22, 30)  # 22:30 MT5 server time (when we stop trading)
-    MT5_CLOSE_BUFFER_END = time(23, 59)  # End of no-trade buffer (until midnight)
-    MT5_OPEN_TIME = time(0, 0)  # 00:00 MT5 server time (market open)
-    MT5_TRADING_START = time(1, 0)  # 01:00 MT5 server time (1 hour after open)
-    MT5_FORCE_CLOSE_TIME = time(20, 30)  # 20:30 MT5 server time (2 hours before close)
-    MT5_IMMEDIATE_CLOSE_TIME = time(22, 0)  # 22:00 MT5 server time (immediate close)
-
-    # Forex Market Hours (EST - Eastern Standard Time)
-    # Forex is 24/5 but we follow our own trading discipline
-    FOREX_WEEKEND_START = "Friday 17:00 EST"  # When forex week "ends"
-    FOREX_WEEKEND_END = "Sunday 17:00 EST"    # When forex week "starts"
-
-    # Our Trading Discipline (within forex market hours)
-    TRADING_DAYS = [0, 1, 2, 3, 4]  # Monday-Friday (0=Monday)
-    TRADING_START_EST = time(0, 0)   # Midnight EST (our start)
-    TRADING_END_EST = time(17, 0)    # 5PM EST Friday (our end)
-
-    # Time Zones
+    # Time Zones (constants that don't change)
     EST = pytz.timezone('US/Eastern')
     UTC = pytz.timezone('UTC')
 
-    def __init__(self, mt5_connector=None):
+    def __init__(self, mt5_connector=None, config=None):
         """
         Initialize TimeManager
 
         Args:
             mt5_connector: MT5 connector instance for server time
+            config: Configuration dictionary
         """
         self.mt5 = mt5_connector
         self._last_closure_date = None
+        self.config = config
+
+        # Load time configuration from config
+        self._load_time_config()
+
+    def _load_time_config(self):
+        """Load time configuration from config.json"""
+        if not self.config:
+            # Fallback to hardcoded values if no config provided
+            self.MT5_CLOSE_TIME = time(22, 30)
+            self.MT5_CLOSE_BUFFER_END = time(23, 59)
+            self.MT5_OPEN_TIME = time(0, 0)
+            self.MT5_TRADING_START = time(1, 0)
+            self.MT5_FORCE_CLOSE_TIME = time(20, 30)
+            self.MT5_IMMEDIATE_CLOSE_TIME = time(22, 0)
+            self.FOREX_WEEKEND_START = "Friday 17:00 EST"
+            self.FOREX_WEEKEND_END = "Sunday 17:00 EST"
+            self.TRADING_DAYS = [0, 1, 2, 3, 4]
+            self.TRADING_START_EST = time(0, 0)
+            self.TRADING_END_EST = time(17, 0)
+            return
+
+        time_config = self.config.get('time_restrictions', {})
+        mt5_times = time_config.get('mt5_trading_times', {})
+        forex_hours = time_config.get('forex_market_hours', {})
+        discipline = time_config.get('trading_discipline', {})
+
+        # Parse time strings to time objects
+        def parse_time(time_str):
+            if isinstance(time_str, str) and ':' in time_str:
+                hours, minutes = map(int, time_str.split(':'))
+                return time(hours, minutes)
+            return time(22, 30)  # fallback
+
+        self.MT5_CLOSE_TIME = parse_time(mt5_times.get('mt5_close_time', '22:30'))
+        self.MT5_CLOSE_BUFFER_END = parse_time(mt5_times.get('mt5_close_buffer_end', '23:59'))
+        self.MT5_OPEN_TIME = parse_time(mt5_times.get('mt5_open_time', '00:00'))
+        self.MT5_TRADING_START = parse_time(mt5_times.get('mt5_trading_start', '01:00'))
+        self.MT5_FORCE_CLOSE_TIME = parse_time(mt5_times.get('mt5_force_close_time', '20:30'))
+        self.MT5_IMMEDIATE_CLOSE_TIME = parse_time(mt5_times.get('mt5_immediate_close_time', '22:00'))
+
+        self.FOREX_WEEKEND_START = forex_hours.get('weekend_start', 'Friday 17:00 EST')
+        self.FOREX_WEEKEND_END = forex_hours.get('weekend_end', 'Sunday 17:00 EST')
+
+        self.TRADING_DAYS = discipline.get('trading_days', [0, 1, 2, 3, 4])
+        self.TRADING_START_EST = parse_time(discipline.get('trading_start_est', '00:00'))
+        self.TRADING_END_EST = parse_time(discipline.get('trading_end_est', '17:00'))
 
     def get_mt5_server_time(self) -> Optional[datetime]:
         """
@@ -589,20 +619,24 @@ class TimeManager:
 _time_manager_instance = None
 
 
-def get_time_manager(mt5_connector=None) -> TimeManager:
+def get_time_manager(mt5_connector=None, config=None) -> TimeManager:
     """
     Get global TimeManager instance (singleton pattern).
 
     Args:
         mt5_connector: MT5 connector instance
+        config: Configuration dictionary
 
     Returns:
         TimeManager: Global time manager instance
     """
     global _time_manager_instance
     if _time_manager_instance is None:
-        _time_manager_instance = TimeManager(mt5_connector)
+        _time_manager_instance = TimeManager(mt5_connector, config)
     elif mt5_connector and _time_manager_instance.mt5 != mt5_connector:
         _time_manager_instance.mt5 = mt5_connector
+    if config and _time_manager_instance.config != config:
+        _time_manager_instance.config = config
+        _time_manager_instance._load_time_config()
 
     return _time_manager_instance

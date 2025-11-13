@@ -1,0 +1,160 @@
+{
+  "comment": "All times in MT5 SERVER time (GMT+2). No timezone conversions!",
+  "global_settings": {
+    "enable_24hour_trading": true,
+    "force_close_hour": 23,
+    "force_close_minute": 45
+  },
+  "symbol_schedules": {
+    "EURUSD": {
+      "start_hour": 9,
+      "end_hour": 23,
+      "comment": "Best: London + NY sessions (10:00-22:00 server)"
+    },
+    "GBPUSD": {
+      "start_hour": 9,
+      "end_hour": 23,
+      "comment": "Best: London + NY sessions (10:00-22:00 server)"
+    },
+    "USDJPY": {
+      "start_hour": 2,
+      "end_hour": 23,
+      "comment": "Best: Tokyo + London + NY (02:00-23:00 server)"
+    },
+    "USDCHF": {
+      "start_hour": 9,
+      "end_hour": 23,
+      "comment": "Best: European + NY sessions"
+    },
+    "AUDUSD": {
+      "start_hour": 0,
+      "end_hour": 20,
+      "comment": "Best: Sydney + Tokyo + London (00:00-19:00 server)"
+    },
+    "NZDUSD": {
+      "start_hour": 0,
+      "end_hour": 20,
+      "comment": "Best: Sydney + Tokyo + London (00:00-19:00 server)"
+    },
+    "USDCAD": {
+      "start_hour": 10,
+      "end_hour": 23,
+      "comment": "Best: London + NY sessions (CAD active during NY)"
+    },
+    "EURAUD": {
+      "start_hour": 9,
+      "end_hour": 20,
+      "comment": "Best: London session for EUR, avoid Asian for this cross"
+    },
+    "EURCAD": {
+      "start_hour": 9,
+      "end_hour": 23,
+      "comment": "Best: London + NY sessions"
+    },
+    "EURCHF": {
+      "start_hour": 9,
+      "end_hour": 20,
+      "comment": "Best: European session (both currencies)"
+    },
+    "EURGBP": {
+      "start_hour": 9,
+      "end_hour": 20,
+      "comment": "Best: London session (both currencies), lower volatility"
+    },
+    "EURJPY": {
+      "start_hour": 2,
+      "end_hour": 20,
+      "comment": "Best: Tokyo + London overlap (02:00-19:00 server)"
+    },
+    "EURNZD": {
+      "start_hour": 9,
+      "end_hour": 20,
+      "comment": "Best: London session for EUR"
+    },
+    "GBPAUD": {
+      "start_hour": 9,
+      "end_hour": 20,
+      "comment": "Best: London session for GBP"
+    },
+    "GBPCAD": {
+      "start_hour": 9,
+      "end_hour": 23,
+      "comment": "Best: London + NY sessions"
+    },
+    "GBPCHF": {
+      "start_hour": 9,
+      "end_hour": 20,
+      "comment": "Best: London session (both currencies)"
+    },
+    "GBPJPY": {
+      "start_hour": 2,
+      "end_hour": 20,
+      "comment": "Best: Tokyo + London, very volatile (02:00-19:00 server)"
+    },
+    "GBPNZD": {
+      "start_hour": 9,
+      "end_hour": 20,
+      "comment": "Best: London session for GBP"
+    },
+    "AUDCAD": {
+      "start_hour": 0,
+      "end_hour": 23,
+      "comment": "Best: Sydney/Tokyo (AUD) + NY (CAD)"
+    },
+    "AUDCHF": {
+      "start_hour": 0,
+      "end_hour": 20,
+      "comment": "Best: Sydney/Tokyo + European"
+    },
+    "AUDJPY": {
+      "start_hour": 0,
+      "end_hour": 20,
+      "comment": "Best: Sydney/Tokyo + London overlap (00:00-19:00 server)"
+    },
+    "AUDNZD": {
+      "start_hour": 0,
+      "end_hour": 20,
+      "comment": "Best: Sydney/Tokyo sessions (both currencies)"
+    },
+    "NZDCAD": {
+      "start_hour": 0,
+      "end_hour": 23,
+      "comment": "Best: Sydney/Tokyo (NZD) + NY (CAD)"
+    },
+    "NZDCHF": {
+      "start_hour": 0,
+      "end_hour": 20,
+      "comment": "Best: Sydney/Tokyo + European"
+    },
+    "NZDJPY": {
+      "start_hour": 0,
+      "end_hour": 20,
+      "comment": "Best: Sydney/Tokyo sessions (both currencies)"
+    },
+    "CADCHF": {
+      "start_hour": 9,
+      "end_hour": 23,
+      "comment": "Best: European + NY sessions"
+    },
+    "CADJPY": {
+      "start_hour": 2,
+      "end_hour": 23,
+      "comment": "Best: Tokyo + NY sessions"
+    },
+    "CHFJPY": {
+      "start_hour": 2,
+      "end_hour": 20,
+      "comment": "Best: Tokyo + European sessions"
+    },
+    "XAUUSD": {
+      "start_hour": 10,
+      "end_hour": 23,
+      "comment": "Best: London + NY sessions (peak liquidity)"
+    },
+    "XAGUSD": {
+      "start_hour": 10,
+      "end_hour": 23,
+      "comment": "Best: London + NY sessions (peak liquidity)"
+    }
+  }
+}

@@ -240,7 +240,7 @@ class OrderManager:
 
     def _calculate_stop_distance(self, symbol: str, signal: str, atr: float,
                                signal_data: Optional[Dict] = None) -> float:
-        """Calculate optimal stop distance from current price"""
+        """Calculate optimal stop distance using professional ATR multipliers"""
 
         # Get broker minimum distance first
         symbol_info = mt5.symbol_info(symbol)
@@ -250,49 +250,72 @@ class OrderManager:
         min_distance = self.order_executor._calculate_min_stop_distance(symbol, symbol_info)
         broker_min_distance = min_distance * 1.5  # 1.5x broker minimum for safety
 
-        # Base distance on ATR
-        if atr is None or atr <= 0:
-            # If ATR fails, use broker minimum as base
-            base_distance = broker_min_distance
-        else:
-            base_distance = atr * 0.5  # 50% of ATR as base (more conservative)
+        # Get ATR multipliers from config
+        stop_loss_config = self.config.get('trading_rules', {}).get('stop_loss_rules', {})
+        atr_multipliers = {
+            'major': stop_loss_config.get('sl_atr_multiplier_major', 2.0),
+            'minor': stop_loss_config.get('sl_atr_multiplier_minor', 2.0),
+            'cross': stop_loss_config.get('sl_atr_multiplier_cross', 2.5),
+            'jpy': stop_loss_config.get('sl_atr_multiplier_jpy', 2.5),
+            'gold': stop_loss_config.get('sl_atr_multiplier_gold', 1.5),
+            'silver': stop_loss_config.get('sl_atr_multiplier_silver', 2.0),
+        }
 
-        # Adjust based on volatility
-        volatility = self._get_volatility(symbol)
-        if volatility > 0.015:  # High volatility
-            distance = max(base_distance, atr * 0.7) if atr else base_distance
-        elif volatility < 0.005:  # Low volatility
-            distance = max(base_distance, atr * 0.3) if atr else base_distance
-        else:  # Normal
-            distance = base_distance
+        # Classify symbol for ATR multiplier
+        pair_type = self._get_pair_type(symbol)
+        atr_multiplier = atr_multipliers.get(pair_type, 2.5)  # Default to cross pair multiplier
+
+        # Calculate ATR-based stop distance
+        if atr is None or atr <= 0:
+            # If ATR fails, use professional minimum as base
+            atr_distance = min_distance
+        else:
+            atr_distance = atr * atr_multiplier
 
         # Apply risk adjustments from signal data
+        risk_multiplier = 1.0
         if signal_data:
-            risk_multiplier = signal_data.get('risk_multiplier', 1.0)
             signal_strength = signal_data.get('signal_strength', 0.5)
 
             # Increase distance for weaker signals
             if signal_strength < 0.4:
-                risk_multiplier *= 1.5
+                risk_multiplier *= 1.3  # Less aggressive than before
             elif signal_strength < 0.6:
-                risk_multiplier *= 1.2
+                risk_multiplier *= 1.1
 
-            distance *= risk_multiplier
+        atr_distance *= risk_multiplier
 
-        # CRITICAL: Ensure distance is at least 1.5x broker minimum
-        distance = max(distance, broker_min_distance)
+        # Use the MAXIMUM of:
+        # 1. ATR-based distance (adaptive to volatility)
+        # 2. Professional minimum (allows normal market movement)
+        # 3. Broker requirement * 1.5 (safety margin)
+        final_distance = max(atr_distance, min_distance, broker_min_distance)
 
-        # Additional safety: ensure minimum pip distance based on symbol
-        if 'JPY' in symbol:
-            min_pip_distance = 0.03  # 3 pips for JPY
-        elif 'XAU' in symbol or 'XAG' in symbol:
-            min_pip_distance = symbol_info.point * 100  # 1 pip for metals
+        logger.debug(
+            f"{symbol} ({pair_type}): Stop calc - ATR: {atr:.5f} × {atr_multiplier} = {atr_distance:.5f}, "
+            f"Min: {min_distance:.5f}, Broker: {broker_min_distance:.5f}, Final: {final_distance:.5f}"
+        )
+
+        return final_distance
+
+    def _get_pair_type(self, symbol: str) -> str:
+        """Classify symbol for ATR multiplier selection"""
+
+        majors = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF']
+        minors = ['AUDUSD', 'NZDUSD', 'USDCAD']
+
+        if symbol in majors:
+            return 'major'
+        elif symbol in minors:
+            return 'minor'
+        elif 'JPY' in symbol:
+            return 'jpy'
+        elif symbol == 'XAUUSD':
+            return 'gold'
+        elif symbol == 'XAGUSD':
+            return 'silver'
         else:
-            min_pip_distance = symbol_info.point * 30  # 3 pips for forex
-
-        distance = max(distance, min_pip_distance)
-
-        return distance
+            return 'cross'  # All other crosses
 
     def _get_volatility(self, symbol: str) -> float:
         """Get volatility estimate for symbol"""
@@ -407,24 +430,29 @@ class OrderManager:
             return 0.01
 
     def _calculate_sl_tp(self, symbol: str, signal: str, entry_price: float, atr: float) -> tuple[float, float]:
-        """Calculate stop loss and take profit prices"""
+        """Calculate stop loss and take profit prices using dynamic RR ratios"""
 
-        default_sl_pips = self.config.get('trading', {}).get('default_sl_pips', 20)
-        default_tp_pips = self.config.get('trading', {}).get('default_tp_pips', 60)
+        # Calculate stop loss distance using ATR-based method
+        stop_distance = self._calculate_stop_distance(symbol, signal, atr)
 
-        # Get pip size
-        symbol_info = mt5.symbol_info(symbol)
-        if symbol_info is None:
-            pip_size = 0.0001  # Default forex pip size
-        else:
-            pip_size = symbol_info.point * 10  # 5-digit broker
+        # Get RR ratio from config for this symbol
+        rr_ratios = self.config.get('trading_rules', {}).get('take_profit_rules', {}).get('rr_ratios', {})
+        rr_ratio = rr_ratios.get(symbol, 3.0)  # Default to 3.0 if not found
+
+        # Calculate take profit distance: stop_distance * rr_ratio
+        tp_distance = stop_distance * rr_ratio
 
         if signal == "BUY":
-            stop_loss = entry_price - (default_sl_pips * pip_size)
-            take_profit = entry_price + (default_tp_pips * pip_size)
+            stop_loss = entry_price - stop_distance
+            take_profit = entry_price + tp_distance
         else:  # SELL
-            stop_loss = entry_price + (default_sl_pips * pip_size)
-            take_profit = entry_price - (default_tp_pips * pip_size)
+            stop_loss = entry_price + stop_distance
+            take_profit = entry_price - tp_distance
+
+        logger.debug(
+            f"{symbol} {signal}: SL distance: {stop_distance:.5f}, RR ratio: {rr_ratio}, "
+            f"TP distance: {tp_distance:.5f}, SL: {stop_loss:.5f}, TP: {take_profit:.5f}"
+        )
 
         return stop_loss, take_profit
 
@@ -448,32 +476,34 @@ class OrderManager:
             if orders is None:
                 return {'managed': 0, 'cancelled': 0, 'errors': 0}
 
-            total_pending = len(orders)
+            # Filter to only our system's orders
+            our_orders = [order for order in orders if hasattr(order, 'magic') and order.magic == self.magic_number]
+            total_pending = len(our_orders)
             managed = 0
             cancelled = 0
             errors = 0
 
-            # Only cancel if we have WAY too many pending orders (emergency cleanup)
+            # Only cancel if we have WAY too many of OUR pending orders (emergency cleanup)
             if total_pending > self.max_pending_orders * 2:  # Double the limit
-                logger.warning(f"Emergency: Too many pending orders: {total_pending} (max: {self.max_pending_orders})")
-                # Cancel oldest orders to reduce count
-                orders_to_cancel = sorted(orders, key=lambda x: getattr(x, 'time_setup', 0))[:total_pending - self.max_pending_orders]
+                logger.warning(f"Emergency: Too many of our pending orders: {total_pending} (max: {self.max_pending_orders})")
+                # Cancel oldest of our orders to reduce count
+                orders_to_cancel = sorted(our_orders, key=lambda x: getattr(x, 'time_setup', 0))[:total_pending - self.max_pending_orders]
                 for order in orders_to_cancel:
                     if self._cancel_order(order.ticket):
                         cancelled += 1
                         logger.info(f"Emergency cancelled excess pending order: {order.ticket}")
 
-            # Only check a subset of orders to avoid overwhelming the system
+            # Only check OUR orders to avoid overwhelming the system
             # Check orders that are older than 2 hours (very stale)
             current_time = datetime.now().timestamp()
             very_stale_threshold = 2 * 3600  # 2 hours
 
-            for order in orders:
+            for order in our_orders:
                 try:
                     managed += 1
                     order_time = getattr(order, 'time_setup', 0)
 
-                    # Only cancel VERY stale orders (>2 hours old)
+                    # Only cancel VERY stale orders (>2 hours old) that belong to our system
                     if (current_time - order_time) > very_stale_threshold:
                         self._cancel_order(order.ticket)
                         cancelled += 1
@@ -695,35 +725,31 @@ class OrderExecutor:
             return mt5.ORDER_FILLING_FOK
 
     def _calculate_min_stop_distance(self, symbol: str, symbol_info) -> float:
-        """Calculate minimum stop distance in price units"""
+        """Calculate minimum stop distance in price units - Professional Day Trading Standards"""
+
+        # Get professional minimums from config
+        stop_loss_config = self.config.get('trading_rules', {}).get('stop_loss_rules', {})
+        professional_minimums = stop_loss_config.get('professional_minimums', {})
+
+        # Get broker's technical requirement
         stops_level = getattr(symbol_info, 'trade_stops_level', 0)
-
-        # stops_level is in points, convert to price units
         point_size = symbol_info.point
+        broker_minimum = stops_level * point_size
 
-        # Minimum stop distance in price units (broker requirement)
-        min_stop_price_distance = stops_level * point_size
+        # Get professional minimum for this symbol (default to 15 pips if not specified)
+        professional_minimum = professional_minimums.get(symbol, 0.0015)
 
-        # Ensure minimum stop distances for all symbol types
-        if 'XAU' in symbol or 'GOLD' in symbol:
-            # Gold: ensure minimum 0.5 price units (5 pips * 0.10) - reasonable for metals
-            min_stop_price_distance = max(min_stop_price_distance, 0.5)
-        elif 'XAG' in symbol or 'SILVER' in symbol:
-            # Silver: ensure minimum 0.20 price units (20 pips * 0.01) - increased for XAGUSD
-            min_stop_price_distance = max(min_stop_price_distance, 0.20)
-        else:
-            # For forex pairs, ensure minimum 2 pips stop distance
-            # Most brokers require at least 2-3 pips for stops
-            if 'JPY' in symbol:
-                # JPY pairs: 2 pips minimum (0.02 price units)
-                min_stop_price_distance = max(min_stop_price_distance, 0.02)
-            else:
-                # Other forex pairs: 2 pips minimum (0.0002 price units for 5-digit brokers)
-                min_stop_price_distance = max(min_stop_price_distance, 0.0002)
+        # Use the MAXIMUM of:
+        # 1. Professional minimum (allows normal market movement)
+        # 2. Broker requirement * 1.5 (safety margin above broker min)
+        final_minimum = max(professional_minimum, broker_minimum * 1.5)
 
-        return min_stop_price_distance
+        logger.debug(
+            f"{symbol}: Min stop - Professional: {professional_minimum:.5f}, "
+            f"Broker: {broker_minimum:.5f}, Final: {final_minimum:.5f}"
+        )
 
-        return min_stop_price_distance
+        return final_minimum
 
     def _adjust_stop_loss(self, symbol: str, order_type: str, price: float,
                          stop_loss: float, symbol_info) -> float:

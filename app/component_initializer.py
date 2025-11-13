@@ -5,6 +5,12 @@ Handles initialization of all trading system components
 
 import os
 import logging
+import sys
+from pathlib import Path
+
+# Add modules directory to path for ScheduleManager
+sys.path.append(str(Path(__file__).parent.parent / 'modules'))
+
 from utils.time_manager import get_time_manager
 from utils.config_loader import ConfigLoader
 from ai.adaptive_learning_manager import AdaptiveLearningManager
@@ -21,6 +27,7 @@ from analysis.fundamental_analyzer import (
 from data.market_data_manager import MarketDataManager
 from core.clock_sync import ClockSynchronizer
 from core.risk_manager import RiskManager
+from schedule_manager import ScheduleManager  # type: ignore
 from core.trading_engine import TradingEngine
 from core.mt5_connector import MT5Connector
 from utils.logger import setup_logger
@@ -98,7 +105,12 @@ class ComponentInitializer:
 
             # Initialize Time Manager
             self.app.logger.info("Initializing Time Manager...")
-            self.app.time_manager = get_time_manager(self.app.mt5)
+            self.app.time_manager = get_time_manager(self.app.mt5, self.app.config)
+
+            # Initialize Schedule Manager
+            self.app.logger.info("Initializing Schedule Manager...")
+            self.app.schedule_manager = ScheduleManager("config/symbol_schedules.json")
+            self.app.schedule_manager.log_schedule_status()
 
             # Initialize Clock Synchronizer first (needed for logger timestamps)
             self.app.logger.info("Initializing Clock Synchronizer...")

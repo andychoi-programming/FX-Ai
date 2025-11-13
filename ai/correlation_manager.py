@@ -8,6 +8,7 @@ from typing import Dict, List, Set, Tuple, Optional
 from enum import Enum
 import numpy as np
 from datetime import datetime
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,10 @@ class CorrelationManager:
         self.correlation_size_multiplier = correlation_config.get('size_multiplier', 0.6)
         self.require_correlation_confirmation = correlation_config.get('require_confirmation', True)
 
+        # Trading limits
+        trading_config = config.get('trading', {})
+        self.min_lot_size = trading_config.get('min_lot_size', 0.01)
+
         # NEW: Dynamic correlation monitoring settings
         self.enable_dynamic_monitoring = correlation_config.get('enable_dynamic_monitoring', True)
         self.correlation_change_threshold = correlation_config.get('correlation_change_threshold', 0.2)  # 0.2 change triggers action
@@ -70,6 +75,13 @@ class CorrelationManager:
         self.correlation_exit_threshold = correlation_config.get('correlation_exit_threshold', 0.8)  # Exit if correlation exceeds this
         self.correlation_entry_threshold = correlation_config.get('correlation_entry_threshold', 0.3)  # Consider entry if correlation drops below this
         self.adaptive_thresholds = correlation_config.get('adaptive_thresholds', True)  # Learn optimal thresholds
+
+        # Diversification settings
+        diversification_config = correlation_config.get('diversification', {})
+        self.max_currency_exposure = diversification_config.get('max_currency_exposure', 0.8)
+        self.min_diversification_score = diversification_config.get('min_diversification_score', 0.6)
+        self.correlation_group_limit = diversification_config.get('correlation_group_limit', 4)
+        self.currency_exposure_penalty = diversification_config.get('currency_exposure_penalty', True)
 
         # Track correlation history for learning
         self.correlation_history = {}
@@ -237,9 +249,7 @@ class CorrelationManager:
     def check_correlation_limit(self, new_symbol: str, open_positions: List[str]) -> Tuple[bool, str]:
         """
         Check if opening a new position is allowed based on correlation analysis
-
-        NEW APPROACH: Allow strongly correlated pairs to trade simultaneously
-        Focus on monitoring correlation changes during trading rather than blocking
+        Enhanced with diversification and currency exposure limits
 
         Args:
             new_symbol: Symbol to potentially open
@@ -251,6 +261,11 @@ class CorrelationManager:
         if not open_positions:
             return True, "No open positions - correlation check passed"
 
+        # First check diversification limits (stricter than basic correlation)
+        diversification_allowed, diversification_reason = self.check_correlation_diversification_limits(new_symbol, open_positions)
+        if not diversification_allowed:
+            return False, f"Diversification limit exceeded: {diversification_reason}"
+
         # Count strongly correlated positions (for informational purposes)
         strongly_correlated_count = 0
         correlated_symbols = []
@@ -261,8 +276,14 @@ class CorrelationManager:
                 strongly_correlated_count += 1
                 correlated_symbols.append(open_symbol)
 
-        # NEW: Allow strongly correlated pairs to trade simultaneously
-        # Instead of blocking, we'll monitor correlation changes during trading
+        # Get portfolio correlation risk assessment
+        portfolio_risk = self.get_portfolio_correlation_risk(open_positions + [new_symbol])
+
+        # Allow trading but with warnings for high risk scenarios
+        if portfolio_risk['overall_risk'] == 'high':
+            self.logger.warning(f"Opening {new_symbol} increases portfolio to HIGH correlation risk (score: {portfolio_risk['risk_score']:.2f})")
+            self.logger.warning(f"Recommendations: {portfolio_risk['recommendations']}")
+
         if strongly_correlated_count > 0:
             self.logger.info(f"Opening {new_symbol} with {strongly_correlated_count} strongly correlated positions: {correlated_symbols}")
             self.logger.info("Correlation monitoring will be active during trading")
@@ -270,7 +291,7 @@ class CorrelationManager:
             # Start correlation tracking for this new position
             self._start_correlation_tracking(new_symbol, correlated_symbols)
 
-        return True, f"Correlation check passed - monitoring active ({strongly_correlated_count} strongly correlated positions)"
+        return True, f"Correlation check passed - monitoring active ({strongly_correlated_count} strongly correlated positions, risk: {portfolio_risk['overall_risk']})"
 
     def _start_correlation_tracking(self, new_symbol: str, correlated_symbols: List[str]):
         """
@@ -541,7 +562,7 @@ class CorrelationManager:
 
     def get_correlation_adjusted_size(self, symbol: str, base_size: float, open_positions: List[str]) -> float:
         """
-        Adjust position size based on correlation with open positions
+        Adjust position size based on correlation with open positions and currency exposure
 
         Args:
             symbol: Symbol for new position
@@ -554,24 +575,48 @@ class CorrelationManager:
         if not open_positions:
             return base_size
 
+        # Get currency exposure for the new symbol
+        new_currencies = self._get_currencies(symbol)
+        current_exposure = self._calculate_currency_exposure(open_positions)
+
+        # Check currency exposure limits
+        exposure_multiplier = self._get_currency_exposure_multiplier(new_currencies, current_exposure)
+
         # Find maximum correlation with open positions
         max_correlation = 0.0
+        correlation_count = 0
         for open_symbol in open_positions:
             corr = abs(self.get_correlation(symbol, open_symbol))
             max_correlation = max(max_correlation, corr)
+            if corr >= self.moderate_correlation_threshold:
+                correlation_count += 1
 
-        # Apply size reduction based on correlation
+        # Apply correlation-based size reduction
+        correlation_multiplier = 1.0
         if max_correlation >= self.strong_correlation_threshold:
-            adjusted_size = base_size * self.correlation_size_multiplier
-            self.logger.info(f"Reducing {symbol} position size by {1-self.correlation_size_multiplier:.0%} due to strong correlation ({max_correlation:.2f})")
-            return adjusted_size
+            correlation_multiplier = self.correlation_size_multiplier
+            self.logger.info(f"Strong correlation detected for {symbol} ({max_correlation:.2f}) - applying {correlation_multiplier:.1%} size multiplier")
         elif max_correlation >= self.moderate_correlation_threshold:
-            moderate_multiplier = (self.correlation_size_multiplier + 1.0) / 2  # Half reduction
-            adjusted_size = base_size * moderate_multiplier
-            self.logger.info(f"Reducing {symbol} position size by {(1-moderate_multiplier):.0%} due to moderate correlation ({max_correlation:.2f})")
-            return adjusted_size
+            correlation_multiplier = (self.correlation_size_multiplier + 1.0) / 2  # Half reduction
+            self.logger.info(f"Moderate correlation detected for {symbol} ({max_correlation:.2f}) - applying {correlation_multiplier:.1%} size multiplier")
 
-        return base_size
+        # Apply diversification penalty for multiple correlated positions
+        if correlation_count > 1:
+            diversification_penalty = max(0.3, 1.0 - (correlation_count - 1) * 0.2)  # 20% reduction per additional correlated position
+            correlation_multiplier *= diversification_penalty
+            self.logger.info(f"Diversification penalty for {symbol}: {correlation_count} correlated positions - applying {diversification_penalty:.1%} penalty")
+
+        # Combine all multipliers
+        final_multiplier = correlation_multiplier * exposure_multiplier
+        adjusted_size = base_size * final_multiplier
+
+        # Ensure minimum size
+        adjusted_size = max(adjusted_size, self.min_lot_size)
+
+        if final_multiplier < 1.0:
+            self.logger.info(f"Adjusted {symbol} position size: {base_size:.4f} -> {adjusted_size:.4f} ({final_multiplier:.1%} of base)")
+
+        return adjusted_size
 
     def get_correlation_confirmation_required(self, symbol: str, open_positions: List[str]) -> Tuple[bool, str]:
         """
@@ -663,8 +708,251 @@ class CorrelationManager:
 
         return min(risk_score, 1.0)  # Cap at 1.0
 
-    def should_allow_correlated_trading(self, symbol1: str, symbol2: str, 
-                                       market_conditions: Dict = None) -> Tuple[bool, str]:
+    def _calculate_currency_exposure(self, open_positions: List[str]) -> Dict[str, float]:
+        """
+        Calculate current exposure to each currency across all open positions
+
+        Args:
+            open_positions: List of currently open position symbols
+
+        Returns:
+            Dict[str, float]: Currency exposure levels (normalized 0-1)
+        """
+        exposure = defaultdict(float)
+        total_positions = len(open_positions)
+
+        if total_positions == 0:
+            return dict(exposure)
+
+        # Count positions per currency
+        for symbol in open_positions:
+            currencies = self._get_currencies(symbol)
+            for currency in currencies:
+                exposure[currency] += 1.0 / total_positions
+
+        # Normalize to 0-1 scale (1.0 = all positions in this currency)
+        for currency in exposure:
+            exposure[currency] = min(exposure[currency], 1.0)
+
+        return dict(exposure)
+
+    def _get_currency_exposure_multiplier(self, new_currencies: Set[str], current_exposure: Dict[str, float]) -> float:
+        """
+        Calculate size multiplier based on currency exposure limits
+
+        Args:
+            new_currencies: Currencies involved in the new position
+            current_exposure: Current exposure levels for each currency
+
+        Returns:
+            float: Size multiplier (0.3-1.0)
+        """
+        max_exposure = 0.0
+
+        for currency in new_currencies:
+            current = current_exposure.get(currency, 0.0)
+            max_exposure = max(max_exposure, current)
+
+        # Currency exposure limits:
+        # 0.0-max_currency_exposure: No reduction (1.0 multiplier)
+        # max_currency_exposure-0.9: Moderate reduction (0.7 multiplier)
+        # 0.9-1.0: Strong reduction (0.5 multiplier)
+
+        if max_exposure >= 0.9:
+            return 0.5
+        elif max_exposure >= self.max_currency_exposure:
+            return 0.7
+        else:
+            return 1.0
+
+    def get_currency_exposure_report(self, open_positions: List[str]) -> Dict:
+        """
+        Generate a comprehensive currency exposure report
+
+        Args:
+            open_positions: List of currently open position symbols
+
+        Returns:
+            Dict: Currency exposure analysis
+        """
+        exposure = self._calculate_currency_exposure(open_positions)
+
+        report = {
+            'currency_exposure': exposure,
+            'high_exposure_currencies': [],
+            'diversification_score': 0.0,
+            'risk_assessment': 'low',
+            'recommendations': []
+        }
+
+        # Identify high exposure currencies
+        for currency, level in exposure.items():
+            if level >= 0.6:
+                report['high_exposure_currencies'].append({
+                    'currency': currency,
+                    'exposure': level,
+                    'risk_level': 'severe' if level >= 0.8 else 'high'
+                })
+
+        # Calculate diversification score (0-1, higher is better diversified)
+        if exposure:
+            avg_exposure = sum(exposure.values()) / len(exposure)
+            max_exposure = max(exposure.values())
+            report['diversification_score'] = 1.0 - (max_exposure - avg_exposure)
+        else:
+            report['diversification_score'] = 1.0
+
+        # Risk assessment
+        if report['high_exposure_currencies']:
+            report['risk_assessment'] = 'high'
+            report['recommendations'].append("Reduce exposure to high-risk currencies")
+        elif report['diversification_score'] < 0.7:
+            report['risk_assessment'] = 'medium'
+            report['recommendations'].append("Consider diversifying currency exposure")
+        else:
+            report['risk_assessment'] = 'low'
+            report['recommendations'].append("Currency exposure is well diversified")
+
+        return report
+
+    def check_correlation_diversification_limits(self, symbol: str, open_positions: List[str]) -> Tuple[bool, str]:
+        """
+        Check if opening a new position violates correlation diversification limits
+
+        Args:
+            symbol: Symbol to potentially open
+            open_positions: List of currently open position symbols
+
+        Returns:
+            Tuple[bool, str]: (allowed, reason)
+        """
+        if not open_positions:
+            return True, "No diversification limits to check"
+
+        # Check correlation groups
+        correlation_groups = self._identify_correlation_groups(open_positions + [symbol])
+
+        # Find the group this symbol would join
+        symbol_group = None
+        for group in correlation_groups:
+            if symbol in group:
+                symbol_group = group
+                break
+
+        if symbol_group and len(symbol_group) > self.correlation_group_limit:
+            return False, f"Would exceed correlation group limit ({len(symbol_group)} > {self.correlation_group_limit})"
+
+        # Check currency exposure limits
+        new_currencies = self._get_currencies(symbol)
+        current_exposure = self._calculate_currency_exposure(open_positions)
+
+        for currency in new_currencies:
+            if current_exposure.get(currency, 0.0) >= self.max_currency_exposure:  # Near maximum exposure
+                return False, f"Currency {currency} exposure too high ({current_exposure[currency]:.1%} >= {self.max_currency_exposure:.1%})"
+
+        return True, "Diversification limits satisfied"
+
+    def _identify_correlation_groups(self, symbols: List[str]) -> List[List[str]]:
+        """
+        Identify groups of highly correlated symbols
+
+        Args:
+            symbols: List of symbols to analyze
+
+        Returns:
+            List[List[str]]: Groups of correlated symbols
+        """
+        if not symbols:
+            return []
+
+        groups = []
+        processed = set()
+
+        for symbol in symbols:
+            if symbol in processed:
+                continue
+
+            # Find all symbols strongly correlated with this one
+            group = [symbol]
+            processed.add(symbol)
+
+            for other_symbol in symbols:
+                if other_symbol not in processed:
+                    corr = abs(self.get_correlation(symbol, other_symbol))
+                    if corr >= self.strong_correlation_threshold:
+                        group.append(other_symbol)
+                        processed.add(other_symbol)
+
+            if len(group) > 1:  # Only include groups with multiple symbols
+                groups.append(group)
+
+        return groups
+
+    def get_portfolio_correlation_risk(self, open_positions: List[str]) -> Dict:
+        """
+        Calculate overall portfolio correlation risk
+
+        Args:
+            open_positions: List of currently open position symbols
+
+        Returns:
+            Dict: Portfolio correlation risk assessment
+        """
+        if len(open_positions) < 2:
+            return {
+                'overall_risk': 'low',
+                'correlation_score': 0.0,
+                'diversification_score': 1.0,
+                'recommendations': ['Add more positions for better diversification']
+            }
+
+        # Calculate average pairwise correlation
+        correlations = []
+        for i, symbol1 in enumerate(open_positions):
+            for symbol2 in open_positions[i+1:]:
+                corr = abs(self.get_correlation(symbol1, symbol2))
+                correlations.append(corr)
+
+        avg_correlation = np.mean(correlations) if correlations else 0.0
+        max_correlation = max(correlations) if correlations else 0.0
+
+        # Calculate diversification score
+        diversification_score = 1.0 - avg_correlation
+
+        # Currency exposure analysis
+        exposure_report = self.get_currency_exposure_report(open_positions)
+
+        # Overall risk assessment
+        risk_score = (avg_correlation * 0.4) + (max_correlation * 0.3) + ((1.0 - exposure_report['diversification_score']) * 0.3)
+
+        if risk_score >= 0.7:
+            overall_risk = 'high'
+            recommendations = [
+                'High correlation risk - consider reducing position sizes',
+                'Close some highly correlated positions',
+                'Wait for correlation divergence before adding new positions'
+            ]
+        elif risk_score >= 0.4:
+            overall_risk = 'medium'
+            recommendations = [
+                'Moderate correlation risk - monitor closely',
+                'Consider position size reductions for correlated pairs'
+            ]
+        else:
+            overall_risk = 'low'
+            recommendations = [
+                'Low correlation risk - normal trading parameters apply'
+            ]
+
+        return {
+            'overall_risk': overall_risk,
+            'correlation_score': avg_correlation,
+            'max_correlation': max_correlation,
+            'diversification_score': diversification_score,
+            'currency_exposure_risk': exposure_report['risk_assessment'],
+            'risk_score': risk_score,
+            'recommendations': recommendations
+        }
         """
         Determine if two correlated symbols should be allowed to trade simultaneously
 

@@ -7,7 +7,7 @@ import logging
 import MetaTrader5 as mt5  # type: ignore
 import sqlite3
 import os
-from datetime import datetime, UTC
+from datetime import datetime, UTC, time
 from typing import Dict, Optional, Tuple
 
 # Set up logger
@@ -71,6 +71,18 @@ class RiskManager:
         logger.info(f"Risk Manager initialized with ${self.risk_per_trade} risk per trade, max_positions={self.max_positions}")
         logger.info(f"Daily trade limit: {self.max_trades_per_symbol_per_day} trade per symbol per day")
         logger.info(f"Max spread: {self.max_spread} pips, Cooldown: {self.cooldown_minutes} minutes")
+    
+    def _parse_time_string(self, time_str: str) -> time:
+        """Parse time string in HH:MM format to time object"""
+        try:
+            if isinstance(time_str, str) and ':' in time_str:
+                hours, minutes = map(int, time_str.split(':'))
+                return time(hours, minutes)
+            # Fallback
+            return time(22, 0)
+        except (ValueError, AttributeError):
+            logger.warning(f"Invalid time string '{time_str}', using fallback 22:00")
+            return time(22, 0)
     
     def _load_daily_trade_counts(self):
         """Load daily trade counts from database for persistence across restarts"""
@@ -754,10 +766,14 @@ class RiskManager:
         if time_success:
             from datetime import time
             current_time_obj = datetime.fromtimestamp(current_timestamp, tz=UTC).time()
-            exit_cutoff_time = time(22, 0)  # 22:00 MT5 server time - no trading after this
+            
+            # Get exit cutoff time from config
+            time_config = self.config.get('time_restrictions', {}).get('mt5_trading_times', {})
+            exit_cutoff_str = time_config.get('exit_cutoff_time', '22:00')
+            exit_cutoff_time = self._parse_time_string(exit_cutoff_str)
             
             if current_time_obj >= exit_cutoff_time:
-                reason = f"{symbol}: Trading not allowed after 22:00 MT5 server time (current: {current_time_obj.strftime('%H:%M')})"
+                reason = f"{symbol}: Trading not allowed after {exit_cutoff_str} MT5 server time (current: {current_time_obj.strftime('%H:%M')})"
                 logger.info(reason)
                 return False, reason
         
@@ -766,10 +782,14 @@ class RiskManager:
         if time_success:
             from datetime import time
             current_time_obj = datetime.fromtimestamp(current_timestamp, tz=UTC).time()
-            entry_cutoff_time = time(1, 0)  # 01:00 MT5 server time
+            
+            # Get entry cutoff time from config
+            time_config = self.config.get('time_restrictions', {}).get('mt5_trading_times', {})
+            entry_cutoff_str = time_config.get('entry_cutoff_time', '01:00')
+            entry_cutoff_time = self._parse_time_string(entry_cutoff_str)
             
             if current_time_obj < entry_cutoff_time:
-                reason = f"{symbol}: Trading not allowed before 01:00 MT5 server time (current: {current_time_obj.strftime('%H:%M')})"
+                reason = f"{symbol}: Trading not allowed before {entry_cutoff_str} MT5 server time (current: {current_time_obj.strftime('%H:%M')})"
                 logger.info(reason)
                 return False, reason
         else:

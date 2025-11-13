@@ -42,6 +42,9 @@ class TradingOrchestrator:
         self.adaptive_learning = app.adaptive_learning
         self.reinforcement_agent = app.reinforcement_agent
         self.time_manager = app.time_manager
+        self.schedule_manager = getattr(app, 'schedule_manager', None)
+        if self.schedule_manager is None:
+            self.logger.warning("ScheduleManager not available - schedule-based features will be disabled")
         self.magic_number = app.magic_number
         self.session_stats = app.session_stats
         self.learning_enabled = app.learning_enabled
@@ -69,6 +72,29 @@ class TradingOrchestrator:
 
                 # 1. Check for time-based closure FIRST (always check after 22:00)
                 await self.check_time_based_closure()
+
+                # 1.5. Check for force close (schedule-based)
+                if hasattr(self.app, 'schedule_manager') and self.app.schedule_manager:
+                    if self.app.schedule_manager.should_force_close_all():
+                        self.logger.info("Force close time reached - closing all positions and cancelling orders")
+                        # Close all positions
+                        if self.trading_engine and hasattr(self.trading_engine, 'close_all_positions'):
+                            try:
+                                close_method = self.trading_engine.close_all_positions
+                                if asyncio.iscoroutinefunction(close_method):
+                                    await close_method()
+                                else:
+                                    loop = asyncio.get_event_loop()
+                                    await loop.run_in_executor(None, close_method)
+                            except Exception as e:
+                                self.logger.error(f"Error closing positions during force close: {e}")
+
+                        # Cancel all pending orders
+                        await self._cancel_all_pending_orders_for_closure()
+
+                        # Sleep for 5 minutes to avoid immediate restart
+                        await asyncio.sleep(300)
+                        continue
 
                 # 2. Log active positions every 6 loops (60 seconds)
                 if loop_count - last_position_log >= 6:
@@ -118,11 +144,20 @@ class TradingOrchestrator:
                         self.logger.debug(f"[{symbol}] Cannot trade: {reason}")
                         continue
 
+                    # Check if symbol is within trading hours
+                    if hasattr(self.app, 'schedule_manager') and self.app.schedule_manager:
+                        if not self.app.schedule_manager.can_trade_symbol(symbol):
+                            self.logger.debug(f"[{symbol}] Outside trading hours: {self.app.schedule_manager.get_next_trading_time(symbol)}")
+                            continue
+
                     # Check for existing pending orders - prevent duplicates
                     existing_orders = mt5.orders_get(symbol=symbol)
                     if existing_orders and len(existing_orders) > 0:
-                        self.logger.debug(f"[{symbol}] Skipping - already has {len(existing_orders)} pending order(s)")
-                        continue
+                        # Filter to only our system's orders
+                        our_orders = [order for order in existing_orders if hasattr(order, 'magic') and order.magic == self.app.magic_number]
+                        if len(our_orders) > 0:
+                            self.logger.debug(f"[{symbol}] Skipping - already has {len(our_orders)} pending order(s) from our system")
+                            continue
 
                     # Check for existing positions - prevent multiple positions per symbol
                     existing_positions = mt5.positions_get(symbol=symbol)
@@ -352,6 +387,11 @@ class TradingOrchestrator:
             # Check learning thread health every hour
             if self.adaptive_learning and loop_count % (360 * 6) == 0:
                 await self._check_learning_thread_health()
+
+            # Log schedule status every hour
+            if loop_count % (360 * 6) == 0:
+                if hasattr(self.app, 'schedule_manager') and self.app.schedule_manager:
+                    self.app.schedule_manager.log_schedule_status()
 
         except Exception as e:
             self.logger.error(f"Error in position and learning monitoring: {e}")
@@ -624,17 +664,13 @@ class TradingOrchestrator:
             holding_minutes = (
                 self.app.get_current_mt5_time() - trade_data['timestamp']).seconds // 60
 
-            # Check for immediate closure after 22:00 MT5 time ONLY if not in active session
-            current_time = self.time_manager.get_current_time()
-            current_time_only = current_time.time()
-            immediate_close_time = self.time_manager.MT5_IMMEDIATE_CLOSE_TIME
-
-            # Only close if after immediate close time AND not in an active trading session
-            if current_time_only >= immediate_close_time:
-                current_session = self.time_manager.get_current_session()
-                # Don't close if we're in Sydney or Tokyo sessions (active after 22:00)
-                if current_session not in ['sydney', 'tokyo']:
-                    await self._close_position_immediately(ticket, trade_data, immediate_close_time)
+            # Check if symbol is outside its optimal trading hours
+            if self.schedule_manager and hasattr(position, 'symbol'):
+                symbol = position.symbol
+                if not self.schedule_manager.can_trade_symbol(symbol):
+                    schedule_info = self.schedule_manager.get_schedule_info(symbol)
+                    self.logger.info(f"Position {ticket} ({symbol}) outside trading hours ({schedule_info}) - closing")
+                    await self._close_position_immediately(ticket, trade_data, "schedule_end")
                     return
 
             # No other time-based closures - only SL/TP or manual closure
@@ -797,16 +833,19 @@ class TradingOrchestrator:
         self.logger.info(f"Correlation monitoring: {symbol} correlation with {correlated_symbol} is now {correlation:.2f}")
 
     async def check_time_based_closure(self):
-        """Check if positions should be closed based on time - always check after 22:00"""
+        """Check if positions should be closed based on symbol schedules"""
         try:
-            # Use TimeManager for consistent time handling
-            should_close, reason = self.time_manager.should_close_positions()
+            # Check if schedule_manager is available
+            if not hasattr(self, 'schedule_manager') or self.schedule_manager is None:
+                self.logger.debug("ScheduleManager not available for time-based closure check")
+                return
 
-            if should_close:
-                self.logger.info(f"Time-based closure triggered - closing all positions: {reason}")
-                self.app._last_closure_date = self.time_manager._last_closure_date  # Sync with TimeManager
+            # Check if it's time for global force close (23:45 server time)
+            if self.schedule_manager.should_force_close_all():
+                self.logger.info("Global force close triggered - closing all positions and cancelling pending orders")
+                self.app._last_closure_date = datetime.now().date()  # Sync with current date
 
-                # Safe async handling for close_all_positions
+                # Close all positions
                 if self.trading_engine:
                     if hasattr(self.trading_engine, 'close_all_positions'):
                         try:
@@ -822,18 +861,117 @@ class TradingOrchestrator:
                         self.logger.warning("close_all_positions method not found on trading_engine")
                 else:
                     self.logger.warning("Trading engine not initialized yet")
-            
+
+                # Cancel all pending orders for our system
+                await self._cancel_all_pending_orders_for_closure()
+
+            # ADDITIONAL CHECK: Close positions that are outside their symbol's trading hours
+            await self._check_schedule_based_closures()
+
             # ADDITIONAL CHECK: Close orphaned positions that missed their closure time
             await self._check_orphaned_positions()
 
         except Exception as e:
             self.logger.error(f"Error in time-based closure: {e}")
 
+    async def _check_schedule_based_closures(self):
+        """Check and close positions that are outside their symbol's optimal trading hours"""
+        try:
+            if not self.schedule_manager:
+                self.logger.warning("Schedule manager not available for schedule-based closures")
+                return
+
+            # Get all positions
+            positions = mt5.positions_get()
+            if positions is None:
+                positions = []
+
+            # Filter to only our system's positions
+            our_positions = [pos for pos in positions if hasattr(pos, 'magic') and pos.magic == self.app.magic_number]
+
+            closed_count = 0
+            for position in our_positions:
+                symbol = position.symbol
+
+                # Check if this symbol can still be traded
+                if not self.schedule_manager.can_trade_symbol(symbol):
+                    # Symbol is outside trading hours - close the position
+                    try:
+                        # Get trade data for this position
+                        trade_data = self.app.get_trade_data(position.ticket)
+                        if not trade_data:
+                            self.logger.warning(f"No trade data found for position {position.ticket}, skipping schedule closure")
+                            continue
+
+                        schedule_info = self.schedule_manager.get_schedule_info(symbol)
+                        self.logger.info(f"Schedule-based closure: {symbol} position {position.ticket} outside trading hours ({schedule_info})")
+
+                        await self._close_position_immediately(position.ticket, trade_data, "schedule_end")
+                        closed_count += 1
+
+                    except Exception as e:
+                        self.logger.error(f"Error closing position {position.ticket} for schedule: {e}")
+
+            if closed_count > 0:
+                self.logger.info(f"Schedule-based closures: Closed {closed_count} positions outside trading hours")
+
+            # Also cancel pending orders for symbols outside trading hours
+            await self._cancel_pending_orders_outside_schedule()
+
+        except Exception as e:
+            self.logger.error(f"Error in schedule-based closures: {e}")
+
+    async def _cancel_pending_orders_outside_schedule(self):
+        """Cancel pending orders for symbols that are outside their trading hours"""
+        try:
+            if not self.schedule_manager:
+                return
+
+            # Get all pending orders
+            orders = mt5.orders_get()
+            if orders is None:
+                orders = []
+
+            # Filter to only our system's orders
+            our_orders = [order for order in orders if hasattr(order, 'magic') and order.magic == self.app.magic_number]
+
+            cancelled_count = 0
+            for order in our_orders:
+                symbol = order.symbol
+
+                # Check if this symbol can still be traded
+                if not self.schedule_manager.can_trade_symbol(symbol):
+                    try:
+                        # Cancel the order
+                        request = {
+                            "action": mt5.TRADE_ACTION_REMOVE,
+                            "order": order.ticket
+                        }
+
+                        result = mt5.order_send(request)
+                        if result and result.retcode == mt5.TRADE_RETCODE_DONE:
+                            cancelled_count += 1
+                            schedule_info = self.schedule_manager.get_schedule_info(symbol)
+                            self.logger.info(f"Cancelled pending order outside schedule: {symbol} ticket {order.ticket} ({schedule_info})")
+                        else:
+                            error_code = getattr(result, 'retcode', 'Unknown') if result else 'No result'
+                            self.logger.error(f"Failed to cancel order {order.ticket} outside schedule: retcode {error_code}")
+
+                    except Exception as e:
+                        self.logger.error(f"Error cancelling order {order.ticket} outside schedule: {e}")
+
+            if cancelled_count > 0:
+                self.logger.info(f"Schedule-based cancellations: Cancelled {cancelled_count} pending orders outside trading hours")
+
+        except Exception as e:
+            self.logger.error(f"Error cancelling pending orders outside schedule: {e}")
+
     async def _check_orphaned_positions(self):
         """Check for positions that should have been closed but were missed (e.g., due to system restart)"""
         try:
-            # Get current MT5 time
-            current_time = self.time_manager.get_current_time()
+            if not self.schedule_manager:
+                self.logger.warning("Schedule manager not available for orphaned position check")
+                return
 
             # Get all positions
             positions = mt5.positions_get()
@@ -843,47 +981,79 @@ class TradingOrchestrator:
             orphaned_positions = []
             now = datetime.now()
 
-            # Today's closure time (22:00)
-            today_closure = now.replace(hour=22, minute=0, second=0, microsecond=0)
-
-            # Yesterday's closure time (22:00 yesterday)
-            yesterday_closure = today_closure - timedelta(days=1)
-
             for position in positions:
                 if hasattr(position, 'magic') and position.magic == self.magic_number:
+                    symbol = position.symbol
                     open_time = datetime.fromtimestamp(position.time)
 
-                    # Determine if this position is orphaned
-                    is_orphaned = False
-
-                    if now.hour >= 22:
-                        # After 22:00 today - close anything opened before 22:00 today
-                        if open_time < today_closure:
-                            is_orphaned = True
-                            reason = f"opened at {open_time.strftime('%H:%M:%S')}, past today's 22:00 closure"
-                    else:
-                        # Before 22:00 today - close anything from yesterday or earlier
-                        if open_time < yesterday_closure:
-                            is_orphaned = True
-                            age_hours = (now - open_time).total_seconds() / 3600
-                            reason = f"opened {age_hours:.1f}h ago, missed yesterday's 22:00 closure"
-
-                    if is_orphaned:
+                    # Check if this symbol is currently outside trading hours
+                    if not self.schedule_manager.can_trade_symbol(symbol):
+                        # Position is orphaned - opened when symbol was tradable but now outside hours
+                        schedule_info = self.schedule_manager.get_schedule_info(symbol)
+                        age_hours = (now - open_time).total_seconds() / 3600
+                        reason = f"opened {age_hours:.1f}h ago when {symbol} was tradable, now outside schedule ({schedule_info})"
                         orphaned_positions.append((position, reason))
 
-            if orphaned_positions:
-                self.logger.warning(f"Found {len(orphaned_positions)} orphaned positions")
+            # Close orphaned positions
+            for position, reason in orphaned_positions:
+                try:
+                    # Get trade data for this position
+                    trade_data = self.app.get_trade_data(position.ticket)
+                    if not trade_data:
+                        self.logger.warning(f"No trade data found for orphaned position {position.ticket}, skipping")
+                        continue
 
-                for pos, reason in orphaned_positions:
-                    self.logger.info(f"Force closing orphaned position: {pos.symbol} ticket {pos.ticket} ({reason})")
-                    close_result = await self.trading_engine.close_position_by_ticket(pos.ticket)
-                    if close_result:
-                        self.logger.info(f"Successfully closed orphaned position {pos.symbol} ticket {pos.ticket}")
-                    else:
-                        self.logger.error(f"Failed to close orphaned position {pos.symbol} ticket {pos.ticket}")
+                    self.logger.info(f"Closing orphaned position: {position.symbol} ticket {position.ticket} - {reason}")
+                    await self._close_position_immediately(position.ticket, trade_data, "orphaned")
+
+                except Exception as e:
+                    self.logger.error(f"Error closing orphaned position {position.ticket}: {e}")
+
+            if orphaned_positions:
+                self.logger.info(f"Closed {len(orphaned_positions)} orphaned positions")
 
         except Exception as e:
             self.logger.error(f"Error checking orphaned positions: {e}")
+
+    async def _cancel_all_pending_orders_for_closure(self):
+        """Cancel all pending orders for our system during time-based closure"""
+        try:
+            # Get all pending orders
+            orders = mt5.orders_get()
+            if orders is None:
+                orders = []
+
+            # Filter to only our system's orders
+            our_orders = [order for order in orders if hasattr(order, 'magic') and order.magic == self.app.magic_number]
+
+            if not our_orders:
+                self.logger.info("No pending orders to cancel during closure")
+                return
+
+            cancelled_count = 0
+            for order in our_orders:
+                try:
+                    # Cancel the order
+                    request = {
+                        "action": mt5.TRADE_ACTION_REMOVE,
+                        "order": order.ticket
+                    }
+
+                    result = mt5.order_send(request)
+                    if result and result.retcode == mt5.TRADE_RETCODE_DONE:
+                        cancelled_count += 1
+                        self.logger.info(f"Cancelled pending order during closure: {order.symbol} ticket {order.ticket} (type: {order.type})")
+                    else:
+                        error_code = getattr(result, 'retcode', 'Unknown') if result else 'No result'
+                        self.logger.error(f"Failed to cancel order {order.ticket} during closure: retcode {error_code}")
+
+                except Exception as e:
+                    self.logger.error(f"Error cancelling order {order.ticket} during closure: {e}")
+
+            self.logger.info(f"Time-based closure: Cancelled {cancelled_count}/{len(our_orders)} pending orders")
+
+        except Exception as e:
+            self.logger.error(f"Error cancelling pending orders during closure: {e}")
 
     async def _log_active_positions(self):
         """Log all currently active positions with detailed metrics"""

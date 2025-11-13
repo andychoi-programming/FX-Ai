@@ -1,0 +1,268 @@
+"""
+FX-Ai Schedule Manager
+Manages optimal trading hours for each symbol
+All times in MT5 SERVER time (GMT+2) - NO timezone conversions!
+"""
+
+import json
+import logging
+from datetime import datetime
+from pathlib import Path
+
+
+class ScheduleManager:
+    """
+    Manages trading schedules for all 30 symbols
+    All times in SERVER time only - what MT5 shows!
+    """
+
+    def __init__(self, config_path="config/symbol_schedules.json"):
+        """
+        Initialize schedule manager
+
+        Args:
+            config_path: Path to JSON config file with schedules
+        """
+        self.logger = logging.getLogger(__name__)
+        self.config_path = config_path
+        self.schedules = {}
+        self.global_settings = {}
+
+        # Load schedules from config file
+        self._load_schedules()
+
+        self.logger.info(f"ScheduleManager initialized with {len(self.schedules)} symbol schedules")
+
+    def _load_schedules(self):
+        """Load schedules from JSON config file"""
+        try:
+            config_file = Path(self.config_path)
+
+            if not config_file.exists():
+                self.logger.error(f"Config file not found: {self.config_path}")
+                self._use_default_schedules()
+                return
+
+            with open(config_file, 'r') as f:
+                config = json.load(f)
+
+            self.global_settings = config.get('global_settings', {})
+            self.schedules = config.get('symbol_schedules', {})
+
+            self.logger.info(f"Loaded schedules for {len(self.schedules)} symbols")
+
+        except Exception as e:
+            self.logger.error(f"Error loading schedules: {e}")
+            self._use_default_schedules()
+
+    def _use_default_schedules(self):
+        """Fallback to default schedules if config not found"""
+        self.logger.warning("Using default schedules (08:00-23:00 for all symbols)")
+
+        self.global_settings = {
+            'enable_24hour_trading': True,
+            'force_close_hour': 23,
+            'force_close_minute': 55
+        }
+
+        # Default: 08:00-23:00 for all symbols
+        default_schedule = {'start_hour': 8, 'end_hour': 23}
+
+        symbols = [
+            'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD',
+            'EURAUD', 'EURCAD', 'EURCHF', 'EURGBP', 'EURJPY', 'EURNZD',
+            'GBPAUD', 'GBPCAD', 'GBPCHF', 'GBPJPY', 'GBPNZD',
+            'AUDCAD', 'AUDCHF', 'AUDJPY', 'AUDNZD',
+            'NZDCAD', 'NZDCHF', 'NZDJPY',
+            'CADCHF', 'CADJPY', 'CHFJPY',
+            'XAUUSD', 'XAGUSD'
+        ]
+
+        for symbol in symbols:
+            self.schedules[symbol] = default_schedule
+
+    def can_trade_symbol(self, symbol):
+        """
+        Check if we can trade this symbol RIGHT NOW
+
+        Args:
+            symbol: Trading symbol (e.g., 'EURUSD', 'GBPJPY')
+
+        Returns:
+            bool: True if symbol can be traded now, False otherwise
+        """
+        # Get current time (server time from system)
+        now = datetime.now()
+        current_hour = now.hour
+        current_minute = now.minute
+
+        # Check if symbol has a schedule
+        if symbol not in self.schedules:
+            self.logger.warning(f"No schedule found for {symbol}, using default 08:00-23:00")
+            return 8 <= current_hour < 23
+
+        schedule = self.schedules[symbol]
+        start_hour = schedule['start_hour']
+        end_hour = schedule['end_hour']
+
+        # Handle schedules that cross midnight
+        # Example: start=22, end=6 means trade from 22:00 to 06:00 next day
+        if start_hour > end_hour:
+            # Crosses midnight
+            can_trade = (current_hour >= start_hour) or (current_hour < end_hour)
+        else:
+            # Normal schedule within same day
+            can_trade = start_hour <= current_hour < end_hour
+
+        return can_trade
+
+    def should_force_close_all(self):
+        """
+        Check if it's time to force close all positions
+
+        Returns:
+            bool: True if should close all positions
+        """
+        if not self.global_settings.get('enable_24hour_trading', True):
+            # 24-hour trading disabled, use simple close
+            return datetime.now().hour == 23
+
+        # Force close at specific time (default: 23:45 server)
+        force_hour = self.global_settings.get('force_close_hour', 23)
+        force_minute = self.global_settings.get('force_close_minute', 45)
+
+        now = datetime.now()
+
+        # Close during the force close window (e.g., 23:45-23:59)
+        if now.hour == force_hour and now.minute >= force_minute:
+            return True
+
+        return False
+
+    def get_schedule_info(self, symbol):
+        """
+        Get human-readable schedule info for a symbol
+
+        Args:
+            symbol: Trading symbol
+
+        Returns:
+            str: Schedule description
+        """
+        if symbol not in self.schedules:
+            return "No schedule (default: 08:00-23:00 server)"
+
+        schedule = self.schedules[symbol]
+        start = f"{schedule['start_hour']:02d}:00"
+        end = f"{schedule['end_hour']:02d}:00"
+        comment = schedule.get('comment', '')
+
+        return f"{start}-{end} server | {comment}"
+
+    def get_active_symbols_now(self, all_symbols):
+        """
+        Get list of symbols that can be traded right now
+
+        Args:
+            all_symbols: List of all available symbols
+
+        Returns:
+            list: Symbols that are currently in their trading hours
+        """
+        active = []
+
+        for symbol in all_symbols:
+            if self.can_trade_symbol(symbol):
+                active.append(symbol)
+
+        return active
+
+    def get_schedule_summary(self):
+        """
+        Get summary of current schedule status
+
+        Returns:
+            dict: Summary information
+        """
+        now = datetime.now()
+        current_hour = now.hour
+
+        total_symbols = len(self.schedules)
+        active_symbols = sum(1 for symbol in self.schedules if self.can_trade_symbol(symbol))
+
+        return {
+            'current_server_time': f"{current_hour:02d}:{now.minute:02d}",
+            'total_symbols': total_symbols,
+            'active_symbols': active_symbols,
+            'inactive_symbols': total_symbols - active_symbols,
+            'force_close_enabled': self.global_settings.get('enable_24hour_trading', True),
+            'force_close_time': f"{self.global_settings.get('force_close_hour', 23):02d}:{self.global_settings.get('force_close_minute', 55):02d}"
+        }
+
+    def log_schedule_status(self):
+        """Log current schedule status"""
+        summary = self.get_schedule_summary()
+
+        self.logger.info("=" * 60)
+        self.logger.info(f"SCHEDULE STATUS (Server Time)")
+        self.logger.info("=" * 60)
+        self.logger.info(f"Current Time: {summary['current_server_time']} server")
+        self.logger.info(f"Active Symbols: {summary['active_symbols']}/{summary['total_symbols']}")
+        self.logger.info(f"Force Close: {summary['force_close_time']} server")
+        self.logger.info("=" * 60)
+
+    def get_next_trading_time(self, symbol):
+        """
+        Get when this symbol will next be tradeable
+
+        Args:
+            symbol: Trading symbol
+
+        Returns:
+            str: Description of next trading time
+        """
+        if self.can_trade_symbol(symbol):
+            return "TRADING NOW"
+
+        if symbol not in self.schedules:
+            return "Unknown (no schedule)"
+
+        schedule = self.schedules[symbol]
+        start_hour = schedule['start_hour']
+        current_hour = datetime.now().hour
+
+        if current_hour < start_hour:
+            hours_until = start_hour - current_hour
+            return f"Opens in {hours_until}h at {start_hour:02d}:00 server"
+        else:
+            hours_until = (24 - current_hour) + start_hour
+            return f"Opens in {hours_until}h at {start_hour:02d}:00 server (tomorrow)"
+
+
+# ===== Convenience Functions =====
+
+def create_schedule_manager(config_path="config/symbol_schedules.json"):
+    """
+    Factory function to create schedule manager
+
+    Args:
+        config_path: Path to config file
+
+    Returns:
+        ScheduleManager: Initialized schedule manager
+    """
+    return ScheduleManager(config_path)
+
+
+def can_trade_now(symbol, schedule_manager):
+    """
+    Quick check if symbol can be traded now
+
+    Args:
+        symbol: Trading symbol
+        schedule_manager: ScheduleManager instance
+
+    Returns:
+        bool: True if can trade
+    """
+    return schedule_manager.can_trade_symbol(symbol)
