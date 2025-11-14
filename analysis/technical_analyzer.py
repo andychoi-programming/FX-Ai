@@ -35,6 +35,26 @@ class TechnicalAnalyzer:
         self.rsi_period = config.get('rsi_period', 14)
         self.atr_period = config.get('atr_period', 14)
 
+        # Data freshness tracking
+        self.last_update = None
+
+    def is_data_fresh(self, max_age_minutes: int = 60) -> bool:
+        """
+        Prevent trading on stale data
+
+        Args:
+            max_age_minutes: Maximum age of data in minutes
+
+        Returns:
+            bool: True if data is fresh
+        """
+        if not self.last_update:
+            return False
+
+        from datetime import datetime
+        age = (datetime.now() - self.last_update).total_seconds() / 60
+        return age < max_age_minutes
+
     def analyze_symbol(self, symbol: str, data: Dict[str, pd.DataFrame]) -> Dict:
         """
         Perform complete technical analysis on symbol data from multiple timeframes

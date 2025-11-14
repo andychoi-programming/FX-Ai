@@ -49,6 +49,45 @@ class MLPredictor:
         self.model_dir = config.get('model_dir', 'models')
         os.makedirs(self.model_dir, exist_ok=True)
 
+        # Feature consistency tracking
+        self.expected_features = [
+            'returns_1d', 'returns_5d', 'volatility_5d', 'volatility_20d', 'volume_ratio',
+            'rsi_norm', 'vwap_position', 'bb_position', 'macd_signal', 'trend_strength',
+            'momentum', 'support_resistance', 'regime_score'
+        ]
+
+    def validate_feature_consistency(self, features: Union[pd.DataFrame, Dict]) -> bool:
+        """
+        Ensure live features match training structure
+
+        Args:
+            features: Features to validate (DataFrame or dict)
+
+        Returns:
+            bool: True if features are consistent
+        """
+        try:
+            if isinstance(features, pd.DataFrame):
+                actual_features = list(features.columns)
+            elif isinstance(features, dict):
+                actual_features = list(features.keys())
+            else:
+                self.logger.error("Features must be DataFrame or dict")
+                return False
+
+            missing = set(self.expected_features) - set(actual_features)
+            extra = set(actual_features) - set(self.expected_features)
+
+            if missing or extra:
+                self.logger.warning(f"Feature mismatch! Missing: {missing}, Extra: {extra}")
+                return False
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error validating feature consistency: {e}")
+            return False
+
     def predict_signal(self, symbol: str, data: pd.DataFrame,
                       technical_signals: Dict, timeframe: str = 'H1') -> Dict:
         """

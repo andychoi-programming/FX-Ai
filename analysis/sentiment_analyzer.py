@@ -34,6 +34,9 @@ class SentimentAnalyzer:
         self.sentiment_history = {}
         self.retail_sentiment = {}
 
+        # Data freshness tracking
+        self.last_update = None
+
         # Keywords for sentiment analysis
         self.bullish_keywords = [
             'bullish', 'buy', 'long', 'up', 'rise', 'gain', 'strong', 'positive',
@@ -44,6 +47,22 @@ class SentimentAnalyzer:
             'bearish', 'sell', 'short', 'down', 'fall', 'drop', 'weak', 'negative',
             'decline', 'recession', 'pessimism', 'fear', 'crash'
         ]
+
+    def is_data_fresh(self, max_age_minutes: int = 60) -> bool:
+        """
+        Prevent trading on stale data
+
+        Args:
+            max_age_minutes: Maximum age of data in minutes
+
+        Returns:
+            bool: True if data is fresh
+        """
+        if not self.last_update:
+            return False
+
+        age = (datetime.now() - self.last_update).total_seconds() / 60
+        return age < max_age_minutes
 
     async def analyze_sentiment(self, symbol: str, news_data: Optional[List[Dict]] = None,
                                social_data: Optional[List[Dict]] = None) -> Dict:
@@ -465,23 +484,32 @@ class SentimentAnalyzer:
             float: Sentiment score between 0 and 1
         """
         try:
-            # Create a new event loop if one doesn't exist
+            # Use asyncio.create_task for non-blocking sentiment updates if in async context
             try:
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
-                    # If loop is running, we need to handle this differently
-                    # For now, return a default neutral score
-                    return 0.5
+                    # Create a task for async execution and return cached/default value
+                    asyncio.create_task(self._async_analyze_sentiment(symbol))
+                    # Return last cached sentiment or neutral
+                    return getattr(self, '_last_sentiment', {}).get(symbol, 0.5)
             except RuntimeError:
-                # No event loop, create one
+                # No event loop, create one for synchronous execution
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
 
-            # Run the async analysis
-            result = loop.run_until_complete(self.analyze_sentiment(symbol))
+            # Run the async analysis with timeout protection
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(loop.run_until_complete, self._analyze_with_timeout(symbol))
+                result = future.result(timeout=30)  # 30 second timeout
 
             # Extract the overall sentiment score
             overall_sentiment = result.get('overall_sentiment', 0.5)
+
+            # Cache the result
+            if not hasattr(self, '_last_sentiment'):
+                self._last_sentiment = {}
+            self._last_sentiment[symbol] = overall_sentiment
 
             # Convert to 0-1 scale if needed
             if isinstance(overall_sentiment, str):
@@ -494,6 +522,35 @@ class SentimentAnalyzer:
             else:
                 return 0.5
 
+        except concurrent.futures.TimeoutError:
+            self.logger.warning(f"Sentiment analysis timeout for {symbol} - using cached/default value")
+            return getattr(self, '_last_sentiment', {}).get(symbol, 0.5)
         except Exception as e:
             self.logger.error(f"Error in synchronous sentiment analysis for {symbol}: {e}")
             return 0.5  # Return neutral sentiment on error
+
+    async def _analyze_with_timeout(self, symbol: str) -> Dict:
+        """Analyze sentiment with timeout protection"""
+        try:
+            return await asyncio.wait_for(self.analyze_sentiment(symbol), timeout=25.0)
+        except asyncio.TimeoutError:
+            self.logger.warning(f"Sentiment analysis timed out for {symbol}")
+            return {'overall_sentiment': 0.5, 'error': 'timeout'}
+        except Exception as e:
+            self.logger.error(f"Error in sentiment analysis for {symbol}: {e}")
+            return {'overall_sentiment': 0.5, 'error': str(e)}
+
+    async def _async_analyze_sentiment(self, symbol: str):
+        """Async sentiment analysis for background updates"""
+        try:
+            result = await self._analyze_with_timeout(symbol)
+            overall_sentiment = result.get('overall_sentiment', 0.5)
+
+            # Cache the result
+            if not hasattr(self, '_last_sentiment'):
+                self._last_sentiment = {}
+            self._last_sentiment[symbol] = overall_sentiment
+
+            self.logger.debug(f"Background sentiment updated for {symbol}: {overall_sentiment}")
+        except Exception as e:
+            self.logger.error(f"Error in background sentiment analysis for {symbol}: {e}")

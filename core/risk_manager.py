@@ -67,6 +67,49 @@ class RiskManager:
         
         # Check and reset daily loss if it's a new day
         self._check_and_reset_daily_loss()
+
+    def validate_position_size(self, symbol: str, lots: float, account_balance: float) -> bool:
+        """
+        Prevent catastrophic position sizing errors
+
+        Args:
+            symbol: Trading symbol
+            lots: Position size in lots
+            account_balance: Current account balance
+
+        Returns:
+            bool: True if position size is safe
+        """
+        try:
+            # Calculate position value (standard lot = 100,000 units)
+            position_value = lots * 100000
+
+            # For metals, adjust calculation
+            if "XAU" in symbol:  # Gold
+                position_value = lots * 100  # Gold is quoted per ounce
+            elif "XAG" in symbol:  # Silver
+                position_value = lots * 5000  # Silver is quoted per ounce
+
+            # Maximum position size should never exceed 5% of account
+            max_position = account_balance * 0.05
+
+            if position_value > max_position:
+                logger.error(f"Position size validation FAILED! "
+                           f"Calculated: ${position_value:,.2f}, "
+                           f"Maximum: ${max_position:,.2f}")
+                return False
+
+            # Additional check: position should not exceed 2% for high-risk pairs
+            if symbol in ['XAUUSD', 'XAGUSD', 'GBPUSD', 'EURUSD']:
+                max_high_risk = account_balance * 0.02
+                if position_value > max_high_risk:
+                    logger.warning(f"High-risk position size warning: ${position_value:,.2f} > 2% of account")
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Error validating position size: {e}")
+            return False
         
         logger.info(f"Risk Manager initialized with ${self.risk_per_trade} risk per trade, max_positions={self.max_positions}")
         logger.info(f"Daily trade limit: {self.max_trades_per_symbol_per_day} trade per symbol per day")

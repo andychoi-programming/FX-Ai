@@ -16,7 +16,8 @@ from core.trading_engine import TradingEngine
 from core.risk_manager import RiskManager
 from ai.adaptive_learning_manager import AdaptiveLearningManager
 from ai.reinforcement_learning_agent import RLAgent
-from utils.time_manager import TimeManager
+from utils.performance_monitor import monitor_performance_async
+from utils.circuit_breaker import CircuitBreaker
 
 
 class TradingOrchestrator:
@@ -49,11 +50,19 @@ class TradingOrchestrator:
         self.session_stats = app.session_stats
         self.learning_enabled = app.learning_enabled
 
+        # Circuit breakers for external services
+        self.sentiment_circuit_breaker = CircuitBreaker(failure_threshold=5, timeout=600)  # 10 min timeout
+        self.ml_circuit_breaker = CircuitBreaker(failure_threshold=3, timeout=300)  # 5 min timeout
+
     def set_trading_engine(self, trading_engine):
         """Set the trading engine after all components are initialized"""
         self.trading_engine = trading_engine
-        self.logger.info("Trading engine set in orchestrator")
 
+    def set_trading_engine(self, trading_engine):
+        """Set the trading engine after all components are initialized"""
+        self.trading_engine = trading_engine
+
+    @monitor_performance_async
     async def trading_loop(self):
         """
         Main trading loop that orchestrates all trading activities.
@@ -451,6 +460,21 @@ class TradingOrchestrator:
                     self.adaptive_learning.auto_learn_from_previous_day_logs()
                 except Exception as e:
                     self.logger.error(f"Error in auto log learning: {e}")
+
+            # Check for model retraining (every 24 hours)
+            if self.adaptive_learning and loop_count % (360 * 24) == 0:
+                try:
+                    # Check if retraining is needed
+                    if hasattr(self.adaptive_learning, 'learning_scheduler'):
+                        should_retrain = self.adaptive_learning.learning_scheduler.check_retrain_schedule()
+                        if should_retrain:
+                            self.logger.info("Model retraining scheduled - starting retraining process")
+                            # Update ML models if available
+                            if hasattr(self.adaptive_learning, 'ml_predictor') and self.adaptive_learning.ml_predictor:
+                                self.adaptive_learning.ml_predictor.update_models()
+                                self.logger.info("ML models updated successfully")
+                except Exception as e:
+                    self.logger.error(f"Error in model retraining check: {e}")
 
         except Exception as e:
             self.logger.error(f"Error maintaining learning systems: {e}")
