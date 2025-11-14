@@ -89,18 +89,22 @@ class ScheduleManager:
         for symbol in symbols:
             self.schedules[symbol] = default_schedule
 
-    def can_trade_symbol(self, symbol):
+    def can_trade_symbol(self, symbol, current_time=None):
         """
         Check if we can trade this symbol RIGHT NOW
 
         Args:
             symbol: Trading symbol (e.g., 'EURUSD', 'GBPJPY')
+            current_time: Optional datetime object to use instead of now()
 
         Returns:
             bool: True if symbol can be traded now, False otherwise
         """
         # Get current time (server time from system)
-        now = datetime.now()
+        if current_time is None:
+            now = datetime.now()
+        else:
+            now = current_time
         current_hour = now.hour
         current_minute = now.minute
 

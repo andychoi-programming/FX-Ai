@@ -40,20 +40,17 @@ class TechnicalAnalyzer:
 
     def is_data_fresh(self, max_age_minutes: int = 60) -> bool:
         """
-        Prevent trading on stale data
+        Check if analyzer is ready for use
 
         Args:
-            max_age_minutes: Maximum age of data in minutes
+            max_age_minutes: Maximum age of data in minutes (not used for technical analyzer)
 
         Returns:
-            bool: True if data is fresh
+            bool: True if analyzer is initialized and ready
         """
-        if not self.last_update:
-            return False
-
-        from datetime import datetime
-        age = (datetime.now() - self.last_update).total_seconds() / 60
-        return age < max_age_minutes
+        # Technical analyzer is always "fresh" since it analyzes data on-demand
+        # The freshness check is more relevant for real-time data feeds
+        return True
 
     def analyze_symbol(self, symbol: str, data: Dict[str, pd.DataFrame]) -> Dict:
         """

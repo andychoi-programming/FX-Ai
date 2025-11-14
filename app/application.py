@@ -7,7 +7,7 @@ import asyncio
 import signal
 import logging
 from datetime import datetime, timezone
-from typing import Dict
+from typing import Dict, Optional
 from utils.logger import setup_logger
 from utils.config_loader import ConfigLoader
 from app.component_initializer import ComponentInitializer
@@ -82,6 +82,10 @@ class FXAiApplication:
             'winning_trades': 0,
             'losing_trades': 0,
             'total_profit': 0.0,
+            'symbol_performance': {},
+            'max_drawdown': 0.0,
+            'avg_win': 0.0,
+            'avg_loss': 0.0,
             'models_retrained': 0,
             'parameters_optimized': 0,
             'rl_models_saved': 0
@@ -115,6 +119,47 @@ class FXAiApplication:
         """Handle shutdown signals gracefully"""
         self.logger.info(f"Received signal {signum}, initiating shutdown...")
         self.shutdown()
+
+    def get_trade_data(self, ticket: int) -> Optional[Dict]:
+        """
+        Get trade data for a given ticket number.
+
+        Args:
+            ticket: MT5 ticket number
+
+        Returns:
+            Trade data dictionary or None if not found
+        """
+        try:
+            # Check if adaptive learning has the trade data
+            if self.adaptive_learning and hasattr(self.adaptive_learning, 'get_trade_data'):
+                return self.adaptive_learning.get_trade_data(ticket)
+
+            # Alternative: Check trading engine's active trades
+            if self.trading_engine and hasattr(self.trading_engine, 'active_trades'):
+                return self.trading_engine.active_trades.get(ticket)
+
+            # Fallback: Create minimal trade data from MT5 history
+            import MetaTrader5 as mt5
+            from datetime import datetime
+            history = mt5.history_orders_get(ticket=ticket)
+            if history and len(history) > 0:
+                order = history[0]
+                return {
+                    'ticket': ticket,
+                    'symbol': order.symbol,
+                    'direction': 'BUY' if order.type == mt5.ORDER_TYPE_BUY else 'SELL',
+                    'entry_price': order.price_open,
+                    'volume': order.volume_initial,
+                    'timestamp': datetime.fromtimestamp(order.time_setup),
+                    'closure_reason': 'unknown'
+                }
+
+            return None
+
+        except Exception as e:
+            self.logger.error(f"Error getting trade data for ticket {ticket}: {e}")
+            return None
 
     def shutdown(self):
         """Shutdown the application gracefully"""

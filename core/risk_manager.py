@@ -70,7 +70,7 @@ class RiskManager:
 
     def validate_position_size(self, symbol: str, lots: float, account_balance: float) -> bool:
         """
-        Prevent catastrophic position sizing errors
+        Validate position size based on risk management principles
 
         Args:
             symbol: Trading symbol
@@ -81,39 +81,39 @@ class RiskManager:
             bool: True if position size is safe
         """
         try:
-            # Calculate position value (standard lot = 100,000 units)
-            position_value = lots * 100000
-
-            # For metals, adjust calculation
-            if "XAU" in symbol:  # Gold
-                position_value = lots * 100  # Gold is quoted per ounce
-            elif "XAG" in symbol:  # Silver
-                position_value = lots * 5000  # Silver is quoted per ounce
-
-            # Maximum position size should never exceed 5% of account
-            max_position = account_balance * 0.05
-
-            if position_value > max_position:
+            # Calculate the actual risk amount for this position
+            stop_loss_pips = self.config.get('trading', {}).get('default_sl_pips', 20)
+            risk_amount = self.calculate_risk_for_lot_size(symbol, lots, stop_loss_pips)
+            
+            # Check that risk amount doesn't exceed reasonable limits
+            max_risk_amount = min(self.risk_per_trade * 2.1, account_balance * 0.021)  # Max 2.1x risk_per_trade or 2.1% of account
+            if risk_amount > max_risk_amount:
                 logger.error(f"Position size validation FAILED! "
-                           f"Calculated: ${position_value:,.2f}, "
-                           f"Maximum: ${max_position:,.2f}")
+                           f"Risk: ${risk_amount:.2f}, "
+                           f"Maximum: ${max_risk_amount:.2f} (2.1x risk per trade or 2.1% of account)")
                 return False
-
-            # Additional check: position should not exceed 2% for high-risk pairs
-            if symbol in ['XAUUSD', 'XAGUSD', 'GBPUSD', 'EURUSD']:
-                max_high_risk = account_balance * 0.02
-                if position_value > max_high_risk:
-                    logger.warning(f"High-risk position size warning: ${position_value:,.2f} > 2% of account")
+            
+            # Check that risk percentage of account is reasonable (max 2% per trade)
+            risk_percentage = (risk_amount / account_balance) * 100
+            if risk_percentage > 2.0:
+                logger.error(f"Position size validation FAILED! "
+                           f"Risk: {risk_percentage:.2f}% of account, "
+                           f"Maximum: 2.0% of account")
+                return False
+            
+            # Additional check: lots should not exceed reasonable maximum based on account size
+            max_lots = min(2.0, account_balance / 10000)  # Max 2 lots or account/10000
+            if lots > max_lots:
+                logger.error(f"Position size validation FAILED! "
+                           f"Lots: {lots:.2f}, "
+                           f"Maximum: {max_lots:.2f} lots")
+                return False
 
             return True
 
         except Exception as e:
             logger.error(f"Error validating position size: {e}")
             return False
-        
-        logger.info(f"Risk Manager initialized with ${self.risk_per_trade} risk per trade, max_positions={self.max_positions}")
-        logger.info(f"Daily trade limit: {self.max_trades_per_symbol_per_day} trade per symbol per day")
-        logger.info(f"Max spread: {self.max_spread} pips, Cooldown: {self.cooldown_minutes} minutes")
     
     def _parse_time_string(self, time_str: str) -> time:
         """Parse time string in HH:MM format to time object"""
@@ -292,13 +292,8 @@ class RiskManager:
                 
                 # Get conversion rate
                 if quote_currency == "JPY":
-                    # For XXX/JPY crosses
-                    usdjpy_tick = mt5.symbol_info_tick("USDJPY")  # type: ignore
-                    if usdjpy_tick:
-                        pip_value_per_lot = (0.01 * 100000) / usdjpy_tick.bid
-                    else:
-                        pip_value_per_lot = 6.5  # Fallback estimate
-                        
+                    # For XXX/JPY crosses - pip value in USD
+                    pip_value_per_lot = (0.01 * 100000) / tick.bid  # Use the cross pair price, not USDJPY
                 else:
                     # For other crosses like EURGBP
                     # Need GBP/USD rate to convert GBP pips to USD
@@ -1006,6 +1001,12 @@ class RiskManager:
                 logger.error(f"Symbol {symbol} not found")
                 return 0.0
             
+            # Get current tick for price-based calculations
+            tick = mt5.symbol_info_tick(symbol)  # type: ignore
+            if tick is None:
+                logger.error(f"Cannot get tick for {symbol}")
+                return 0.0
+            
             # Get pip value calculation (reuse logic from calculate_position_size)
             contract_size = symbol_info.trade_contract_size
             point = symbol_info.point
@@ -1021,24 +1022,49 @@ class RiskManager:
             else:
                 pip_size = point
             
-            # Calculate pip value per lot
-            if "JPY" in symbol and symbol.endswith("JPY"):
-                pip_value_per_lot = pip_size * contract_size
+            # Calculate pip value per lot using the same logic as calculate_position_size
+            if symbol.endswith("USD"):
+                # Direct pairs (EURUSD, GBPUSD, etc.)
+                pip_value_per_lot = 10.0  # $10 per pip for 1 lot
             elif symbol.startswith("USD"):
-                pip_value_per_lot = pip_size * contract_size
-            elif symbol.endswith("USD"):
-                pip_value_per_lot = pip_size * contract_size
+                # Inverse pairs (USDCHF, USDJPY, etc.)
+                if "JPY" in symbol:
+                    pip_value_per_lot = (0.01 * 100000) / tick.bid
+                else:
+                    pip_value_per_lot = (0.0001 * 100000) / tick.bid
             elif "XAU" in symbol or "GOLD" in symbol:
                 pip_value_per_lot = pip_size * contract_size  # For XAUUSD: 0.1 * 100 = $10 per pip per lot
             elif "XAG" in symbol:
                 pip_value_per_lot = pip_size * contract_size  # For XAGUSD: similar calculation
             else:
-                # Get current price for cross pairs
-                tick = mt5.symbol_info_tick(symbol)  # type: ignore
-                if tick:
-                    pip_value_per_lot = (pip_size * contract_size) / tick.bid
+                # CROSS PAIRS (EURGBP, EURJPY, GBPJPY, etc.)
+                # Need to convert through the quote currency
+                quote_currency = symbol[-3:]  # Last 3 chars (GBP, JPY, etc.)
+                
+                # Get conversion rate
+                if quote_currency == "JPY":
+                    # For XXX/JPY crosses - pip value in USD
+                    pip_value_per_lot = (0.01 * 100000) / tick.bid  # Use the cross pair price, not USDJPY
                 else:
-                    pip_value_per_lot = pip_size * contract_size
+                    # For other crosses like EURGBP
+                    # Need GBP/USD rate to convert GBP pips to USD
+                    conversion_symbol = f"{quote_currency}USD"
+                    conversion_tick = mt5.symbol_info_tick(conversion_symbol)  # type: ignore
+                    
+                    if conversion_tick and conversion_tick.bid > 0:
+                        # EURGBP pip value = 10 GBP x GBPUSD rate
+                        pip_value_per_lot = 10.0 * conversion_tick.bid
+                    else:
+                        # Fallback if can't get conversion - use reasonable estimates
+                        logger.warning(f"Can't get {conversion_symbol} rate, using estimate")
+                        if quote_currency == "CAD":
+                            pip_value_per_lot = 7.5  # CADUSD ~1.35, so 10 CAD * 1.35 = ~13.5, but use conservative estimate
+                        elif quote_currency == "CHF":
+                            pip_value_per_lot = 11.0  # CHFUSD ~0.85, so 10 CHF * 0.85 = ~8.5, but use conservative estimate
+                        elif quote_currency == "GBP":
+                            pip_value_per_lot = 13.0  # GBPUSD ~1.30
+                        else:
+                            pip_value_per_lot = 10.0  # Default estimate
             
             # Convert to account currency if needed
             account_info = mt5.account_info()  # type: ignore
