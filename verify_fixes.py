@@ -86,7 +86,7 @@ def check_database_duplicates():
             # Calculate success rate
             if total_orders > 0:
                 success_rate = (successful_orders / total_orders) * 100
-                print(".1f"
+                print(f"Success Rate: {success_rate:.1f}%")
                 if success_rate < 90:
                     print("⚠️  WARNING: Low success rate - check MT5 connection!")
                 else:
