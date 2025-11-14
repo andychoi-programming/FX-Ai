@@ -95,6 +95,8 @@ class ConfigLoader:
         except Exception as e:
             self.logger.error(f"Error loading configuration: {e}")
             self.config = self.defaults.copy()
+        
+        return self.config
 
     def save_config(self):
         """Save current configuration to file"""

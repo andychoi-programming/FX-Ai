@@ -185,6 +185,11 @@ class FXAiApplication:
             if success:
                 # Initialize trading orchestrator
                 self.trading_orchestrator = TradingOrchestrator(self)
+                
+                # Set the trading engine in the orchestrator (created after orchestrator in ComponentInitializer)
+                if hasattr(self, 'trading_engine') and self.trading_engine:
+                    self.trading_orchestrator.set_trading_engine(self.trading_engine)
+                
                 self.logger.info("All components initialized successfully")
                 return True
             else:

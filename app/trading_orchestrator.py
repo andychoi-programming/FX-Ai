@@ -49,6 +49,11 @@ class TradingOrchestrator:
         self.session_stats = app.session_stats
         self.learning_enabled = app.learning_enabled
 
+    def set_trading_engine(self, trading_engine):
+        """Set the trading engine after all components are initialized"""
+        self.trading_engine = trading_engine
+        self.logger.info("Trading engine set in orchestrator")
+
     async def trading_loop(self):
         """
         Main trading loop that orchestrates all trading activities.

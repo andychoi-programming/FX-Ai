@@ -50,7 +50,7 @@ class TradingEngine:
         self.magic_number = self.config.get('trading', {}).get('magic_number')
 
         # Initialize modular components
-        self.order_executor = OrderExecutor(mt5_connector, self.config)
+        self.order_executor = OrderExecutor(mt5_connector, self.config, risk_manager)
         self.stop_loss_manager = StopLossManager(mt5_connector, self.config)
         self.take_profit_manager = TakeProfitManager(mt5_connector, self.config)
         self.position_closer = PositionCloser(mt5_connector, self.config, self.active_positions)

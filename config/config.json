@@ -171,9 +171,9 @@
       "min_signal_strength": 0.35,
       "max_spread": 3.0,
       "min_risk_reward_ratio": 3.0,
-      "require_ml_confirmation": true,
+      "require_ml_confirmation": false,
       "require_technical_confirmation": false,
-      "_comment": "Signal must be >0.35 strength, spread <3 pips, RR >2:1, ML confirmation required"
+      "_comment": "ML disabled temporarily while models rebuild. Re-enable after 24-48 hours of trading data collected."
     },
     "stop_loss_rules": {
       "method": "atr_based",

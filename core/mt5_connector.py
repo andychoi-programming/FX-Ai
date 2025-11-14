@@ -24,7 +24,7 @@ class MT5Connector:
             server: Broker server name
             path: Path to terminal64.exe
         """
-        self.login = login
+        self.login = int(login) if login is not None else None
         self.password = password
         self.server = server
         self.path = path

@@ -84,6 +84,19 @@ class RiskManager:
             logger.warning(f"Invalid time string '{time_str}', using fallback 22:00")
             return time(22, 0)
     
+    def _get_symbol_min_rr(self, symbol: str) -> float:
+        """Get the minimum risk-reward ratio for a specific symbol"""
+        try:
+            # Get symbol-specific RR ratios from config
+            take_profit_rules = self.config.get('trading_rules', {}).get('take_profit_rules', {})
+            rr_ratios = take_profit_rules.get('rr_ratios', {})
+            
+            # Return symbol-specific ratio if available, otherwise default to 3.0
+            return rr_ratios.get(symbol, 3.0)
+        except Exception as e:
+            logger.warning(f"Error getting symbol RR ratio for {symbol}: {e}, using default 3.0")
+            return 3.0
+    
     def _load_daily_trade_counts(self):
         """Load daily trade counts from database for persistence across restarts"""
         if not self.db_path:
@@ -172,8 +185,21 @@ class RiskManager:
             # Get symbol info
             symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
-                logger.error(f"Symbol {symbol} not found")
-                return 0.01
+                logger.warning(f"Symbol {symbol} not found, using default pip values")
+                # Use default pip value per lot
+                if "XAU" in symbol:
+                    pip_value_per_lot = 10.0
+                elif "XAG" in symbol:
+                    pip_value_per_lot = 50.0
+                elif "JPY" in symbol:
+                    pip_value_per_lot = 10.0
+                else:
+                    pip_value_per_lot = 10.0
+                
+                risk_amount = risk_override if risk_override else self.risk_per_trade
+                lot_size = risk_amount / (stop_loss_pips * pip_value_per_lot)
+                lot_size = max(0.01, min(1.0, lot_size))
+                return lot_size
             
             # Use specialized calculation for metals
             if "XAU" in symbol or "XAG" in symbol:
@@ -186,8 +212,21 @@ class RiskManager:
             # Get current price for calculations
             tick = mt5.symbol_info_tick(symbol)  # type: ignore
             if tick is None:
-                logger.error(f"Cannot get tick for {symbol}")
-                return 0.01
+                logger.warning(f"Cannot get tick for {symbol}, using default calculation")
+                # Use default pip value per lot
+                if "XAU" in symbol:
+                    pip_value_per_lot = 10.0
+                elif "XAG" in symbol:
+                    pip_value_per_lot = 50.0
+                elif "JPY" in symbol:
+                    pip_value_per_lot = 10.0
+                else:
+                    pip_value_per_lot = 10.0
+                
+                risk_amount = risk_override if risk_override else self.risk_per_trade
+                lot_size = risk_amount / (stop_loss_pips * pip_value_per_lot)
+                lot_size = max(0.01, min(1.0, lot_size))
+                return lot_size
             
             # FIXED CALCULATION METHOD FOR CROSS PAIRS
             # Calculate pip value correctly for all pair types
@@ -349,12 +388,11 @@ class RiskManager:
         try:
             symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
+                logger.error(f"Cannot get symbol info for {symbol}")
                 return 0.0
             
             if stop_loss_pips is None:
-                stop_loss_pips = self.config.get('trading', {}).get('default_sl_pips')
-            
-            # Correct pip size for different symbol types
+                stop_loss_pips = 20            # Correct pip size for different symbol types
             if "XAU" in symbol:
                 pip_size = 0.10  # Gold: 1 pip = 0.10 price units
             elif "XAG" in symbol:
@@ -362,12 +400,12 @@ class RiskManager:
             elif "JPY" in symbol:
                 pip_size = 0.01  # JPY pairs: 1 pip = 0.01 price units
             else:
-                pip_size = 0.0001  # Standard pairs: 1 pip = 0.0001 price units
+                pip_size = 0.001  # Standard pairs: 1 pip = 0.001 price units
             
             # Calculate distance in price units
             distance = stop_loss_pips * pip_size
             
-            # Calculate SL price
+            # Calculate SL price based on order type
             if order_type.upper() == "BUY":
                 sl_price = entry_price - distance
             else:  # SELL
@@ -388,10 +426,11 @@ class RiskManager:
         try:
             symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
+                logger.error(f"Cannot get symbol info for {symbol}")
                 return 0.0
             
             if take_profit_pips is None:
-                take_profit_pips = self.config.get('trading', {}).get('default_tp_pips')
+                take_profit_pips = 60
             
             # Correct pip size for different symbol types
             if "XAU" in symbol:
@@ -426,7 +465,7 @@ class RiskManager:
         try:
             # Get default SL/TP pips from config
             sl_pips = self.config.get('trading', {}).get('default_sl_pips')
-            tp_pips = self.config.get('trading', {}).get('default_tp_pips')
+            tp_pips = sl_pips * 3
             
             # Calculate SL and TP prices
             sl_price = self.calculate_stop_loss_price(symbol, direction, entry_price, sl_pips)
@@ -440,6 +479,17 @@ class RiskManager:
         except Exception as e:
             logger.error(f"Error calculating stop loss and take profit: {e}")
             return {'stop_loss': 0.0, 'take_profit': 0.0}
+    
+    def _get_pip_value(self, symbol: str) -> float:
+        """Get pip value for symbol"""
+        if "XAU" in symbol:
+            return 0.10
+        elif "XAG" in symbol:
+            return 0.01
+        elif "JPY" in symbol:
+            return 0.01
+        else:
+            return 0.0001
     
     def validate_trade_risk(self, 
                            symbol: str, 
@@ -485,6 +535,44 @@ class RiskManager:
         except Exception as e:
             logger.error(f"Error validating trade: {e}")
             return False, f"Validation error: {e}"
+    
+    def validate_risk_reward(self, symbol: str, entry_price: float, stop_loss: float, take_profit: float) -> Tuple[bool, str]:
+        """
+        Validate that the risk-reward ratio meets the symbol-specific minimum requirements
+        
+        Args:
+            symbol: Trading symbol
+            entry_price: Entry price
+            stop_loss: Stop loss price
+            take_profit: Take profit price
+            
+        Returns:
+            Tuple of (is_valid, reason)
+        """
+        try:
+            # Get symbol-specific minimum RR ratio
+            min_rr_ratio = self._get_symbol_min_rr(symbol)
+            
+            # Calculate risk and reward distances
+            risk_distance = abs(entry_price - stop_loss)
+            reward_distance = abs(entry_price - take_profit)
+            
+            if risk_distance == 0:
+                return False, "Invalid stop loss: risk distance is zero"
+            
+            # Calculate actual RR ratio
+            actual_ratio = reward_distance / risk_distance
+            
+            # Check if it meets minimum requirement (with small tolerance for floating point precision)
+            if actual_ratio < (min_rr_ratio - 0.05):
+                return False, f"Risk-reward ratio too low: {actual_ratio:.2f}:1 < {min_rr_ratio}:1 required for {symbol}"
+            
+            logger.info(f"[{symbol}] RR validation passed: {actual_ratio:.2f}:1 >= {min_rr_ratio}:1")
+            return True, f"RR ratio validated: {actual_ratio:.2f}:1"
+            
+        except Exception as e:
+            logger.error(f"Error validating risk-reward ratio for {symbol}: {e}")
+            return False, f"RR validation error: {e}"
     
     def estimate_trade_risk(self, symbol: str, lot_size: float, stop_loss_pips: float) -> float:
         """Estimate the risk amount for a trade"""
@@ -1048,7 +1136,7 @@ class RiskManager:
 
     def calculate_stop_loss_take_profit(self, symbol: str, current_price: float, direction: str) -> Dict[str, float]:
         """
-        Calculate stop loss and take profit levels based on default pips from config
+        Calculate stop loss and take profit levels based on symbol-specific risk-reward ratios
         
         Args:
             symbol: Trading symbol
@@ -1059,15 +1147,28 @@ class RiskManager:
             Dict with 'stop_loss' and 'take_profit' prices
         """
         try:
-            # Get default pips from config
+            # Get default SL pips from config
             default_sl_pips = self.config.get('trading', {}).get('default_sl_pips')
-            default_tp_pips = self.config.get('trading', {}).get('default_tp_pips')
+            
+            # Get symbol-specific minimum risk-reward ratio
+            min_rr_ratio = self._get_symbol_min_rr(symbol)
+            
+            # Calculate TP pips based on symbol-specific RR ratio
+            default_tp_pips = default_sl_pips * min_rr_ratio
             
             # Get symbol info for pip calculation
             symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
                 logger.error(f"Cannot get symbol info for {symbol}")
-                return {'stop_loss': current_price * 0.98, 'take_profit': current_price * 1.02}  # Fallback
+                # Fallback values using pip calculation
+                pip_size = self._get_pip_value(symbol)
+                if direction.upper() == 'BUY':
+                    stop_loss = current_price - (default_sl_pips * pip_size)
+                    take_profit = current_price + (default_tp_pips * pip_size)
+                else:
+                    stop_loss = current_price + (default_sl_pips * pip_size)
+                    take_profit = current_price - (default_tp_pips * pip_size)
+                return {'stop_loss': stop_loss, 'take_profit': take_profit}  # Fallback
             
             # Calculate pip size
             if "XAU" in symbol or "GOLD" in symbol:
@@ -1091,7 +1192,7 @@ class RiskManager:
             stop_loss = round(stop_loss, symbol_info.digits)
             take_profit = round(take_profit, symbol_info.digits)
             
-            logger.info(f"[{symbol}] {direction}: price={current_price:.5f}, SL={stop_loss:.5f}, TP={take_profit:.5f} (SL: {default_sl_pips}pips, TP: {default_tp_pips}pips, pip_size={pip_size})")
+            logger.info(f"[{symbol}] {direction}: price={current_price:.5f}, SL={stop_loss:.5f}, TP={take_profit:.5f} (SL: {default_sl_pips}pips, TP: {default_tp_pips:.1f}pips, RR: {min_rr_ratio}:1)")
             
             return {
                 'stop_loss': stop_loss,

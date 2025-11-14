@@ -607,10 +607,11 @@ class OrderManager:
 class OrderExecutor:
     """Handles order execution and validation through MT5"""
 
-    def __init__(self, mt5_connector, config: dict):
+    def __init__(self, mt5_connector, config: dict, risk_manager=None):
         """Initialize order executor"""
         self.mt5 = mt5_connector
         self.config = config
+        self.risk_manager = risk_manager  # Add risk manager
         self.magic_number = config.get('trading', {}).get('magic_number')
         self.max_slippage = config.get('trading', {}).get('max_slippage')
         self.min_risk_reward_ratio = config.get('trading', {}).get('min_risk_reward_ratio')
@@ -833,22 +834,38 @@ class OrderExecutor:
 
     def _validate_risk_reward_ratio(self, symbol: str, order_type: str, price: float,
                                    stop_loss: float, take_profit: float) -> bool:
-        """Validate risk-reward ratio meets minimum requirements"""
-        # All stop orders require 1:3 risk-reward ratio
-        min_ratio = self.min_risk_reward_ratio  # 3.0 for all stop orders
-
-        risk_distance = abs(stop_loss - price)
-        reward_distance = abs(take_profit - price)
-        ratio = reward_distance / risk_distance if risk_distance > 0 else 0
-
-        # Allow for small floating point precision errors
-        if ratio < (min_ratio - 0.05):  # Slightly below minimum to account for precision
-            logger.error(
-                f"Order rejected: insufficient risk-reward ratio {ratio:.2f}:1 (required: {min_ratio}:1 for {order_type})")
+        """Validate risk-reward ratio meets symbol-specific minimum requirements"""
+        try:
+            # Use risk manager's dynamic RR validation
+            if hasattr(self, 'risk_manager') and self.risk_manager:
+                is_valid, reason = self.risk_manager.validate_risk_reward(symbol, price, stop_loss, take_profit)
+                if not is_valid:
+                    logger.error(f"Order rejected: {reason} for {order_type}")
+                    return False
+                
+                logger.info(f"Order validated: {reason} for {order_type}")
+                return True
+            else:
+                # Fallback to old logic if risk_manager not available
+                logger.warning("Risk manager not available, using fallback RR validation")
+                min_ratio = self.min_risk_reward_ratio  # 3.0 for all stop orders
+                
+                risk_distance = abs(stop_loss - price)
+                reward_distance = abs(take_profit - price)
+                ratio = reward_distance / risk_distance if risk_distance > 0 else 0
+                
+                # Allow for small floating point precision errors
+                if ratio < (min_ratio - 0.05):  # Slightly below minimum to account for precision
+                    logger.error(
+                        f"Order rejected: insufficient risk-reward ratio {ratio:.2f}:1 (required: {min_ratio}:1 for {order_type})")
+                    return False
+                
+                logger.info(f"Order validated: {ratio:.1f}:1 risk-reward ratio (min: {min_ratio}:1 for {order_type})")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error validating risk-reward ratio for {symbol}: {e}")
             return False
-
-        logger.info(f"Order validated: {ratio:.1f}:1 risk-reward ratio (min: {min_ratio}:1 for {order_type})")
-        return True
 
     def _round_prices_to_symbol_precision(self, symbol: str, price: float = None,
                                         stop_loss: float = None, take_profit: float = None,

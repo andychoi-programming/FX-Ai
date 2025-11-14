@@ -99,7 +99,17 @@ class ComponentInitializer:
 
             # 1. MT5 Connection
             self.app.logger.info("Initializing MT5 connection...")
-            self.app.mt5 = MT5Connector(self.app.config)
+            # Load MT5 credentials from environment variables
+            import os
+            from dotenv import load_dotenv
+            load_dotenv()
+
+            self.app.mt5 = MT5Connector(
+                os.getenv('MT5_LOGIN'),
+                os.getenv('MT5_PASSWORD'),
+                os.getenv('MT5_SERVER'),
+                os.getenv('MT5_PATH')
+            )
             if not self.app.mt5.connect():
                 raise Exception("Failed to connect to MT5")
 
