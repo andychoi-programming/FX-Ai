@@ -9,7 +9,7 @@
   },
   "trading": {
     "symbols": [
-      "AUDUSD"
+      "AUDUSD", "NZDUSD", "AUDJPY", "NZDJPY", "AUDNZD", "USDJPY"
     ],
     "risk_per_trade": 50.0,
     "risk_type": "fixed_dollar",
@@ -19,7 +19,7 @@
     "max_spread": 3.0,
     "min_lot_size": 0.01,
     "max_lot_size": 1.0,
-    "min_signal_strength": 0.050,
+    "min_signal_strength": 0.250,
     "max_daily_loss": 500.0,
     "min_risk_reward_ratio": 3.0,
     "enable_news_filter": true,

@@ -126,6 +126,10 @@ class ScheduleManager:
             # Normal schedule within same day
             can_trade = start_hour <= current_hour < end_hour
 
+        # TEMPORARY DEBUG LOGGING for Sydney session testing
+        self.logger.info(f"Schedule check: {symbol} @ {current_hour}:{current_minute:02d} = {can_trade} "
+                        f"(Schedule: {start_hour:02d}:00-{end_hour:02d}:00)")
+
         return can_trade
 
     def should_force_close_all(self):
