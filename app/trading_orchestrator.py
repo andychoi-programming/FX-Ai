@@ -122,8 +122,6 @@ class TradingOrchestrator:
         last_position_log = 0
         last_health_check = 0
         last_performance_log = 0
-        last_trading_opportunity_check = 0
-        last_schedule_check = 0
 
         while self.app.running:
             try:
@@ -133,10 +131,8 @@ class TradingOrchestrator:
                 if loop_count % 30 == 0:
                     self.logger.info(f"=== TRADING CYCLE #{loop_count} ===")
 
-                # 1. Check for time-based closure (every 60 loops = 10 minutes)
-                if loop_count - last_schedule_check >= 60:
-                    await self.check_time_based_closure()
-                    last_schedule_check = loop_count
+                # 1. Check for time-based closure FIRST (always check after 22:00)
+                await self.check_time_based_closure()
 
                 # 1.5. Check for force close (schedule-based)
                 if hasattr(self.app, 'schedule_manager') and self.app.schedule_manager:
@@ -177,14 +173,9 @@ class TradingOrchestrator:
                     last_performance_log = loop_count
 
                 # 3. Check for new trading opportunities
-                opportunity_check_interval = self.config.get('trading', {}).get('trading_opportunity_check_interval_seconds', 120)
-                loops_per_check = max(1, opportunity_check_interval // 10)  # Convert seconds to loop count
-                
-                if loop_count - last_trading_opportunity_check >= loops_per_check:
-                    if loop_count % 30 == 0:  # Log opportunity checking every 5 minutes
-                        self.logger.debug("Checking for new trading opportunities...")
-                    await self._check_trading_opportunities()
-                    last_trading_opportunity_check = loop_count
+                if loop_count % 30 == 0:  # Log opportunity checking every 5 minutes
+                    self.logger.debug("Checking for new trading opportunities...")
+                await self._check_trading_opportunities()
 
                 # 4. Monitor existing positions and learning systems
                 await self._monitor_positions_and_learning(loop_count)
