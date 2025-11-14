@@ -29,6 +29,8 @@
     "close_on_shutdown": true,
     "prevent_multiple_positions_per_symbol": true,
     "dry_run": false,
+    "trading_opportunity_check_interval_seconds": 120,
+    "schedule_check_interval_seconds": 600,
     "magic_number": 123456,
     "order_type": "pending",
     "pending_order_distances": {

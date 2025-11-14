@@ -30,7 +30,9 @@ class DailyLimitTracker:
         self.max_trades_per_symbol = 1  # Your rule
 
     def can_trade(self, symbol: str) -> bool:
-        today = datetime.now().date()
+        # CRITICAL: Use MT5 server time, not local time
+        server_time = self.mt5.get_server_time() if self.mt5 else datetime.now()
+        today = server_time.date()
 
         # Reset at midnight
         if today not in self.daily_trades:
@@ -51,7 +53,9 @@ class DailyLimitTracker:
         return True
 
     def record_trade(self, symbol: str):
-        today = datetime.now().date()
+        # CRITICAL: Use MT5 server time, not local time
+        server_time = self.mt5.get_server_time() if self.mt5 else datetime.now()
+        today = server_time.date()
         if today not in self.daily_trades:
             self.daily_trades[today] = {}
         self.daily_trades[today][symbol] = self.daily_trades[today].get(symbol, 0) + 1
@@ -122,6 +126,8 @@ class TradingOrchestrator:
         last_position_log = 0
         last_health_check = 0
         last_performance_log = 0
+        last_trading_opportunity_check = 0
+        last_schedule_check = 0
 
         while self.app.running:
             try:
@@ -132,7 +138,12 @@ class TradingOrchestrator:
                     self.logger.info(f"=== TRADING CYCLE #{loop_count} ===")
 
                 # 1. Check for time-based closure FIRST (always check after 22:00)
-                await self.check_time_based_closure()
+                schedule_check_interval = self.config.get('trading', {}).get('schedule_check_interval_seconds', 600)
+                schedule_loops_per_check = max(1, schedule_check_interval // 10)  # Convert seconds to loop count
+                
+                if loop_count - last_schedule_check >= schedule_loops_per_check:
+                    await self.check_time_based_closure()
+                    last_schedule_check = loop_count
 
                 # 1.5. Check for force close (schedule-based)
                 if hasattr(self.app, 'schedule_manager') and self.app.schedule_manager:
@@ -173,9 +184,14 @@ class TradingOrchestrator:
                     last_performance_log = loop_count
 
                 # 3. Check for new trading opportunities
-                if loop_count % 30 == 0:  # Log opportunity checking every 5 minutes
-                    self.logger.debug("Checking for new trading opportunities...")
-                await self._check_trading_opportunities()
+                opportunity_check_interval = self.config.get('trading', {}).get('trading_opportunity_check_interval_seconds', 120)
+                loops_per_check = max(1, opportunity_check_interval // 10)  # Convert seconds to loop count
+                
+                if loop_count - last_trading_opportunity_check >= loops_per_check:
+                    if loop_count % 30 == 0:  # Log opportunity checking every 5 minutes
+                        self.logger.debug("Checking for new trading opportunities...")
+                    await self._check_trading_opportunities()
+                    last_trading_opportunity_check = loop_count
 
                 # 4. Monitor existing positions and learning systems
                 await self._monitor_positions_and_learning(loop_count)
@@ -199,6 +215,18 @@ class TradingOrchestrator:
     async def _check_trading_opportunities(self):
         """Check for new trading opportunities across all symbols."""
         try:
+            # DEBUG LOGGING for Sydney session testing
+            server_time = self.app.get_current_mt5_time() if hasattr(self.app, 'get_current_mt5_time') else None
+            current_session = "unknown"
+            if hasattr(self.app, 'schedule_manager') and self.app.schedule_manager:
+                current_session = self.app.schedule_manager.get_current_session(server_time) if server_time else "unknown"
+            
+            self.logger.info(f"=== TRADING OPPORTUNITY CHECK ===")
+            self.logger.info(f"Server Time: {server_time}")
+            self.logger.info(f"Current Session: {current_session}")
+            self.logger.info(f"Loop Count: {self.loop_count}")
+            self.logger.info(f"Time Since Last Check: {self.loop_count - self.last_trading_opportunity_check} loops")
+            
             symbols = self.config.get('trading', {}).get('symbols', [])
             opportunities_found = 0
             symbols_analyzed = 0
@@ -223,12 +251,16 @@ class TradingOrchestrator:
 
                     # Check for existing pending orders - prevent duplicates
                     existing_orders = mt5.orders_get(symbol=symbol)
+                    has_pending_orders = False
                     if existing_orders and len(existing_orders) > 0:
                         # Filter to only our system's orders
                         our_orders = [order for order in existing_orders if hasattr(order, 'magic') and order.magic == self.app.magic_number]
                         if len(our_orders) > 0:
-                            self.logger.debug(f"[{symbol}] Skipping - already has {len(our_orders)} pending order(s) from our system")
-                            continue
+                            self.logger.info(f"[{symbol}] Has {len(our_orders)} pending order(s) - skipping")
+                            has_pending_orders = True
+                    
+                    if has_pending_orders:
+                        continue
 
                     # Check for existing positions - prevent multiple positions per symbol
                     existing_positions = mt5.positions_get(symbol=symbol)
