@@ -122,6 +122,153 @@ def check_database_duplicates():
         import traceback
         traceback.print_exc()
 
+def check_sydney_session_monitoring():
+    """Monitor Sydney session specific patterns"""
+    print(f"\n🌏 SYDNEY SESSION MONITORING:")
+    print("-" * 40)
+
+    log_files = ['sydney_test.log', 'logs/trading.log', 'logs/main.log']
+
+    # Sydney session indicators
+    session_indicators = [
+        'Current Session: Sydney',
+        'Current Session: tokyo_sydney',
+        'Sydney Session',
+        'tokyo_sydney'
+    ]
+
+    schedule_checks = [
+        'Schedule check:',
+        'Outside trading hours'
+    ]
+
+    symbol_activity = [
+        'AUDUSD', 'NZDUSD', 'AUDJPY', 'NZDJPY', 'AUDNZD', 'USDJPY'
+    ]
+
+    opportunity_checks = [
+        'TRADING OPPORTUNITY CHECK',
+        'Analyzing.*trading symbols'
+    ]
+
+    for log_file in log_files:
+        if os.path.exists(log_file):
+            print(f"\nAnalyzing {log_file} for Sydney session:")
+            try:
+                with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+                    content = f.read()
+
+                    # Check session detection
+                    session_found = False
+                    for indicator in session_indicators:
+                        if indicator in content:
+                            print(f"  ✅ Session detected: {indicator}")
+                            session_found = True
+                            break
+                    if not session_found:
+                        print("  ⚠️  No Sydney session indicators found")
+
+                    # Check schedule filtering
+                    schedule_checks_found = 0
+                    for check in schedule_checks:
+                        count = content.count(check)
+                        if count > 0:
+                            print(f"  ✅ Schedule checks: {count} occurrences")
+                            schedule_checks_found += count
+
+                    # Check symbol activity
+                    active_symbols = []
+                    for symbol in symbol_activity:
+                        if symbol in content:
+                            active_symbols.append(symbol)
+                    if active_symbols:
+                        print(f"  ✅ Active symbols detected: {', '.join(active_symbols)}")
+                    else:
+                        print("  ⚠️  No Tier 1 symbols detected in logs")
+
+                    # Check opportunity analysis
+                    opportunities_found = 0
+                    for indicator in opportunity_checks:
+                        count = content.count(indicator)
+                        opportunities_found += count
+                    if opportunities_found > 0:
+                        print(f"  ✅ Trading opportunity checks: {opportunities_found} occurrences")
+                    else:
+                        print("  ⚠️  No trading opportunity checks detected")
+
+                    # Check for 2-minute intervals
+                    interval_indicators = [
+                        'Time Since Last Check:.*loops',
+                        'Loop Count:'
+                    ]
+                    intervals_found = 0
+                    for indicator in interval_indicators:
+                        count = content.count(indicator)
+                        intervals_found += count
+                    if intervals_found > 0:
+                        print(f"  ✅ Loop timing checks: {intervals_found} occurrences")
+
+            except Exception as e:
+                print(f"  Error reading {log_file}: {e}")
+        else:
+            print(f"  Log file not found: {log_file}")
+
+    print("\nExpected Sydney Session Pattern:")
+    print("  00:00-02:00: AUDUSD, NZDUSD, AUDJPY, NZDJPY, AUDNZD active")
+    print("  02:00+: USDJPY also active")
+    print("  10:00+: EUR/GBP pairs become active, AUD/NZD may still be active")
+    print("  20:00+: AUD/NZD pairs stop, EUR/GBP/USDJPY continue")
+    """Check log files for key indicators"""
+    print(f"\n📋 LOG FILE ANALYSIS:")
+    print("-" * 40)
+
+    log_files = ['sydney_test.log', 'logs/trading.log', 'logs/main.log']
+
+    success_indicators = [
+        '✅ ORDER SUCCESS',
+        'Order placed successfully',
+        'Request executed'
+    ]
+
+    failure_indicators = [
+        'Order failed: Request executed',
+        'Multiple pending orders per symbol',
+        '❌ ORDER FAILED'
+    ]
+
+    for log_file in log_files:
+        if os.path.exists(log_file):
+            print(f"\nAnalyzing {log_file}:")
+            try:
+                with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+                    content = f.read()
+
+                    # Check for success indicators
+                    success_count = 0
+                    for indicator in success_indicators:
+                        count = content.count(indicator)
+                        if count > 0:
+                            print(f"  ✅ {indicator}: {count} occurrences")
+                            success_count += count
+
+                    # Check for failure indicators
+                    failure_count = 0
+                    for indicator in failure_indicators:
+                        count = content.count(indicator)
+                        if count > 0:
+                            print(f"  ❌ {indicator}: {count} occurrences")
+                            failure_count += count
+
+                    if success_count > 0 and failure_count == 0:
+                        print("  🎉 Log analysis: SUCCESS - No failure indicators found!")
+                    elif failure_count > 0:
+                        print("  ⚠️  Log analysis: ISSUES DETECTED - Check failure messages above")
+
+            except Exception as e:
+                print(f"  Error reading {log_file}: {e}")
+        else:
+            print(f"  Log file not found: {log_file}")
+
 def check_log_files():
     """Check log files for key indicators"""
     print(f"\n📋 LOG FILE ANALYSIS:")
@@ -181,6 +328,7 @@ def main():
     print()
 
     check_database_duplicates()
+    check_sydney_session_monitoring()
     check_log_files()
 
     print(f"\n" + "=" * 50)
@@ -191,6 +339,7 @@ def main():
     print("  ✅ High success rate = MT5 retcode fixes working")
     print("  ✅ Orders in database = Tracking working")
     print("  ✅ No 'Request executed' failures = Success code fixes working")
+    print("  ✅ Sydney session monitoring = Schedule filtering working")
     print("=" * 50)
 
 if __name__ == "__main__":
