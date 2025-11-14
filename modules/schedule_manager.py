@@ -256,10 +256,16 @@ class ScheduleManager:
 
     def get_current_session(self, current_time=None):
         """
-        Determine the current trading session based on MT5 server time.
+        Determine the current trading session based on MT5 server time (GMT+2).
+
+        Market sessions in UTC:
+        - Sydney: 22:00-07:00 UTC → 00:00-09:00 GMT+2
+        - Tokyo: 00:00-09:00 UTC → 02:00-11:00 GMT+2
+        - London: 08:00-16:30 UTC → 10:00-18:30 GMT+2
+        - New York: 13:00-22:00 UTC → 15:00-00:00 GMT+2
 
         Args:
-            current_time: datetime object (uses current time if None)
+            current_time: datetime object (uses MT5 server time if None)
 
         Returns:
             str: Session name ('tokyo_sydney', 'london', 'new_york', 'overlap', or 'closed')
@@ -269,32 +275,30 @@ class ScheduleManager:
 
         hour = current_time.hour
 
-        # Session times (MT5 server time = GMT+2)
-        # Sydney/Tokyo: 22:00-10:00 (server time)
-        # London: 09:00-18:00 (server time)
-        # New York: 15:00-00:00 (server time)
+        # All times in GMT+2 (MT5 server time)
 
-        # Tokyo/Sydney session (22:00-10:00)
-        if hour >= 22 or hour < 10:
-            # Check for overlap with London (09:00-10:00)
-            if 9 <= hour < 10:
+        # New York session (15:00-00:00 server time / 13:00-22:00 UTC)
+        if 15 <= hour < 24:
+            # Check for overlap with London (15:00-18:30)
+            if 15 <= hour < 19:  # 18:30 = 18 for simplicity
+                return "overlap"  # London-NY overlap
+            return "new_york"
+
+        # Sydney/Tokyo session (00:00-11:00 server time)
+        if 0 <= hour < 11:
+            # Check for overlap with London (10:00-11:00)
+            if 10 <= hour < 11:
                 return "overlap"  # Tokyo-London overlap
             return "tokyo_sydney"
 
-        # London session (09:00-18:00)
-        elif 9 <= hour < 18:
-            # Check for overlap with New York (15:00-18:00)
-            if 15 <= hour < 18:
-                return "overlap"  # London-NY overlap
+        # London session (10:00-18:30 server time / 08:00-16:30 UTC)
+        if 10 <= hour < 19:  # Using 19:00 to include 18:30
+            # Already checked overlap with Tokyo above
+            # Already checked overlap with NY above
             return "london"
 
-        # New York session (15:00-00:00)
-        elif 15 <= hour < 24:
-            return "new_york"
-
-        # Closed (shouldn't normally hit this with 24/7 trading)
-        else:
-            return "closed"
+        # Closed / Low liquidity (rare in 24-hour forex)
+        return "closed"
 
 
 # ===== Convenience Functions =====

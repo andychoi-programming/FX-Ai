@@ -107,6 +107,14 @@ class TradingOrchestrator:
         # Daily limit tracker
         self.daily_limit_tracker = DailyLimitTracker()
 
+        # Initialize loop counters
+        self.loop_count = 0
+        self.last_trading_opportunity_check = 0
+        self.last_schedule_check = 0
+        self.last_position_log = 0
+        self.last_health_check = 0
+        self.last_performance_log = 0
+
     def set_trading_engine(self, trading_engine):
         """Set the trading engine after all components are initialized"""
         self.trading_engine = trading_engine
