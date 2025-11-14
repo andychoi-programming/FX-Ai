@@ -254,6 +254,48 @@ class ScheduleManager:
             hours_until = (24 - current_hour) + start_hour
             return f"Opens in {hours_until}h at {start_hour:02d}:00 server (tomorrow)"
 
+    def get_current_session(self, current_time=None):
+        """
+        Determine the current trading session based on MT5 server time.
+
+        Args:
+            current_time: datetime object (uses current time if None)
+
+        Returns:
+            str: Session name ('tokyo_sydney', 'london', 'new_york', 'overlap', or 'closed')
+        """
+        if current_time is None:
+            current_time = datetime.now()
+
+        hour = current_time.hour
+
+        # Session times (MT5 server time = GMT+2)
+        # Sydney/Tokyo: 22:00-10:00 (server time)
+        # London: 09:00-18:00 (server time)
+        # New York: 15:00-00:00 (server time)
+
+        # Tokyo/Sydney session (22:00-10:00)
+        if hour >= 22 or hour < 10:
+            # Check for overlap with London (09:00-10:00)
+            if 9 <= hour < 10:
+                return "overlap"  # Tokyo-London overlap
+            return "tokyo_sydney"
+
+        # London session (09:00-18:00)
+        elif 9 <= hour < 18:
+            # Check for overlap with New York (15:00-18:00)
+            if 15 <= hour < 18:
+                return "overlap"  # London-NY overlap
+            return "london"
+
+        # New York session (15:00-00:00)
+        elif 15 <= hour < 24:
+            return "new_york"
+
+        # Closed (shouldn't normally hit this with 24/7 trading)
+        else:
+            return "closed"
+
 
 # ===== Convenience Functions =====
 
