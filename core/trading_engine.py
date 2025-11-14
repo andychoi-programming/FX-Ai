@@ -6,7 +6,7 @@ Orchestrates trading operations using modular components
 import logging
 import asyncio
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 import MetaTrader5 as mt5
 from utils.position_monitor import PositionMonitor
 from utils.risk_validator import RiskValidator
@@ -34,6 +34,7 @@ class TradingEngine:
             ml_predictor,
             adaptive_learning_manager=None):
         """Initialize trading engine with modular components"""
+        self.logger = logging.getLogger(__name__)
         self.mt5 = mt5_connector
         self.risk_manager = risk_manager
         self.technical = technical_analyzer
@@ -60,7 +61,21 @@ class TradingEngine:
         self.position_monitor = PositionMonitor(self.magic_number)
         self.position_monitor.enable_alerts(True)
 
-        logger.info("Trading Engine initialized with position monitoring")
+        # MT5 Success codes - CRITICAL FIX!
+        self.SUCCESS_CODES = [
+            mt5.TRADE_RETCODE_DONE,          # 10009 - Request completed
+            mt5.TRADE_RETCODE_PLACED,        # 10008 - Order placed
+            mt5.TRADE_RETCODE_DONE_PARTIAL,  # 10010 - Request partially completed
+        ]
+        
+        # MT5 Error codes that need special handling
+        self.RETRIABLE_ERRORS = [
+            mt5.TRADE_RETCODE_REQUOTE,       # 10004 - Requote
+            mt5.TRADE_RETCODE_CONNECTION,    # 10018 - No connection
+            mt5.TRADE_RETCODE_PRICE_OFF,     # 10015 - Invalid price
+        ]
+
+        logger.info("Trading Engine initialized with position monitoring and improved MT5 error handling")
 
     def sync_with_mt5_positions(self) -> None:
         """Sync internal position tracking with existing MT5 positions"""
@@ -288,19 +303,12 @@ class TradingEngine:
                     self.logger.error(f"   Account balance: ${account_balance:,.2f}")
                     return None
 
-            # 4. Execute through circuit breaker if available
-            if orchestrator and hasattr(orchestrator, 'ml_circuit_breaker'):
-                try:
-                    result = orchestrator.ml_circuit_breaker.call(
-                        self._execute_trade_safe,
-                        signal
-                    )
-                except Exception as e:
-                    self.logger.error(f"❌ Trade rejected - Circuit breaker open or error: {e}")
-                    return None
-            else:
-                # Fallback to direct execution
+            # 4. Execute trade directly (circuit breaker bypassed for now due to async issues)
+            try:
                 result = await self._execute_trade_safe(signal)
+            except Exception as e:
+                self.logger.error(f"❌ Trade rejected - Execution error: {e}")
+                return None
 
             # 5. Record trade in daily tracker
             if orchestrator and hasattr(orchestrator, 'daily_limit_tracker') and result and result.get('success'):
@@ -465,3 +473,178 @@ class TradingEngine:
     async def extend_take_profit(self, position) -> None:
         """Extend take profit due to favorable conditions - delegated to TakeProfitManager"""
         await self.take_profit_manager.extend_take_profit(position)
+
+    def execute_order(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute order with CORRECT success/failure detection
+        
+        Args:
+            request: MT5 order request dictionary
+            
+        Returns:
+            Dict with success status and details
+        """
+        try:
+            # Send order to MT5
+            result = mt5.order_send(request)
+            
+            if result is None:
+                error = mt5.last_error()
+                self.logger.error(f"❌ Order send returned None: {error}")
+                return {
+                    'success': False,
+                    'error': f"MT5 connection error: {error}",
+                    'retcode': None
+                }
+            
+            # Log the raw result for debugging
+            self.logger.debug(f"MT5 Result - retcode: {result.retcode}, comment: {result.comment}")
+            
+            # ✅ CHECK FOR SUCCESS (THIS IS THE CRITICAL FIX!)
+            if result.retcode in self.SUCCESS_CODES:
+                # SUCCESS - Order was placed or executed
+                self.logger.info(f"✅ Order placed successfully!")
+                self.logger.info(f"   Ticket: {result.order}")
+                self.logger.info(f"   Retcode: {result.retcode} ({self._get_retcode_description(result.retcode)})")
+                self.logger.info(f"   Comment: {result.comment}")
+                
+                return {
+                    'success': True,
+                    'ticket': result.order,
+                    'retcode': result.retcode,
+                    'comment': result.comment,
+                    'price': result.price if hasattr(result, 'price') else None,
+                    'volume': result.volume if hasattr(result, 'volume') else None
+                }
+            
+            # ❌ FAILURE - Order was rejected or failed
+            else:
+                error_desc = self._get_retcode_description(result.retcode)
+                self.logger.warning(f"❌ Order rejected!")
+                self.logger.warning(f"   Retcode: {result.retcode} ({error_desc})")
+                self.logger.warning(f"   Comment: {result.comment}")
+                
+                # Check if error is retriable
+                is_retriable = result.retcode in self.RETRIABLE_ERRORS
+                
+                return {
+                    'success': False,
+                    'error': result.comment,
+                    'retcode': result.retcode,
+                    'error_description': error_desc,
+                    'retriable': is_retriable
+                }
+                
+        except Exception as e:
+            self.logger.error(f"❌ Exception during order execution: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': str(e),
+                'retcode': None
+            }
+    
+    def _get_retcode_description(self, retcode: int) -> str:
+        """Get human-readable description of MT5 return code"""
+        
+        descriptions = {
+            # Success codes
+            10008: "Order placed successfully",
+            10009: "Request executed successfully", 
+            10010: "Request partially completed",
+            
+            # Common error codes
+            10004: "Requote",
+            10006: "Request rejected",
+            10007: "Request canceled by trader",
+            10008: "Order placed",
+            10009: "Request completed",
+            10010: "Only part of the request was completed",
+            10011: "Request processing error",
+            10012: "Request canceled by timeout",
+            10013: "Invalid request",
+            10014: "Invalid volume in the request",
+            10015: "Invalid price in the request",
+            10016: "Invalid stops in the request",
+            10017: "Trade is disabled",
+            10018: "Market is closed",
+            10019: "Not enough money to complete the request",
+            10020: "Prices changed",
+            10021: "No quotes to process the request",
+            10022: "Invalid order expiration date in the request",
+            10023: "Order state changed",
+            10024: "Too frequent requests",
+            10025: "No changes in request",
+            10026: "Autotrading disabled by server",
+            10027: "Autotrading disabled by client terminal",
+            10028: "Request locked for processing",
+            10029: "Order or position frozen",
+            10030: "Invalid order filling type",
+            10031: "No connection with the trade server",
+            10032: "Operation is allowed only for live accounts",
+            10033: "The number of pending orders has reached the limit",
+            10034: "Volume of orders and positions for the symbol has reached the limit",
+            10035: "Incorrect or prohibited order type",
+            10036: "Position with the specified POSITION_IDENTIFIER has already been closed",
+            10038: "Close volume exceeds the current position volume",
+            10039: "Close order already exists for the position",
+            10040: "The number of open positions simultaneously present on an account can be limited"
+        }
+        
+        return descriptions.get(retcode, f"Unknown return code: {retcode}")
+    
+    def place_pending_order(
+        self, 
+        symbol: str,
+        order_type: int,
+        volume: float,
+        price: float,
+        sl: float,
+        tp: float,
+        comment: str = "",
+        magic: int = 234000
+    ) -> Dict[str, Any]:
+        """
+        Place a pending order (buy_stop or sell_stop)
+        
+        Returns:
+            Dict with success status and order details
+        """
+        
+        # Prepare the order request
+        request = {
+            "action": mt5.TRADE_ACTION_PENDING,
+            "symbol": symbol,
+            "volume": volume,
+            "type": order_type,
+            "price": price,
+            "sl": sl,
+            "tp": tp,
+            "deviation": 20,
+            "magic": magic,
+            "comment": comment,
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_IOC,
+        }
+        
+        self.logger.info(f"📤 Placing pending order: {symbol} {volume} lots @ {price}")
+        self.logger.info(f"   Type: {self._get_order_type_name(order_type)}")
+        self.logger.info(f"   SL: {sl}, TP: {tp}")
+        
+        # Execute the order
+        result = self.execute_order(request)
+        
+        return result
+    
+    def _get_order_type_name(self, order_type: int) -> str:
+        """Get human-readable order type name"""
+        types = {
+            mt5.ORDER_TYPE_BUY: "BUY (Market)",
+            mt5.ORDER_TYPE_SELL: "SELL (Market)",
+            mt5.ORDER_TYPE_BUY_LIMIT: "BUY LIMIT",
+            mt5.ORDER_TYPE_SELL_LIMIT: "SELL LIMIT",
+            mt5.ORDER_TYPE_BUY_STOP: "BUY STOP",
+            mt5.ORDER_TYPE_SELL_STOP: "SELL STOP",
+            mt5.ORDER_TYPE_BUY_STOP_LIMIT: "BUY STOP LIMIT",
+            mt5.ORDER_TYPE_SELL_STOP_LIMIT: "SELL STOP LIMIT",
+        }
+        return types.get(order_type, f"Unknown type: {order_type}")

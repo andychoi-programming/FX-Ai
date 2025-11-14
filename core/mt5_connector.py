@@ -292,21 +292,21 @@ class MT5Connector:
             if result is None:
                 return {'success': False, 'error': 'Order send failed - no response'}
 
-            if result.retcode != mt5.TRADE_RETCODE_DONE:
+            if result.retcode == mt5.TRADE_RETCODE_DONE:
+                return {
+                    'success': True,
+                    'order': result.order,
+                    'deal': result.deal,
+                    'volume': result.volume,
+                    'price': result.price,
+                    'comment': result.comment
+                }
+            else:
                 return {
                     'success': False,
                     'error': f'Order failed: {result.comment}',
                     'retcode': result.retcode
                 }
-
-            return {
-                'success': True,
-                'order': result.order,
-                'deal': result.deal,
-                'volume': result.volume,
-                'price': result.price,
-                'comment': result.comment
-            }
 
     def close_position(self, ticket: int, deviation: int = 10) -> Dict:
         """Close an open position by ticket"""

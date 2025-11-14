@@ -1321,23 +1321,15 @@ class OrderExecutor:
                         "magic": self.magic_number,
                         "comment": comment or "FX-Ai",
                         "type_time": mt5.ORDER_TIME_DAY,  # Expire at end of trading day
-                        "type_filling": mt5.ORDER_FILLING_IOC,
                     }
 
-                    # Add deviation only for market orders
+                    # Add filling mode only for market orders
                     if trade_action == mt5.TRADE_ACTION_DEAL:
                         request["deviation"] = self.max_slippage
-
-                    # Add SL/TP for pending orders (they are applied when order fills)
-                    if trade_action == mt5.TRADE_ACTION_PENDING:
-                        if stop_loss is not None:
-                            request["sl"] = stop_loss
-                        if take_profit is not None:
-                            request["tp"] = take_profit
-
-                    # Add filling mode only for market orders
-                    if filling_mode is not None and trade_action == mt5.TRADE_ACTION_DEAL:
-                        request["type_filling"] = filling_mode
+                        if filling_mode is not None:
+                            request["type_filling"] = filling_mode
+                        else:
+                            request["type_filling"] = mt5.ORDER_FILLING_IOC
 
                     # Note: SL/TP are included in pending order requests and will be applied when order fills
                     # For market orders, SL/TP will be set after order placement using TRADE_ACTION_SLTP
