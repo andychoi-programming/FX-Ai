@@ -246,6 +246,76 @@ class TradingEngine:
 
         return result
 
+    async def execute_trade_with_validation(self, signal: Dict, orchestrator=None) -> Optional[Dict]:
+        """
+        Execute trade with comprehensive pre-flight checks
+
+        Args:
+            signal: Trading signal dictionary
+            orchestrator: TradingOrchestrator instance for validation
+
+        Returns:
+            Trade result or None if validation fails
+        """
+        try:
+            # 1. Check data freshness if orchestrator available
+            if orchestrator and hasattr(orchestrator, 'log_system_health'):
+                if not orchestrator.log_system_health():
+                    self.logger.error("❌ Trade rejected - System health check failed")
+                    return None
+
+            # 2. Check daily limits
+            if orchestrator and hasattr(orchestrator, 'daily_limit_tracker'):
+                if not orchestrator.daily_limit_tracker.can_trade(signal['symbol']):
+                    self.logger.error(f"❌ Trade rejected - Daily limit reached for {signal['symbol']}")
+                    return None
+
+            # 3. Validate position size
+            if orchestrator and hasattr(orchestrator, 'risk_manager'):
+                account_balance = 0
+                if hasattr(orchestrator, 'mt5') and orchestrator.mt5:
+                    account_info = orchestrator.mt5.get_account_info()
+                    account_balance = account_info.get('balance', 0) if account_info else 0
+
+                if not orchestrator.risk_manager.validate_position_size(
+                    signal['symbol'],
+                    signal.get('position_size', 0),
+                    account_balance
+                ):
+                    self.logger.error("❌ Trade rejected - Position size validation failed")
+                    self.logger.error(f"   Symbol: {signal['symbol']}")
+                    self.logger.error(f"   Position size: {signal.get('position_size', 0)}")
+                    self.logger.error(f"   Account balance: ${account_balance:,.2f}")
+                    return None
+
+            # 4. Execute through circuit breaker if available
+            if orchestrator and hasattr(orchestrator, 'ml_circuit_breaker'):
+                try:
+                    result = orchestrator.ml_circuit_breaker.call(
+                        self._execute_trade_safe,
+                        signal
+                    )
+                except Exception as e:
+                    self.logger.error(f"❌ Trade rejected - Circuit breaker open or error: {e}")
+                    return None
+            else:
+                # Fallback to direct execution
+                result = await self._execute_trade_safe(signal)
+
+            # 5. Record trade in daily tracker
+            if orchestrator and hasattr(orchestrator, 'daily_limit_tracker') and result and result.get('success'):
+                orchestrator.daily_limit_tracker.record_trade(signal['symbol'])
+
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Error in trade execution with validation: {e}")
+            return None
+
+    async def _execute_trade_safe(self, signal: Dict) -> Optional[Dict]:
+        """Safe trade execution without validation"""
+        return await self.execute_trade(signal)
+
     async def execute_trade(self, signal: Dict) -> Optional[Dict]:
         """Execute a trading signal - main entry point for trade execution"""
         try:

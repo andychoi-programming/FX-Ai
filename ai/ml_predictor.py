@@ -56,6 +56,50 @@ class MLPredictor:
             'momentum', 'support_resistance', 'regime_score'
         ]
 
+    def update_models(self, symbols: list = None, data_dict: Dict[str, pd.DataFrame] = None):
+        """
+        Update models with new data
+
+        Args:
+            symbols: List of symbols to retrain
+            data_dict: Dictionary of data by symbol
+        """
+        import time
+
+        # Log the retraining event prominently
+        self.logger.info("=" * 70)
+        self.logger.info("🤖 MODEL RETRAINING INITIATED")
+        self.logger.info("=" * 70)
+
+        if symbols is None:
+            symbols = list(self.models.keys()) if self.models else []
+
+        self.logger.info(f"Symbols to retrain: {symbols}")
+        if data_dict:
+            self.logger.info(f"Data points per symbol: {[(s, len(data_dict.get(s, []))) for s in symbols]}")
+
+        for symbol in symbols:
+            try:
+                if data_dict and symbol in data_dict and len(data_dict[symbol]) >= self.config.get('min_data_points', 1000):
+                    start_time = time.time()
+
+                    # Train the model
+                    self._train_model(symbol, data_dict[symbol])
+
+                    duration = time.time() - start_time
+                    self.logger.info(f"✅ {symbol} retrained in {duration:.2f}s")
+                elif symbol in self.models:
+                    self.logger.warning(f"⚠️ {symbol} skipped - insufficient data or no data provided")
+                else:
+                    self.logger.warning(f"⚠️ {symbol} skipped - no existing model to update")
+
+            except Exception as e:
+                self.logger.error(f"❌ Failed to retrain {symbol}: {e}")
+
+        self.logger.info("=" * 70)
+        self.logger.info("🤖 MODEL RETRAINING COMPLETED")
+        self.logger.info("=" * 70)
+
     def validate_feature_consistency(self, features: Union[pd.DataFrame, Dict]) -> bool:
         """
         Ensure live features match training structure

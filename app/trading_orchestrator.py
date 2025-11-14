@@ -8,6 +8,7 @@ for the FX-Ai trading system.
 import asyncio
 import json
 import time as time_module
+import logging
 from typing import Dict, Any, Optional
 import MetaTrader5 as mt5
 from datetime import datetime, timedelta
@@ -16,8 +17,44 @@ from core.trading_engine import TradingEngine
 from core.risk_manager import RiskManager
 from ai.adaptive_learning_manager import AdaptiveLearningManager
 from ai.reinforcement_learning_agent import RLAgent
-from utils.performance_monitor import monitor_performance_async
+from utils.performance_monitor import monitor_performance_async, PerformanceTracker
 from utils.circuit_breaker import CircuitBreaker
+
+
+class DailyLimitTracker:
+    """Prevent runaway trading"""
+
+    def __init__(self):
+        self.daily_trades = {}
+        self.max_trades_per_day = 30  # Absolute maximum
+        self.max_trades_per_symbol = 1  # Your rule
+
+    def can_trade(self, symbol: str) -> bool:
+        today = datetime.now().date()
+
+        # Reset at midnight
+        if today not in self.daily_trades:
+            self.daily_trades = {today: {}}
+
+        # Check symbol limit
+        symbol_count = self.daily_trades[today].get(symbol, 0)
+        if symbol_count >= self.max_trades_per_symbol:
+            logging.warning(f"⚠️ Daily limit reached for {symbol}")
+            return False
+
+        # Check total daily limit
+        total_today = sum(self.daily_trades[today].values())
+        if total_today >= self.max_trades_per_day:
+            logging.error(f"🔴 DAILY TRADE LIMIT REACHED ({self.max_trades_per_day})")
+            return False
+
+        return True
+
+    def record_trade(self, symbol: str):
+        today = datetime.now().date()
+        if today not in self.daily_trades:
+            self.daily_trades[today] = {}
+        self.daily_trades[today][symbol] = self.daily_trades[today].get(symbol, 0) + 1
 
 
 class TradingOrchestrator:
@@ -54,9 +91,11 @@ class TradingOrchestrator:
         self.sentiment_circuit_breaker = CircuitBreaker(failure_threshold=5, timeout=600)  # 10 min timeout
         self.ml_circuit_breaker = CircuitBreaker(failure_threshold=3, timeout=300)  # 5 min timeout
 
-    def set_trading_engine(self, trading_engine):
-        """Set the trading engine after all components are initialized"""
-        self.trading_engine = trading_engine
+        # Performance monitoring
+        self.performance_tracker = PerformanceTracker()
+
+        # Daily limit tracker
+        self.daily_limit_tracker = DailyLimitTracker()
 
     def set_trading_engine(self, trading_engine):
         """Set the trading engine after all components are initialized"""
@@ -75,6 +114,8 @@ class TradingOrchestrator:
 
         loop_count = 0
         last_position_log = 0
+        last_health_check = 0
+        last_performance_log = 0
 
         while self.app.running:
             try:
@@ -114,6 +155,16 @@ class TradingOrchestrator:
                 if loop_count - last_position_log >= 6:
                     await self._log_active_positions()
                     last_position_log = loop_count
+
+                # 2.5. Periodic health and performance monitoring
+                if loop_count - last_health_check >= 60:  # Every 10 minutes
+                    self.log_circuit_breaker_status()
+                    self.log_system_health()
+                    last_health_check = loop_count
+
+                if loop_count - last_performance_log >= 360:  # Every hour
+                    self.log_performance_metrics()
+                    last_performance_log = loop_count
 
                 # 3. Check for new trading opportunities
                 if loop_count % 30 == 0:  # Log opportunity checking every 5 minutes
@@ -189,7 +240,7 @@ class TradingOrchestrator:
                                        f"Entry: {signal['entry_price']:.5f}")
 
                         # Execute the trade
-                        trade_result = await self.trading_engine.execute_trade(signal)
+                        trade_result = await self.trading_engine.execute_trade_with_validation(signal, self)
                         if trade_result and trade_result.get('success', False):
                             self.logger.info(f"[{symbol}] OK Trade executed successfully - Ticket: {trade_result.get('ticket', 'N/A')}")
                             
@@ -478,6 +529,121 @@ class TradingOrchestrator:
 
         except Exception as e:
             self.logger.error(f"Error maintaining learning systems: {e}")
+
+    def log_circuit_breaker_status(self):
+        """Log circuit breaker status every hour"""
+        sentiment_status = self.sentiment_circuit_breaker.get_status()
+        ml_status = self.ml_circuit_breaker.get_status()
+
+        self.logger.info("Circuit Breaker Status:")
+        self.logger.info(f"  Sentiment: {'🔴 OPEN' if sentiment_status['is_open'] else '🟢 CLOSED'} "
+                        f"(Failures: {sentiment_status['failure_count']})")
+        self.logger.info(f"  ML: {'🔴 OPEN' if ml_status['is_open'] else '🟢 CLOSED'} "
+                        f"(Failures: {ml_status['failure_count']})")
+
+    def get_data_freshness_report(self) -> Dict:
+        """Check freshness of all data sources"""
+        return {
+            'technical': self.technical_analyzer.is_data_fresh() if hasattr(self, 'technical_analyzer') else False,
+            'fundamental': self.fundamental_analyzer.is_data_current() if hasattr(self, 'fundamental_analyzer') else False,
+            'sentiment': self.sentiment_analyzer.is_data_fresh() if hasattr(self, 'sentiment_analyzer') else False,
+            'timestamp': datetime.now().isoformat()
+        }
+
+    def log_system_health(self):
+        """Log complete system health before trading"""
+        freshness = self.get_data_freshness_report()
+
+        self.logger.info("📊 SYSTEM HEALTH CHECK:")
+        self.logger.info(f"  Technical Data: {'✅ Fresh' if freshness['technical'] else '❌ Stale'}")
+        self.logger.info(f"  Fundamental Data: {'✅ Fresh' if freshness['fundamental'] else '❌ Stale'}")
+        self.logger.info(f"  Sentiment Data: {'✅ Fresh' if freshness['sentiment'] else '❌ Stale'}")
+
+        # Don't trade if any data is stale
+        if not all([freshness['technical'], freshness['fundamental'], freshness['sentiment']]):
+            self.logger.warning("⚠️ TRADING BLOCKED - Stale data detected")
+            return False
+
+        return True
+
+    def log_performance_metrics(self):
+        """Log comprehensive performance metrics"""
+        metrics = self.performance_tracker.get_metrics_report()
+
+        self.logger.info("⚡ PERFORMANCE METRICS:")
+
+        # Show slowest operations
+        slowest = sorted(metrics.items(), key=lambda x: x[1]['avg'], reverse=True)[:5]
+
+        for operation, stats in slowest:
+            self.logger.info(f"  {operation}:")
+            self.logger.info(f"    Avg: {stats['avg']:.3f}s")
+            self.logger.info(f"    Max: {stats['max']:.3f}s")
+            self.logger.info(f"    Calls: {stats['count']}")
+
+            # Warning if operation is consistently slow
+            if stats['avg'] > 3.0:
+                self.logger.warning(f"    ⚠️ Operation is slow - consider optimization")
+
+    async def pre_trading_checklist(self) -> bool:
+        """Complete pre-flight checklist before trading"""
+
+        self.logger.info("=" * 70)
+        self.logger.info("🚦 PRE-TRADING CHECKLIST")
+        self.logger.info("=" * 70)
+
+        checks = {
+            'MT5 Connection': self.mt5 and hasattr(self.mt5, 'connected') and self.mt5.connected,
+            'Account Balance > $100': self._check_account_balance(),
+            'All Symbols Enabled': await self._check_symbols_enabled(),
+            'Technical Analyzer Ready': hasattr(self, 'technical_analyzer') and hasattr(self.technical_analyzer, 'is_data_fresh'),
+            'Sentiment Analyzer Ready': hasattr(self, 'sentiment_analyzer') and hasattr(self.sentiment_analyzer, 'is_data_fresh'),
+            'ML Models Loaded': hasattr(self, 'ml_predictor') and len(getattr(self.ml_predictor, 'models', {})) > 0,
+            'Circuit Breakers Closed': not self.sentiment_circuit_breaker.get_status()['is_open'] and not self.ml_circuit_breaker.get_status()['is_open'],
+            'Risk Manager Active': hasattr(self.risk_manager, 'validate_position_size'),
+            'Performance Monitor Active': self.performance_tracker is not None,
+            'Daily Limit Tracker Active': self.daily_limit_tracker is not None
+        }
+
+        all_passed = True
+        for check_name, passed in checks.items():
+            status = "✅" if passed else "❌"
+            self.logger.info(f"  {status} {check_name}")
+            if not passed:
+                all_passed = False
+
+        self.logger.info("=" * 70)
+
+        if all_passed:
+            self.logger.info("🟢 ALL CHECKS PASSED - Ready for trading")
+        else:
+            self.logger.error("🔴 SOME CHECKS FAILED - DO NOT START TRADING")
+
+        self.logger.info("=" * 70)
+
+        return all_passed
+
+    def _check_account_balance(self) -> bool:
+        """Check if account balance is sufficient"""
+        try:
+            if not self.mt5:
+                return False
+            account_info = self.mt5.get_account_info()
+            return account_info and account_info.get('balance', 0) > 100
+        except Exception:
+            return False
+
+    async def _check_symbols_enabled(self) -> bool:
+        """Check if all required symbols are enabled"""
+        try:
+            test_symbols = ['EURUSD', 'GBPUSD', 'XAUUSD', 'XAGUSD']
+            for symbol in test_symbols:
+                symbol_info = self.mt5.get_symbol_info(symbol)
+                if not symbol_info or not symbol_info.get('visible', False):
+                    return False
+            return True
+        except Exception:
+            return False
 
     async def _check_learning_thread_health(self):
         """Check the health of the learning thread."""
@@ -845,7 +1011,7 @@ class TradingOrchestrator:
                 }
 
                 # Execute the trade
-                trade_result = await self.trading_engine.execute_trade(signal)
+                trade_result = await self.trading_engine.execute_trade_with_validation(signal, self)
                 if trade_result:
                     self.logger.info(f"Successfully opened {new_symbol} based on correlation analysis")
                 else:

@@ -214,6 +214,15 @@ class FXAiApplication:
         # Set running flag to True before starting trading loop
         self.running = True
 
+        # Run pre-trading checklist
+        self.logger.info("Running pre-trading checklist...")
+        checklist_passed = await self.trading_orchestrator.pre_trading_checklist()
+
+        if not checklist_passed:
+            self.logger.error("Pre-trading checklist failed - aborting startup")
+            self.shutdown()
+            return
+
         # Start trading loop
         try:
             await self.trading_orchestrator.trading_loop()
