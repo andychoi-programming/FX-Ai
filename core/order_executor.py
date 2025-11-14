@@ -223,20 +223,19 @@ class OrderManager:
 
         symbol_info = mt5.symbol_info(symbol)
         if symbol_info is None:
-            return 0.001  # Very conservative fallback
+            atr_fallbacks = self.config.get('atr_fallbacks', {})
+            return atr_fallbacks.get('conservative_fallback_pips', 0.001)
 
         # Estimate ATR based on symbol type and current price
         current_price = symbol_info.ask
+        atr_fallbacks = self.config.get('atr_fallbacks', {})
 
         if 'XAU' in symbol or 'GOLD' in symbol:
-            # Gold ATR estimate: ~0.5-1.5% of price
-            return current_price * 0.01
+            return current_price * atr_fallbacks.get('gold_atr_percentage', 0.01)
         elif 'XAG' in symbol or 'SILVER' in symbol:
-            # Silver ATR estimate: ~1-2% of price
-            return current_price * 0.015
+            return current_price * atr_fallbacks.get('silver_atr_percentage', 0.015)
         else:
-            # Forex ATR estimate: ~0.1-0.3% of price
-            return current_price * 0.002
+            return current_price * atr_fallbacks.get('forex_atr_percentage', 0.002)
 
     def _calculate_stop_distance(self, symbol: str, signal: str, atr: float,
                                signal_data: Optional[Dict] = None) -> float:

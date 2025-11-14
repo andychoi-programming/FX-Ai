@@ -516,8 +516,9 @@ class TimeManager:
             session_thresholds = {**default_thresholds, **config_thresholds}
             session_threshold = session_thresholds.get(current_session, base_threshold)
 
-            # Ensure threshold doesn't go below 0.200 (adjusted for current signal quality)
-            return max(0.200, min(session_threshold, base_threshold))
+            # Ensure threshold doesn't go below minimum (adjusted for current signal quality)
+            min_threshold = config.get('performance_thresholds', {}).get('min_session_threshold', 0.200)
+            return max(min_threshold, min(session_threshold, base_threshold))
 
         except Exception as e:
             logger.warning(f"Error getting session threshold: {e}")

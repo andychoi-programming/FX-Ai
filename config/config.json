@@ -889,5 +889,79 @@
     "mt5_server_time": "2025-11-12 07:55:00+00:00",
     "time_offset_hours": 7,
     "_comment": "Computer local time and MT5 server time difference for reference"
+  },
+  "atr_fallbacks": {
+    "gold_atr_percentage": 0.01,
+    "silver_atr_percentage": 0.015,
+    "forex_atr_percentage": 0.002,
+    "conservative_fallback_pips": 0.001,
+    "_comment": "ATR percentage estimates for different asset classes when ATR calculation fails"
+  },
+  "correlation_groups": {
+    "euro_pairs": ["EURUSD", "EURGBP", "EURJPY", "EURCHF", "EURAUD", "EURNZD", "EURCAD"],
+    "gbp_pairs": ["GBPUSD", "GBPJPY", "GBPCHF", "GBPAUD", "GBPNZD", "GBPCAD"],
+    "oceania_pairs": ["AUDUSD", "NZDUSD", "AUDJPY", "NZDJPY", "AUDCHF", "NZDCHF", "AUDCAD", "NZDCAD"],
+    "usd_pairs": ["EURUSD", "GBPUSD", "AUDUSD", "NZDUSD", "USDCAD", "USDCHF", "USDJPY"],
+    "jpy_pairs": ["USDJPY", "EURJPY", "GBPJPY", "AUDJPY", "NZDJPY", "CADJPY", "CHFJPY"],
+    "correlation_defaults": {
+      "euro_correlation": 0.8,
+      "gbp_correlation": 0.7,
+      "oceania_correlation": 0.65
+    },
+    "_comment": "Predefined currency pair groups for correlation analysis"
+  },
+  "adaptive_learning_preferences": {
+    "session_preferences": {
+      "tokyo_sydney": {
+        "preferred_pairs": ["AUDUSD", "NZDUSD", "AUDJPY", "NZDJPY", "AUDNZD", "USDJPY"],
+        "threshold_multiplier": 1.0,
+        "reason": "Asian pairs during Asian sessions"
+      },
+      "london": {
+        "preferred_pairs": ["EURUSD", "GBPUSD", "EURGBP", "EURCHF", "EURJPY", "GBPJPY"],
+        "threshold_multiplier": 0.85,
+        "reason": "European pairs during London session"
+      },
+      "new_york": {
+        "preferred_pairs": ["EURUSD", "GBPUSD", "USDCAD", "USDJPY"],
+        "threshold_multiplier": 0.90,
+        "reason": "Major pairs during NY session"
+      }
+    },
+    "_comment": "Session-specific trading preferences for adaptive learning"
+  },
+  "sentiment_base_values": {
+    "EURUSD": {"long": 65, "short": 35},
+    "GBPUSD": {"long": 45, "short": 55},
+    "USDJPY": {"long": 50, "short": 50},
+    "AUDUSD": {"long": 70, "short": 30},
+    "USDCAD": {"long": 40, "short": 60},
+    "_comment": "Base retail sentiment values for major currency pairs"
+  },
+  "schedule_symbols": {
+    "trading_symbols": [
+      "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "NZDUSD", "USDCAD",
+      "EURAUD", "EURCAD", "EURCHF", "EURGBP", "EURJPY", "EURNZD",
+      "GBPAUD", "GBPCAD", "GBPCHF", "GBPJPY", "GBPNZD",
+      "AUDCAD", "AUDCHF", "AUDJPY", "AUDNZD",
+      "NZDCAD", "NZDCHF", "NZDJPY",
+      "CADCHF", "CADJPY", "CHFJPY",
+      "XAUUSD", "XAGUSD"
+    ],
+    "default_schedule": {"start_hour": 8, "end_hour": 23},
+    "_comment": "Symbols included in trading schedule management"
+  },
+  "performance_thresholds": {
+    "operation_warning_seconds": 5.0,
+    "_comment": "Performance monitoring thresholds for operation timing warnings"
+  },
+  "pip_calculations": {
+    "metals_pip_divisor": 10,
+    "_comment": "Pip calculation divisors for different asset classes"
+  },
+  "validation_ranges": {
+    "risk_reward_ratio_min": 1.5,
+    "risk_reward_ratio_max": 5.0,
+    "_comment": "Acceptable ranges for risk-reward ratio validation"
   }
 }

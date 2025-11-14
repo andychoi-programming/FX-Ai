@@ -76,7 +76,7 @@ class ScheduleManager:
         # Default: 08:00-23:00 for all symbols
         default_schedule = {'start_hour': 8, 'end_hour': 23}
 
-        symbols = [
+        symbols = self.config.get('schedule_symbols', {}).get('trading_symbols', [
             'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD',
             'EURAUD', 'EURCAD', 'EURCHF', 'EURGBP', 'EURJPY', 'EURNZD',
             'GBPAUD', 'GBPCAD', 'GBPCHF', 'GBPJPY', 'GBPNZD',
@@ -84,7 +84,7 @@ class ScheduleManager:
             'NZDCAD', 'NZDCHF', 'NZDJPY',
             'CADCHF', 'CADJPY', 'CHFJPY',
             'XAUUSD', 'XAGUSD'
-        ]
+        ])
 
         for symbol in symbols:
             self.schedules[symbol] = default_schedule

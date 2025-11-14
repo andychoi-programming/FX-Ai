@@ -141,7 +141,7 @@ class AdaptiveLearningManager:
                 }
             },
 
-            "session_preferences": {
+            "session_preferences": self.config.get('adaptive_learning_preferences', {}).get('session_preferences', {
                 "tokyo_sydney": {
                     "preferred_pairs": ["AUDUSD", "NZDUSD", "AUDJPY", "NZDJPY", "AUDNZD", "USDJPY"],
                     "threshold_multiplier": 1.0,
@@ -157,7 +157,7 @@ class AdaptiveLearningManager:
                     "threshold_multiplier": 0.90,
                     "reason": "Major pairs during NY session"
                 }
-            },
+            }),
 
             "time_based_patterns": {
                 "market_open_gaps": {

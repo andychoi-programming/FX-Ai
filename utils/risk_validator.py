@@ -36,7 +36,8 @@ class RiskValidator:
             if 'JPY' in symbol:
                 risk_pips = risk_pips / 100
             elif 'XAU' in symbol or 'XAG' in symbol:
-                risk_pips = risk_pips / 10  # Metals: 1 pip = 0.10 units
+                pip_divisor = config.get('pip_calculations', {}).get('metals_pip_divisor', 10)
+                risk_pips = risk_pips / pip_divisor  # Metals: configurable pip divisor
 
             # Validate risk is reasonable - asset-specific limits
             if risk_pips <= 0:

@@ -307,13 +307,13 @@ class SentimentAnalyzer:
         try:
             # Mock retail sentiment data
             # In real implementation, this would come from brokers' sentiment data
-            base_sentiment = {
+            base_sentiment = self.config.get('sentiment_base_values', {
                 'EURUSD': {'long': 65, 'short': 35},
                 'GBPUSD': {'long': 45, 'short': 55},
                 'USDJPY': {'long': 50, 'short': 50},
                 'AUDUSD': {'long': 70, 'short': 30},
                 'USDCAD': {'long': 40, 'short': 60}
-            }
+            })
 
             sentiment = base_sentiment.get(symbol, {'long': 50, 'short': 50})
 

@@ -11,12 +11,13 @@ from typing import Callable, Any
 logger = logging.getLogger(__name__)
 
 
-def monitor_performance(func: Callable) -> Callable:
+def monitor_performance(func: Callable, warning_threshold: float = 5.0) -> Callable:
     """
     Track function execution time
 
     Args:
         func: Function to monitor
+        warning_threshold: Time in seconds above which to log a warning (default: 5.0)
 
     Returns:
         Wrapped function with performance tracking
@@ -28,7 +29,7 @@ def monitor_performance(func: Callable) -> Callable:
             result = func(*args, **kwargs)
             duration = time.time() - start
 
-            if duration > 5.0:  # Warn if any operation takes > 5 seconds
+            if duration > warning_threshold:  # Warn if any operation takes > threshold seconds
                 logger.warning(f"{func.__name__} took {duration:.2f}s - consider optimization")
 
             return result
@@ -40,12 +41,13 @@ def monitor_performance(func: Callable) -> Callable:
     return wrapper
 
 
-def monitor_performance_async(func: Callable) -> Callable:
+def monitor_performance_async(func: Callable, warning_threshold: float = 5.0) -> Callable:
     """
     Track async function execution time
 
     Args:
         func: Async function to monitor
+        warning_threshold: Time in seconds above which to log a warning (default: 5.0)
 
     Returns:
         Wrapped async function with performance tracking
@@ -57,7 +59,7 @@ def monitor_performance_async(func: Callable) -> Callable:
             result = await func(*args, **kwargs)
             duration = time.time() - start
 
-            if duration > 5.0:  # Warn if any operation takes > 5 seconds
+            if duration > warning_threshold:  # Warn if any operation takes > threshold seconds
                 logger.warning(f"{func.__name__} took {duration:.2f}s - consider optimization")
 
             return result

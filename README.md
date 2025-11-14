@@ -141,6 +141,118 @@ This approach ensures the system adapts to current market dynamics rather than o
 - **`config/symbol_schedules.json`**: Symbol-specific trading schedules and optimal hours (30+ currency pairs)
 - **`models/parameter_optimization/optimal_parameters.json`**: ML model parameters (auto-generated)
 
+### Configuration Improvements (v2.0+)
+
+**Recent Enhancement**: All previously hardcoded values have been moved to configuration files for improved maintainability and flexibility. The system now supports full parameterization without code changes.
+
+#### New Configurable Sections
+
+The following sections have been added to `config/config.json` to eliminate hardcoded values:
+
+**ATR Fallbacks** (`atr_fallbacks`):
+
+```json
+"atr_fallbacks": {
+  "gold": 0.01,
+  "silver": 0.015,
+  "forex": 0.002
+}
+```
+
+- Default ATR percentages for different asset classes when ATR calculation fails
+
+**Correlation Groups** (`correlation_groups`):
+
+```json
+"correlation_groups": {
+  "euro_pairs": ["EURUSD", "EURGBP", "EURJPY", "EURAUD"],
+  "gbp_pairs": ["GBPUSD", "GBPJPY", "GBPAUD", "GBPCAD"],
+  "yen_pairs": ["USDJPY", "EURJPY", "GBPJPY", "AUDJPY"]
+}
+```
+
+- Currency pair groupings for correlation analysis and risk management
+
+**Adaptive Learning Preferences** (`adaptive_learning_preferences`):
+
+```json
+"adaptive_learning_preferences": {
+  "session_weights": {
+    "london": 0.4,
+    "new_york": 0.35,
+    "tokyo": 0.15,
+    "sydney": 0.1
+  }
+}
+```
+
+- Session preference weights for adaptive learning algorithms
+
+**Sentiment Base Values** (`sentiment_base_values`):
+
+```json
+"sentiment_base_values": {
+  "EURUSD": {"long": 65, "short": 35},
+  "GBPUSD": {"long": 60, "short": 40}
+}
+```
+
+- Base sentiment scores for fundamental analysis by symbol
+
+**Schedule Symbols** (`schedule_symbols`):
+
+```json
+"schedule_symbols": [
+  "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD",
+  "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"
+]
+```
+
+- List of symbols for schedule management and trading
+
+**Performance Thresholds** (`performance_thresholds`):
+
+```json
+"performance_thresholds": {
+  "min_win_rate": 0.55,
+  "max_drawdown_percent": 5.0,
+  "retrain_threshold": 0.45
+}
+```
+
+- Thresholds for performance monitoring and model retraining
+
+**Pip Calculations** (`pip_calculations`):
+
+```json
+"pip_calculations": {
+  "forex_divisor": 10000,
+  "gold_divisor": 100,
+  "silver_divisor": 100
+}
+```
+
+- Pip value divisors for different asset classes
+
+**Validation Ranges** (`validation_ranges`):
+
+```json
+"validation_ranges": {
+  "rr_ratio": {"min": 1.5, "max": 5.0},
+  "atr_multiplier": {"min": 0.5, "max": 3.0}
+}
+```
+
+- Acceptable ranges for risk-reward ratios and ATR multipliers
+
+#### Benefits of Configurable Parameters
+
+- **Zero Hardcoded Values**: All trading parameters are now externalized
+- **Runtime Flexibility**: Adjust parameters without code deployment
+- **Risk Management**: Fine-tune settings based on market conditions
+- **Backtesting Support**: Easily test different parameter combinations
+- **Maintenance**: Simplified updates and version control
+
 ### Symbol Schedules Configuration
 
 The system uses separate configuration for trading hours to enable optimal 24-hour trading:
@@ -372,6 +484,9 @@ FX-Ai/
    # - Risk management parameters
    # - Trading symbols and limits
    # - Fundamental monitoring settings
+   # - ATR fallbacks and correlation groups (new v2.0+)
+   # - Sentiment base values and performance thresholds (new v2.0+)
+   # - Pip calculations and validation ranges (new v2.0+)
 
    # Review config/symbol_schedules.json for trading hours
    # - Symbol-specific optimal trading windows

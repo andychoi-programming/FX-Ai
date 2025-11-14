@@ -40,14 +40,18 @@ def check_rr_consistency():
             return False
 
         # Check ratio ranges are reasonable
+        validation_ranges = config.get('validation_ranges', {})
+        min_ratio = validation_ranges.get('risk_reward_ratio_min', 1.5)
+        max_ratio = validation_ranges.get('risk_reward_ratio_max', 5.0)
+        
         invalid_ratios = []
         for symbol, ratio in rr_ratios.items():
-            if not (1.5 <= ratio <= 5.0):
+            if not (min_ratio <= ratio <= max_ratio):
                 invalid_ratios.append(f"{symbol}({ratio})")
 
         if invalid_ratios:
             print(f"⚠️  Unusual RR ratios: {invalid_ratios}")
-            print("   Expected range: 1.5:1 to 5.0:1")
+            print(f"   Expected range: {min_ratio}:1 to {max_ratio}:1")
 
         print(f"✅ All {len(rr_ratios)} symbols have RR ratios configured")
         return True

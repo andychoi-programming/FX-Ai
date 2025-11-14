@@ -23,6 +23,7 @@ try:
     import MetaTrader5 as mt5
     from core.mt5_connector import MT5Connector
     from utils.logger import setup_logger
+    from utils.config_loader import ConfigLoader
 except ImportError as e:
     print(f"ERROR: Failed to import required modules: {e}")
     print("Please run this script from the FX-Ai root directory")
@@ -43,8 +44,13 @@ class EmergencyStop:
     """
 
     def __init__(self):
+        # Load configuration
+        config_loader = ConfigLoader()
+        config_loader.load_config()
+        self.config = config_loader.config
+        
         self.mt5 = None
-        self.magic_number = 123456  # Use the correct magic number
+        self.magic_number = self.config.get('trading', {}).get('magic_number', 123456)
 
     def initialize_mt5(self):
         """Initialize MT5 connection and verify trading capability"""

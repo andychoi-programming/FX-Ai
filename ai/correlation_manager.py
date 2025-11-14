@@ -120,43 +120,50 @@ class CorrelationManager:
             correlations[(pair2, pair1)] = -0.8
 
         # Define known correlation relationships (fallback if not in config)
-        euro_pairs = ['EURUSD', 'EURGBP', 'EURJPY', 'EURCHF', 'EURAUD', 'EURNZD', 'EURCAD']
+        correlation_groups = self.config.get('correlation_groups', {})
+        correlation_defaults = correlation_groups.get('correlation_defaults', {})
+        
+        euro_pairs = correlation_groups.get('euro_pairs', ['EURUSD', 'EURGBP', 'EURJPY', 'EURCHF', 'EURAUD', 'EURNZD', 'EURCAD'])
+        euro_correlation = correlation_defaults.get('euro_correlation', 0.8)
         for i, pair1 in enumerate(euro_pairs):
             for pair2 in euro_pairs[i+1:]:
                 key = (pair1, pair2)
                 if key not in correlations:  # Don't override config values
-                    correlations[key] = 0.8
-                    correlations[(pair2, pair1)] = 0.8
+                    correlations[key] = euro_correlation
+                    correlations[(pair2, pair1)] = euro_correlation
 
         # GBP pairs (highly correlated with EUR pairs)
-        gbp_pairs = ['GBPUSD', 'GBPJPY', 'GBPCHF', 'GBPAUD', 'GBPNZD', 'GBPCAD']
+        gbp_pairs = correlation_groups.get('gbp_pairs', ['GBPUSD', 'GBPJPY', 'GBPCHF', 'GBPAUD', 'GBPNZD', 'GBPCAD'])
+        gbp_correlation = correlation_defaults.get('gbp_correlation', 0.75)
         for gbp_pair in gbp_pairs:
             for eur_pair in euro_pairs:
                 key = (gbp_pair, eur_pair)
                 if key not in correlations:
-                    correlations[key] = 0.75
-                    correlations[(eur_pair, gbp_pair)] = 0.75
+                    correlations[key] = gbp_correlation
+                    correlations[(eur_pair, gbp_pair)] = gbp_correlation
 
         # GBP pairs with each other
         for i, pair1 in enumerate(gbp_pairs):
             for pair2 in gbp_pairs[i+1:]:
                 key = (pair1, pair2)
                 if key not in correlations:
-                    correlations[key] = 0.7
-                    correlations[(pair2, pair1)] = 0.7
+                    correlations[key] = correlation_defaults.get('gbp_correlation', 0.7)
+                    correlations[(pair2, pair1)] = correlation_defaults.get('gbp_correlation', 0.7)
 
         # AUD/NZD pairs (Oceania pairs - positive correlation)
-        oceania_pairs = ['AUDUSD', 'NZDUSD', 'AUDJPY', 'NZDJPY', 'AUDCHF', 'NZDCHF', 'AUDCAD', 'NZDCAD']
+        oceania_pairs = correlation_groups.get('oceania_pairs', ['AUDUSD', 'NZDUSD', 'AUDJPY', 'NZDJPY', 'AUDCHF', 'NZDCHF', 'AUDCAD', 'NZDCAD'])
+        oceania_correlation = correlation_defaults.get('oceania_correlation', 0.65)
         for i, pair1 in enumerate(oceania_pairs):
             for pair2 in oceania_pairs[i+1:]:
                 key = (pair1, pair2)
                 if key not in correlations:
-                    correlations[key] = 0.65
-                    correlations[(pair2, pair1)] = 0.65
+                    correlations[key] = oceania_correlation
+                    correlations[(pair2, pair1)] = oceania_correlation
 
         # Negative correlations (USD pairs vs non-USD pairs)
-        usd_pairs = ['EURUSD', 'GBPUSD', 'AUDUSD', 'NZDUSD', 'USDCAD', 'USDCHF', 'USDJPY']
-        non_usd_pairs = ['EURJPY', 'GBPJPY', 'AUDJPY', 'NZDJPY', 'EURCHF', 'GBPCHF', 'AUDCHF', 'NZDCHF']
+        usd_pairs = correlation_groups.get('usd_pairs', ['EURUSD', 'GBPUSD', 'AUDUSD', 'NZDUSD', 'USDCAD', 'USDCHF', 'USDJPY'])
+        jpy_pairs = correlation_groups.get('jpy_pairs', ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'NZDJPY', 'CADJPY', 'CHFJPY'])
+        non_usd_pairs = [pair for pair in jpy_pairs if 'JPY' in pair]  # Filter for JPY pairs as non-USD
 
         for usd_pair in usd_pairs:
             for non_usd_pair in non_usd_pairs:

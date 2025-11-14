@@ -471,13 +471,13 @@ class FundamentalAnalyzer:
             interest_rates = self.get_interest_rates()
 
             # Calculate fundamental score for each major currency pair
-            currency_pairs = [
+            currency_pairs = self.config.get('schedule_symbols', {}).get('trading_symbols', [
                 'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD',
                 'EURJPY', 'GBPJPY', 'EURGBP', 'AUDJPY', 'EURAUD', 'EURCHF', 'AUDNZD',
                 'NZDJPY', 'GBPAUD', 'GBPCAD', 'EURNZD', 'AUDCAD', 'GBPCHF', 'AUDCHF',
                 'EURCAD', 'CADJPY', 'GBPNZD', 'CADCHF', 'CHFJPY', 'NZDCAD', 'NZDCHF',
                 'XAUUSD', 'XAGUSD'
-            ]
+            ])
 
             for symbol in currency_pairs:
                 # Default neutral score
