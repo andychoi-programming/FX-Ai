@@ -114,6 +114,160 @@ class AdaptiveLearningManager:
 
         logger.info("Adaptive Learning Manager initialized with modular components")
 
+        # Initialize smart defaults for known forex patterns
+        self._load_smart_defaults()
+
+    def _load_smart_defaults(self):
+        """Load known forex patterns to bootstrap learning system"""
+        self.smart_defaults = {
+            "day_adjustments": {
+                "monday": {
+                    "hours": "08:00-11:00",
+                    "threshold_add": 0.080,
+                    "confidence": 0.7,
+                    "reason": "Monday morning gap risk"
+                },
+                "friday": {
+                    "hours": "18:00-23:00",
+                    "threshold_add": 0.100,
+                    "confidence": 0.8,
+                    "reason": "Friday afternoon position closing"
+                },
+                "wednesday": {
+                    "hours": "12:00-15:00",
+                    "threshold_add": -0.030,
+                    "confidence": 0.6,
+                    "reason": "Mid-week liquidity sweet spot"
+                }
+            },
+
+            "session_preferences": {
+                "tokyo_sydney": {
+                    "preferred_pairs": ["AUDUSD", "NZDUSD", "AUDJPY", "NZDJPY", "AUDNZD", "USDJPY"],
+                    "threshold_multiplier": 1.0,
+                    "reason": "Asian pairs during Asian sessions"
+                },
+                "london": {
+                    "preferred_pairs": ["EURUSD", "GBPUSD", "EURGBP", "EURCHF", "EURJPY", "GBPJPY"],
+                    "threshold_multiplier": 0.85,
+                    "reason": "European pairs during London session"
+                },
+                "new_york": {
+                    "preferred_pairs": ["EURUSD", "GBPUSD", "USDCAD", "USDJPY"],
+                    "threshold_multiplier": 0.90,
+                    "reason": "Major pairs during NY session"
+                }
+            },
+
+            "time_based_patterns": {
+                "market_open_gaps": {
+                    "sessions": ["tokyo_sydney", "london"],
+                    "hours_after_open": 2,
+                    "threshold_add": 0.050,
+                    "reason": "Avoid gap-related volatility"
+                },
+                "session_overlap": {
+                    "threshold_add": -0.040,
+                    "reason": "Increased liquidity during overlaps"
+                },
+                "end_of_day": {
+                    "hours_before_close": 2,
+                    "threshold_add": 0.060,
+                    "reason": "Position closing pressure"
+                }
+            }
+        }
+
+        logger.info("Smart defaults loaded for known forex patterns")
+
+    def get_smart_threshold_adjustment(self, symbol: str, session: str, current_time: datetime, base_threshold: float) -> tuple:
+        """Get threshold adjustment based on known forex patterns
+
+        Returns:
+            tuple: (adjusted_threshold, reason, confidence)
+        """
+        adjustment = 0.0
+        reasons = []
+        confidence = 0.5  # Base confidence
+
+        # Day of week adjustments
+        day_name = current_time.strftime('%A').lower()
+        if day_name in self.smart_defaults["day_adjustments"]:
+            day_pattern = self.smart_defaults["day_adjustments"][day_name]
+            # Check if current time is within the specified hours
+            if self._time_in_range(current_time, day_pattern["hours"]):
+                adjustment += day_pattern["threshold_add"]
+                reasons.append(day_pattern["reason"])
+                confidence = max(confidence, day_pattern["confidence"])
+
+        # Session preference adjustments
+        if session in self.smart_defaults["session_preferences"]:
+            session_pref = self.smart_defaults["session_preferences"][session]
+            if symbol in session_pref["preferred_pairs"]:
+                multiplier = session_pref["threshold_multiplier"]
+                adjustment *= multiplier
+                reasons.append(session_pref["reason"])
+                confidence = max(confidence, 0.7)
+
+        # Time-based patterns
+        for pattern_name, pattern in self.smart_defaults["time_based_patterns"].items():
+            if pattern_name == "market_open_gaps":
+                if session in pattern["sessions"]:
+                    # Check if we're within X hours of session start
+                    session_start = self._get_session_start_time(session, current_time.date())
+                    if session_start and (current_time - session_start).total_seconds() < (pattern["hours_after_open"] * 3600):
+                        adjustment += pattern["threshold_add"]
+                        reasons.append(pattern["reason"])
+                        confidence = max(confidence, 0.6)
+
+            elif pattern_name == "end_of_day":
+                # Check if we're within X hours of session end
+                session_end = self._get_session_end_time(session, current_time.date())
+                if session_end and (session_end - current_time).total_seconds() < (pattern["hours_before_close"] * 3600):
+                    adjustment += pattern["threshold_add"]
+                    reasons.append(pattern["reason"])
+                    confidence = max(confidence, 0.6)
+
+        adjusted_threshold = base_threshold + adjustment
+        reason_str = "; ".join(reasons) if reasons else "No smart adjustments"
+
+        return adjusted_threshold, reason_str, confidence
+
+    def _time_in_range(self, check_time: datetime, time_range: str) -> bool:
+        """Check if time is within a range like '08:00-11:00'"""
+        try:
+            start_str, end_str = time_range.split('-')
+            start_time = datetime.strptime(start_str, '%H:%M').time()
+            end_time = datetime.strptime(end_str, '%H:%M').time()
+
+            check_time_only = check_time.time()
+            return start_time <= check_time_only <= end_time
+        except:
+            return False
+
+    def _get_session_start_time(self, session: str, date) -> Optional[datetime]:
+        """Get session start time (simplified)"""
+        # This is a simplified version - in production you'd use proper session times
+        session_starts = {
+            "tokyo_sydney": 22,  # 10:00 PM UTC (6:00 AM Tokyo)
+            "london": 8,         # 8:00 AM UTC
+            "new_york": 13       # 1:00 PM UTC
+        }
+        if session in session_starts:
+            return datetime.combine(date, datetime.min.time().replace(hour=session_starts[session]))
+        return None
+
+    def _get_session_end_time(self, session: str, date) -> Optional[datetime]:
+        """Get session end time (simplified)"""
+        session_ends = {
+            "tokyo_sydney": 7,   # 7:00 AM UTC
+            "london": 16,        # 4:00 PM UTC
+            "new_york": 21       # 9:00 PM UTC
+        }
+        if session in session_ends:
+            return datetime.combine(date, datetime.min.time().replace(hour=session_ends[session]))
+        return None
+
     def _register_scheduler_callbacks(self):
         """Register callbacks for scheduled tasks"""
         self.scheduler.register_task_callback('retrain_models', self.retrain_models)

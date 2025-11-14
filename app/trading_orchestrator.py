@@ -19,6 +19,78 @@ from ai.adaptive_learning_manager import AdaptiveLearningManager
 from ai.reinforcement_learning_agent import RLAgent
 from utils.performance_monitor import monitor_performance_async, PerformanceTracker
 from utils.circuit_breaker import CircuitBreaker
+class SignalThresholdManager:
+    """Manages dynamic signal thresholds based on symbol-session matching and smart defaults"""
+
+    def __init__(self, logger, adaptive_learning=None):
+        self.logger = logger
+        self.adaptive_learning = adaptive_learning
+
+        # Define optimal sessions for symbol types
+        self.optimal_sessions = {
+            'AUD': ['tokyo_sydney', 'overlap'],
+            'NZD': ['tokyo_sydney', 'overlap'],
+            'JPY': ['tokyo_sydney', 'london'],
+            'EUR': ['london', 'new_york', 'overlap'],
+            'GBP': ['london', 'overlap'],
+            'USD': ['new_york', 'london', 'overlap']
+        }
+
+    def get_dynamic_threshold(self, symbol: str, session: str, base_threshold: float, current_time=None) -> float:
+        """Adjust threshold based on symbol-session match and smart defaults"""
+
+        # Start with base threshold
+        final_threshold = base_threshold
+        adjustments = []
+
+        # 1. Symbol-session matching adjustment
+        base_currency = symbol[:3]
+        quote_currency = symbol[3:6]
+
+        optimal_for_base = session in self.optimal_sessions.get(base_currency, [])
+        optimal_for_quote = session in self.optimal_sessions.get(quote_currency, [])
+
+        if optimal_for_base and optimal_for_quote:
+            # Both currencies active - BEST
+            adjustment = -0.05  # Lower threshold (more aggressive)
+            final_threshold += adjustment
+            adjustments.append(f"Optimal session (-0.05)")
+            self.logger.info(f"         🎯 {symbol} OPTIMAL for {session}: threshold {base_threshold:.3f} → {final_threshold:.3f}")
+
+        elif optimal_for_base or optimal_for_quote:
+            # One currency active - OKAY
+            adjustment = 0.0  # Standard threshold
+            adjustments.append(f"Acceptable session (0.00)")
+            self.logger.info(f"         ⚖️ {symbol} ACCEPTABLE for {session}: threshold {base_threshold:.3f}")
+
+        else:
+            # Neither currency active - POOR
+            adjustment = +0.10  # Higher threshold (more selective)
+            final_threshold += adjustment
+            adjustments.append(f"Sub-optimal session (+0.10)")
+            self.logger.warning(f"         ⚠️ {symbol} SUB-OPTIMAL for {session}: threshold {base_threshold:.3f} → {final_threshold:.3f}")
+
+        # 2. Smart defaults adjustment (if available)
+        if self.adaptive_learning and current_time:
+            try:
+                smart_threshold, smart_reason, confidence = self.adaptive_learning.get_smart_threshold_adjustment(
+                    symbol, session, current_time, final_threshold
+                )
+
+                if abs(smart_threshold - final_threshold) > 0.001:  # If there's a meaningful adjustment
+                    adjustment = smart_threshold - final_threshold
+                    final_threshold = smart_threshold
+                    adjustments.append(f"Smart defaults ({adjustment:+.3f})")
+                    self.logger.info(f"         🧠 SMART ADJUSTMENT: {smart_reason} (confidence: {confidence:.1f})")
+
+            except Exception as e:
+                self.logger.debug(f"         Smart defaults unavailable: {e}")
+
+        # Log final threshold
+        if len(adjustments) > 1:
+            self.logger.info(f"         📊 FINAL THRESHOLD: {final_threshold:.3f} (Base: {base_threshold:.3f}, Adjustments: {', '.join(adjustments)})")
+
+        return final_threshold
 
 
 class DailyLimitTracker:
@@ -106,6 +178,9 @@ class TradingOrchestrator:
 
         # Daily limit tracker
         self.daily_limit_tracker = DailyLimitTracker()
+
+        # Signal threshold manager for symbol-session matching
+        self.threshold_manager = SignalThresholdManager(self.logger, self.adaptive_learning)
 
         # Initialize loop counters
         self.loop_count = 0
@@ -221,109 +296,162 @@ class TradingOrchestrator:
                 await asyncio.sleep(30)
 
     async def _check_trading_opportunities(self):
-        """Check for new trading opportunities across all symbols."""
+        """Check for new trading opportunities across all symbols with detailed logging."""
+        start_time = time_module.time()
+
+        self.logger.info("=" * 80)
+        self.logger.info("🔍 TRADING OPPORTUNITY CHECK - DETAILED ANALYSIS")
+        self.logger.info("=" * 80)
+
         try:
-            # DEBUG LOGGING for Sydney session testing
-            server_time = self.app.get_current_mt5_time() if hasattr(self.app, 'get_current_mt5_time') else None
+            # Get current conditions
+            server_time = self.app.get_current_mt5_time() if hasattr(self.app, 'get_current_mt5_time') else datetime.now()
             current_session = "unknown"
             if hasattr(self.app, 'schedule_manager') and self.app.schedule_manager:
                 current_session = self.app.schedule_manager.get_current_session(server_time) if server_time else "unknown"
-            
-            self.logger.info(f"=== TRADING OPPORTUNITY CHECK ===")
-            self.logger.info(f"Server Time: {server_time}")
-            self.logger.info(f"Current Session: {current_session}")
-            self.logger.info(f"Loop Count: {self.loop_count}")
-            self.logger.info(f"Time Since Last Check: {self.loop_count - self.last_trading_opportunity_check} loops")
-            
+
+            threshold = self.config.get('trading', {}).get('min_signal_strength', 0.250)
             symbols = self.config.get('trading', {}).get('symbols', [])
-            opportunities_found = 0
-            symbols_analyzed = 0
 
-            self.logger.info(f"Analyzing {len(symbols)} trading symbols for opportunities...")
+            self.logger.info(f"📊 Server Time: {server_time}")
+            self.logger.info(f"🕐 Current Session: {current_session}")
+            self.logger.info(f"🎯 Signal Threshold: {threshold}")
+            self.logger.info(f"📈 Symbols to analyze: {symbols}")
+            self.logger.info(f"🔄 Loop Count: {self.loop_count}")
+            self.logger.info("-" * 80)
 
-            for symbol in symbols:
+            # Initialize counters
+            signals_above_threshold = 0
+            signals_below_threshold = 0
+            trades_attempted = 0
+            trades_successful = 0
+            symbols_skipped_risk = 0
+            symbols_skipped_hours = 0
+            symbols_skipped_pending = 0
+            symbols_skipped_position = 0
+            symbols_no_signal = 0
+
+            # Analyze each symbol with detailed logging
+            for i, symbol in enumerate(symbols, 1):
                 try:
-                    symbols_analyzed += 1
+                    self.logger.info(f"[{i:2d}/{len(symbols):2d}] 🔍 ANALYZING {symbol}...")
 
-                    # Check if we can trade this symbol
+                    # Check risk manager approval
                     can_trade, reason = self.risk_manager.can_trade(symbol)
                     if not can_trade:
-                        self.logger.debug(f"[{symbol}] Cannot trade: {reason}")
+                        self.logger.info(f"         🚫 RISK FILTER: {reason}")
+                        symbols_skipped_risk += 1
                         continue
 
-                    # Check if symbol is within trading hours
+                    # Check trading hours
                     if hasattr(self.app, 'schedule_manager') and self.app.schedule_manager:
                         if not self.app.schedule_manager.can_trade_symbol(symbol, self.app.get_current_mt5_time()):
-                            self.logger.debug(f"[{symbol}] Outside trading hours: {self.app.schedule_manager.get_next_trading_time(symbol)}")
+                            next_time = self.app.schedule_manager.get_next_trading_time(symbol)
+                            self.logger.info(f"         ⏰ HOURS FILTER: Outside trading hours, next: {next_time}")
+                            symbols_skipped_hours += 1
                             continue
 
-                    # Check for existing pending orders - prevent duplicates
+                    # Check for existing pending orders
                     existing_orders = mt5.orders_get(symbol=symbol)
                     has_pending_orders = False
                     if existing_orders and len(existing_orders) > 0:
-                        # Filter to only our system's orders
                         our_orders = [order for order in existing_orders if hasattr(order, 'magic') and order.magic == self.app.magic_number]
                         if len(our_orders) > 0:
-                            self.logger.info(f"[{symbol}] Has {len(our_orders)} pending order(s) - skipping")
+                            self.logger.info(f"         📋 PENDING FILTER: {len(our_orders)} pending order(s)")
+                            symbols_skipped_pending += 1
                             has_pending_orders = True
-                    
+
                     if has_pending_orders:
                         continue
 
-                    # Check for existing positions - prevent multiple positions per symbol
+                    # Check for existing positions
                     existing_positions = mt5.positions_get(symbol=symbol)
                     if existing_positions and len(existing_positions) > 0:
-                        self.logger.debug(f"[{symbol}] Skipping - already has {len(existing_positions)} open position(s)")
+                        self.logger.info(f"         📊 POSITION FILTER: {len(existing_positions)} open position(s)")
+                        symbols_skipped_position += 1
                         continue
 
-                    # Generate trading signal
+                    # Generate trading signal with detailed logging
+                    self.logger.info(f"         ⚡ Generating signal...")
                     signal = await self._generate_trading_signal(symbol)
-                    if signal:
-                        opportunities_found += 1
-                        self.logger.info(f"[{symbol}] TRADE SIGNAL: {signal['direction']} "
-                                       f"(Strength: {signal['signal_strength']:.3f}) | "
-                                       f"Size: {signal['position_size']:.2f} lots | "
-                                       f"Entry: {signal['entry_price']:.5f}")
 
-                        # Execute the trade
-                        trade_result = await self.trading_engine.execute_trade_with_validation(signal, self)
-                        if trade_result and trade_result.get('success', False):
-                            self.logger.info(f"[{symbol}] OK Trade executed successfully - Ticket: {trade_result.get('ticket', 'N/A')}")
-                            
-                            # Record trade for daily limit tracking
-                            self.risk_manager.record_trade(symbol)
-                            
-                            # Record open trade in database for monitoring
-                            if self.adaptive_learning:
-                                self.adaptive_learning.record_open_trade(trade_result)
-                            
-                            # Start monitoring this trade (skip in dry run mode)
-                            dry_run = self.config.get('trading', {}).get('dry_run', False)
-                            if not dry_run:
-                                asyncio.create_task(self.monitor_trade(
-                                    trade_result.get('ticket', 0), trade_result))
+                    if signal:
+                        signal_strength = signal.get('signal_strength', 0)
+                        direction = signal.get('direction', 'NONE')
+
+                        self.logger.info(f"         📈 SIGNAL: {signal_strength:.4f} | Direction: {direction}")
+
+                        # Get dynamic threshold based on symbol-session matching
+                        dynamic_threshold = self.threshold_manager.get_dynamic_threshold(symbol, current_session, threshold, server_time)
+
+                        # Compare to dynamic threshold
+                        if signal_strength >= dynamic_threshold:
+                            signals_above_threshold += 1
+                            self.logger.info(f"         ✅ ABOVE THRESHOLD ({signal_strength:.4f} >= {dynamic_threshold:.4f})")
+                            self.logger.info(f"         🚀 ATTEMPTING TRADE...")
+
+                            trades_attempted += 1
+
+                            # Execute the trade
+                            trade_result = await self.trading_engine.execute_trade_with_validation(signal, self)
+
+                            if trade_result and trade_result.get('success', False):
+                                trades_successful += 1
+                                ticket = trade_result.get('ticket', 'N/A')
+                                self.logger.info(f"         ✅ TRADE SUCCESSFUL: Ticket #{ticket}")
+
+                                # Record trade for daily limit tracking
+                                self.risk_manager.record_trade(symbol)
+
+                                # Record open trade in database for monitoring
+                                if self.adaptive_learning:
+                                    self.adaptive_learning.record_open_trade(trade_result)
+
+                                # Start monitoring this trade (skip in dry run mode)
+                                dry_run = self.config.get('trading', {}).get('dry_run', False)
+                                if not dry_run:
+                                    asyncio.create_task(self.monitor_trade(
+                                        trade_result.get('ticket', 0), trade_result))
+                                else:
+                                    self.logger.info(f"         🧪 DRY RUN: Simulating monitoring for #{ticket}")
                             else:
-                                # In dry run mode, just log that we're "monitoring"
-                                self.logger.info(f"[{symbol}] Dry run: Simulating monitoring for {trade_result.get('ticket', 'N/A')}")
+                                error_msg = trade_result.get('error', 'Unknown error') if trade_result else 'Trade execution failed'
+                                self.logger.error(f"         ❌ TRADE FAILED: {error_msg}")
                         else:
-                            error_msg = trade_result.get('error', 'Unknown error') if trade_result else 'Trade execution failed'
-                            self.logger.warning(f"[{symbol}] [FAILED] Trade execution failed: {error_msg}")
+                            signals_below_threshold += 1
+                            self.logger.info(f"         ❌ BELOW THRESHOLD ({signal_strength:.4f} < {dynamic_threshold:.4f})")
                     else:
-                        # Log why no signal was generated (less frequent logging)
-                        if symbols_analyzed % 5 == 0:  # Log every 5th symbol to avoid spam
-                            self.logger.debug(f"[{symbol}] No trading signal (insufficient strength)")
+                        symbols_no_signal += 1
+                        self.logger.info(f"         📉 NO SIGNAL: Insufficient strength or data")
 
                 except Exception as e:
-                    self.logger.error(f"[{symbol}] Error processing: {e}")
+                    self.logger.error(f"[{symbol}] 💥 EXCEPTION during analysis: {e}", exc_info=True)
 
-            # Summary logging
-            if opportunities_found > 0:
-                self.logger.info(f"TRADING SUMMARY: {opportunities_found} opportunities found, {symbols_analyzed} symbols analyzed")
-            elif symbols_analyzed % 10 == 0:  # Log summary every 10 cycles when no opportunities
-                self.logger.info(f"TRADING SUMMARY: No opportunities found, {symbols_analyzed} symbols analyzed")
+            # Comprehensive summary
+            elapsed = time_module.time() - start_time
+
+            self.logger.info("=" * 80)
+            self.logger.info("📊 OPPORTUNITY CHECK SUMMARY")
+            self.logger.info("=" * 80)
+            self.logger.info(f"⏱️  Analysis Time: {elapsed:.2f} seconds")
+            self.logger.info(f"📈 Signals Above Threshold: {signals_above_threshold}")
+            self.logger.info(f"📉 Signals Below Threshold: {signals_below_threshold}")
+            self.logger.info(f"🚀 Trades Attempted: {trades_attempted}")
+            self.logger.info(f"✅ Trades Successful: {trades_successful}")
+            self.logger.info(f"🚫 Skipped - Risk: {symbols_skipped_risk}")
+            self.logger.info(f"⏰ Skipped - Hours: {symbols_skipped_hours}")
+            self.logger.info(f"📋 Skipped - Pending: {symbols_skipped_pending}")
+            self.logger.info(f"📊 Skipped - Position: {symbols_skipped_position}")
+            self.logger.info(f"📉 No Signal: {symbols_no_signal}")
+            self.logger.info("=" * 80)
+
+            # Success rate logging
+            if trades_attempted > 0:
+                success_rate = (trades_successful / trades_attempted) * 100
+                self.logger.info(f"🎯 Trade Success Rate: {success_rate:.1f}% ({trades_successful}/{trades_attempted})")
 
         except Exception as e:
-            self.logger.error(f"Error checking trading opportunities: {e}")
+            self.logger.error(f"💥 CRITICAL ERROR in opportunity check: {e}", exc_info=True)
 
     async def _generate_trading_signal(self, symbol: str) -> Optional[Dict[str, Any]]:
         """
