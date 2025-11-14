@@ -1345,7 +1345,10 @@ class OrderExecutor:
                         logger.debug(last_error)
                         continue
 
-                    if result.retcode == mt5.TRADE_RETCODE_DONE:
+                    # Define success codes
+                    SUCCESS_CODES = [10008, 10009, 10010]  # PLACED, DONE, DONE_PARTIAL
+
+                    if result.retcode in SUCCESS_CODES:
                         logger.info(f"Order placed with filling mode {filling_mode}: {symbol} {order_type} @ {price}")
                         break  # Success, exit the retry loop
                     else:
@@ -1362,7 +1365,7 @@ class OrderExecutor:
                     continue
             
             # If all filling modes failed, try pending orders as fallback (only for market orders)
-            if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
+            if result is None or result.retcode not in [10008, 10009, 10010]:
                 # Only try pending fallback for market orders, not for stop orders that failed as pending
                 if trade_action != mt5.TRADE_ACTION_PENDING:
                     logger.info(f"Market orders failed for {symbol}, trying pending orders as fallback")
@@ -1374,7 +1377,7 @@ class OrderExecutor:
                         return pending_result
             
             # If both market and pending orders failed, return the last error
-            if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
+            if result is None or result.retcode not in [10008, 10009, 10010]:
                 logger.error(f"All order types failed for {symbol}. Last error: {last_error}")
                 return {
                     'success': False,
@@ -1493,12 +1496,6 @@ class OrderExecutor:
                     'order': result.order,
                     'price': result.price
                 }
-            else:
-                logger.error(f"Order failed: {result.comment}")
-                return {
-                    'success': False,
-                    'error': result.comment
-                }
 
         except Exception as e:
             logger.error(f"Error placing order: {e}")
@@ -1613,7 +1610,7 @@ class OrderExecutor:
                 logger.error(f"Pending order send failed - no response from MT5 for {symbol}")
                 return None
 
-            if result.retcode == mt5.TRADE_RETCODE_DONE:
+            if result.retcode in [10008, 10009, 10010]:  # PLACED, DONE, DONE_PARTIAL
                 logger.info(f"Pending order placed successfully: {symbol} {order_type} @ {pending_price}")
                 return {
                     'success': True,

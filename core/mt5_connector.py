@@ -292,7 +292,10 @@ class MT5Connector:
             if result is None:
                 return {'success': False, 'error': 'Order send failed - no response'}
 
-            if result.retcode == mt5.TRADE_RETCODE_DONE:
+            # Define success codes
+            SUCCESS_CODES = [10008, 10009, 10010]  # PLACED, DONE, DONE_PARTIAL
+
+            if result.retcode in SUCCESS_CODES:
                 return {
                     'success': True,
                     'order': result.order,
