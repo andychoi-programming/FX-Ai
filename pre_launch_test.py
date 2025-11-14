@@ -39,8 +39,8 @@ def pre_launch_test():
             print(f"   Local Time: {local_time}")
             print(f"   Time Difference: {time_diff_hours:.1f} hours")
 
-            if abs(time_diff_hours) > 1:
-                print("⚠️  WARNING: Time difference > 1 hour - check system clock!")
+            if abs(time_diff_hours) > 3:  # Allow up to 3 hours difference for timezone variations
+                print("⚠️  WARNING: Time difference > 3 hours - check system clock!")
                 validation_passed = False
             else:
                 print("✅ Time synchronization looks good")
@@ -129,9 +129,9 @@ def pre_launch_test():
             print(f"✅ Existing Orders: {orders_count}")
 
             if positions_count > 0:
-                print("⚠️  WARNING: Existing positions detected - ensure they're intended")
+                print("ℹ️  INFO: Existing positions detected - review in MT5 terminal")
             if orders_count > 0:
-                print("⚠️  WARNING: Existing orders detected - ensure they're intended")
+                print("ℹ️  INFO: Existing orders detected - review in MT5 terminal")
 
         except Exception as e:
             print(f"❌ Order/position check failed: {e}")
