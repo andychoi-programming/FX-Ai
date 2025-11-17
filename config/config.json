@@ -203,7 +203,7 @@
     "take_profit_rules": {
       "method": "rr_based",
       "tp_atr_multiplier_forex": 6.0,
-      "tp_atr_multiplier_metals": 5.0,
+      "tp_atr_multiplier_metals": 8.0,
       "default_tp_pips": 60,
       "tp_adjustment_sentiment": true,
       "tp_adjustment_fundamental": true,
@@ -965,7 +965,7 @@
     "metals_pip_divisor": 10,
     "pip_values_per_001_lot": {
       "XAUUSD": 1.00,
-      "XAGUSD": 0.40,
+      "XAGUSD": 0.16,
       "default_forex": 0.001,
       "default_jpy": 0.01
     },
