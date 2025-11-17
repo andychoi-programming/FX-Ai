@@ -492,15 +492,23 @@ class OrderManager:
                         cancelled += 1
                         logger.info(f"Emergency cancelled excess pending order: {order.ticket}")
 
-            # Only check OUR orders to avoid overwhelming the system
-            # Check orders that are older than 2 hours (very stale)
+            # Check orders that are older than 1 hour (stale - trigger re-analysis)
             current_time = datetime.now().timestamp()
+            stale_threshold = 1 * 3600  # 1 hour
+            # Check orders that are older than 2 hours (very stale)
             very_stale_threshold = 2 * 3600  # 2 hours
 
             for order in our_orders:
                 try:
                     managed += 1
                     order_time = getattr(order, 'time_setup', 0)
+
+                    # For orders >1 hour old, trigger re-analysis
+                    if (current_time - order_time) > stale_threshold and (current_time - order_time) <= very_stale_threshold:
+                        logger.warning(f"Stale pending order detected: {order.ticket} (age: {(current_time - order_time)/3600:.1f}h) - Re-analysis recommended")
+                        # TODO: Implement re-analysis logic here
+                        # For now, just log - in future, call analysis functions to decide keep/cancel/modify
+                        continue
 
                     # Only cancel VERY stale orders (>2 hours old) that belong to our system
                     if (current_time - order_time) > very_stale_threshold:
