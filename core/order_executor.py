@@ -81,10 +81,10 @@ class OrderManager:
                 return {'success': False, 'error': f'Failed to get tick data for {symbol}'}
 
             current_price = tick.ask if signal == "BUY" else tick.bid
-            atr = self._get_atr(symbol)
+            atr = self.order_executor._get_atr(symbol)
 
             # Calculate optimal stop distance
-            stop_distance = self._calculate_stop_distance(symbol, signal, atr, signal_data)
+            stop_distance = self.order_executor._calculate_stop_distance(symbol, signal, atr, signal_data)
 
             # Calculate stop order price
             if signal == "BUY":
@@ -99,11 +99,11 @@ class OrderManager:
 
             # Calculate volume if not provided
             if volume is None:
-                volume = self._calculate_position_size(symbol, stop_price, stop_loss or (stop_price - stop_distance))
+                volume = self.order_executor._calculate_position_size(symbol, stop_price, stop_loss or (stop_price - stop_distance))
 
             # Calculate SL/TP if not provided
             if stop_loss is None or take_profit is None:
-                sl_price, tp_price = self._calculate_sl_tp(symbol, signal, stop_price, atr)
+                sl_price, tp_price = self.order_executor._calculate_sl_tp(symbol, signal, stop_price, atr)
                 if stop_loss is None:
                     stop_loss = sl_price
                 if take_profit is None:
@@ -140,17 +140,17 @@ class OrderManager:
                 return {'success': False, 'error': f'Failed to get tick data for {symbol}'}
 
             current_price = tick.ask if signal == "BUY" else tick.bid
-            atr = self._get_atr(symbol)
+            atr = self.order_executor._get_atr(symbol)
 
             # Calculate volume if not provided
             if volume is None:
                 # For market orders, estimate SL distance for position sizing
                 estimated_sl_distance = atr * 2  # Conservative estimate
-                volume = self._calculate_position_size(symbol, current_price, current_price - estimated_sl_distance)
+                volume = self.order_executor._calculate_position_size(symbol, current_price, current_price - estimated_sl_distance)
 
             # Calculate SL/TP if not provided
             if stop_loss is None or take_profit is None:
-                sl_price, tp_price = self._calculate_sl_tp(symbol, signal, current_price, atr)
+                sl_price, tp_price = self.order_executor._calculate_sl_tp(symbol, signal, current_price, atr)
                 if stop_loss is None:
                     stop_loss = sl_price
                 if take_profit is None:
