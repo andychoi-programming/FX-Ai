@@ -96,7 +96,8 @@ class SignalThresholdManager:
 class DailyLimitTracker:
     """Prevent runaway trading"""
 
-    def __init__(self):
+    def __init__(self, mt5_connector=None):
+        self.mt5 = mt5_connector
         self.daily_trades = {}
         self.max_trades_per_day = 30  # Absolute maximum
         self.max_trades_per_symbol = 1  # Your rule
@@ -177,7 +178,7 @@ class TradingOrchestrator:
         self.performance_tracker = PerformanceTracker()
 
         # Daily limit tracker
-        self.daily_limit_tracker = DailyLimitTracker()
+        self.daily_limit_tracker = DailyLimitTracker(self.mt5)
 
         # Signal threshold manager for symbol-session matching
         self.threshold_manager = SignalThresholdManager(self.logger, self.adaptive_learning)

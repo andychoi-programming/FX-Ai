@@ -350,7 +350,7 @@ def setup_logger(name: str = 'FX-Ai', level: str = 'INFO',
     )
 
     # Console handler
-    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler = UnicodeSafeStreamHandler(sys.stdout)
     console_handler.setLevel(getattr(logging, level.upper(), logging.INFO))
     console_handler.setFormatter(console_formatter)
     
@@ -550,6 +550,37 @@ def update_all_loggers_with_mt5(mt5_connector: Any):
                     
     except Exception as e:
         logging.error(f"Error updating loggers with MT5: {e}")
+
+class UnicodeSafeStreamHandler(logging.StreamHandler):
+    """
+    Custom StreamHandler that safely handles Unicode characters on Windows
+    """
+
+    def emit(self, record):
+        """
+        Emit a record, handling Unicode encoding errors gracefully
+        """
+        try:
+            super().emit(record)
+        except UnicodeEncodeError:
+            # Handle Unicode encoding errors by replacing problematic characters
+            try:
+                # Get the formatted message
+                msg = self.format(record)
+                # Replace Unicode characters that cause issues
+                safe_msg = msg.encode('cp1252', errors='replace').decode('cp1252')
+                # Write directly to stream
+                stream = self.stream
+                stream.write(safe_msg + self.terminator)
+                self.flush()
+            except Exception:
+                # If all else fails, write a safe error message
+                try:
+                    safe_error = f"[Unicode encoding error in log message]\n"
+                    self.stream.write(safe_error)
+                    self.flush()
+                except Exception:
+                    pass  # Last resort - ignore the error
 
 def shutdown_logger(logger: logging.Logger):
     """
