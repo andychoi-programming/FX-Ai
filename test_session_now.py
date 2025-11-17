@@ -14,13 +14,13 @@ def test_session_now():
 
     # Initialize MT5
     if not mt5.initialize():
-        print("❌ MT5 initialization failed")
+        print("[FAIL] MT5 initialization failed")
         return False
 
     # Get current server time
     tick = mt5.symbol_info_tick("EURUSD")
     if not tick:
-        print("❌ Failed to get EURUSD tick")
+        print("[FAIL] Failed to get EURUSD tick")
         mt5.shutdown()
         return False
 
@@ -56,23 +56,23 @@ def test_session_now():
         print(f"Actual Session: {actual_session}")
 
         if actual_session == expected.split()[0]:  # Remove overlap description for comparison
-            print("✅ Session detection CORRECT!")
+            print("[PASS] Session detection CORRECT!")
             success = True
         else:
-            print("❌ Session detection INCORRECT!")
+            print("[FAIL] Session detection INCORRECT!")
             success = False
 
     except Exception as e:
-        print(f"❌ Error testing session detection: {e}")
+        print(f"[FAIL] Error testing session detection: {e}")
         success = False
 
     mt5.shutdown()
 
     print("\n" + "=" * 60)
     if success:
-        print("🎉 Session Detection Test PASSED!")
+        print("[SUCCESS] Session Detection Test PASSED!")
     else:
-        print("❌ Session Detection Test FAILED!")
+        print("[FAIL] Session Detection Test FAILED!")
     print("=" * 60)
 
     return success

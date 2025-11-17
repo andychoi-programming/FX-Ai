@@ -8,7 +8,7 @@ import sys
 from app.application import FXAiApplication
 
 async def diagnose():
-    print("🔍 DIAGNOSING NO TRADE OPPORTUNITIES\n")
+    print("[SEARCH] DIAGNOSING NO TRADE OPPORTUNITIES\n")
     print("="*70)
 
     # Initialize app
@@ -32,7 +32,7 @@ async def diagnose():
             # Get market data
             h1_data = app.market_data_manager.get_bars(symbol, mt5.TIMEFRAME_H1, 200)
             if h1_data is None or len(h1_data) < 50:
-                print(f"\n{symbol}: ❌ Insufficient data")
+                print(f"\n{symbol}: [FAIL] Insufficient data")
                 continue
 
             market_data = {'H1': h1_data}
@@ -82,37 +82,37 @@ async def diagnose():
             print(f"  Threshold:   {min_strength:.3f}")
 
             if signal_strength >= min_strength:
-                print(f"  Status: ✅ WOULD TRADE")
+                print(f"  Status: [PASS] WOULD TRADE")
             else:
                 gap = min_strength - signal_strength
-                print(f"  Status: ❌ TOO WEAK (need +{gap:.3f})")
+                print(f"  Status: [FAIL] TOO WEAK (need +{gap:.3f})")
 
         except Exception as e:
-            print(f"\n{symbol}: ❌ Error - {e}")
+            print(f"\n{symbol}: [FAIL] Error - {e}")
 
     print("\n" + "="*70)
-    print("💡 RECOMMENDATIONS:")
+    print("[INFO] RECOMMENDATIONS:")
     print("="*70)
 
     # Analyze session
     current_session = app.time_manager.get_current_session()
     if current_session in ['sydney', 'tokyo']:
-        print("⚠️  Currently in LOW LIQUIDITY session (Sydney/Tokyo)")
+        print("[WARN]  Currently in LOW LIQUIDITY session (Sydney/Tokyo)")
         print("   - Weak signals are NORMAL")
         print("   - System correctly refusing weak trades")
         print("   - WAIT for London session (08:00 server time)")
     elif current_session == 'london':
-        print("✅ Currently in GOOD session (London)")
+        print("[PASS] Currently in GOOD session (London)")
         print("   - If still no signals, market may be ranging")
         print("   - Consider lowering threshold temporarily")
     elif current_session == 'new_york':
-        print("✅ Currently in GOOD session (New York)")
+        print("[PASS] Currently in GOOD session (New York)")
         print("   - If still no signals, check market conditions")
     else:
-        print("⚠️  Currently OUTSIDE major sessions")
+        print("[WARN]  Currently OUTSIDE major sessions")
         print("   - Low activity is expected")
 
-    print("\n📊 SIGNAL STRENGTH ANALYSIS:")
+    print("\n[CHART] SIGNAL STRENGTH ANALYSIS:")
     # More detailed analysis would go here
 
     app.shutdown()

@@ -189,18 +189,23 @@ class MT5Connector:
                 return df
             return None
 
-    def get_ticks(self, symbol: str, count: int = 1000) -> Optional[pd.DataFrame]:
-        """Get tick data"""
+    def get_account_info(self) -> Optional[Dict]:
+        """Get account information"""
         with self._mt5_lock:  # Thread-safe MT5 access
-            ticks = mt5.copy_ticks_from(symbol, datetime.now(), count, mt5.COPY_TICKS_ALL)  # type: ignore
-
-            if ticks is not None and len(ticks) > 0:
-                df = pd.DataFrame(ticks)
-                df['time'] = pd.to_datetime(df['time'], unit='s')
-                df['time_msc'] = pd.to_datetime(df['time_msc'], unit='ms')
-                df.set_index('time', inplace=True)
-                return df
-            return None
+            account_info = mt5.account_info()  # type: ignore
+            if account_info is None:
+                return None
+            
+            return {
+                'login': account_info.login,
+                'balance': account_info.balance,
+                'equity': account_info.equity,
+                'margin': account_info.margin,
+                'margin_free': account_info.margin_free,
+                'margin_level': account_info.margin_level,
+                'server': account_info.server,
+                'currency': account_info.currency
+            }
 
     async def place_order(
         self,

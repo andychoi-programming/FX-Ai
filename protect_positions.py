@@ -108,10 +108,10 @@ def modify_position_sl_tp(position, sl_price, tp_price):
 
     result = mt5.order_send(request)
     if result.retcode == mt5.TRADE_RETCODE_DONE:
-        logger.info(f"✅ Modified {position.symbol} SL={sl_price}, TP={tp_price}")
+        logger.info(f"[PASS] Modified {position.symbol} SL={sl_price}, TP={tp_price}")
         return True
     else:
-        logger.error(f"❌ Failed to modify {position.symbol}: {result.comment}")
+        logger.error(f"[FAIL] Failed to modify {position.symbol}: {result.comment}")
         return False
 
 def close_position_safely(position, reason="Manual close"):
@@ -140,10 +140,10 @@ def close_position_safely(position, reason="Manual close"):
 
     result = mt5.order_send(request)
     if result.retcode == mt5.TRADE_RETCODE_DONE:
-        logger.info(f"✅ Closed {position.symbol} position, profit: {position.profit}")
+        logger.info(f"[PASS] Closed {position.symbol} position, profit: {position.profit}")
         return True
     else:
-        logger.error(f"❌ Failed to close {position.symbol}: {result.comment}")
+        logger.error(f"[FAIL] Failed to close {position.symbol}: {result.comment}")
         return False
 
 def main():

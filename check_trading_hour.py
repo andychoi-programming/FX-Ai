@@ -9,7 +9,7 @@ time_manager = TimeManager()
 current_time = time_manager.get_current_time()
 current_hour = current_time.hour
 
-print(f"🔍 OPTIMAL TRADING HOUR CHECK")
+print(f"[SEARCH] OPTIMAL TRADING HOUR CHECK")
 print(f"Current MT5 time: {current_time}")
 print(f"Current hour: {current_hour}")
 

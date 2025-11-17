@@ -15,17 +15,17 @@ def test_session_detection():
 
     # Initialize MT5
     if not mt5.initialize():
-        print("❌ MT5 initialization failed")
+        print("[FAIL] MT5 initialization failed")
         return False
 
-    print("✅ MT5 initialized successfully")
+    print("[PASS] MT5 initialized successfully")
 
     # Create schedule manager
     try:
         schedule_manager = ScheduleManager()
-        print("✅ ScheduleManager created successfully")
+        print("[PASS] ScheduleManager created successfully")
     except Exception as e:
-        print(f"❌ Failed to create ScheduleManager: {e}")
+        print(f"[FAIL] Failed to create ScheduleManager: {e}")
         mt5.shutdown()
         return False
 
@@ -34,21 +34,21 @@ def test_session_detection():
         server_time = mt5.symbol_info_tick("EURUSD")
         if server_time:
             current_time = datetime.fromtimestamp(server_time.time)
-            print(f"✅ Current MT5 Server Time: {current_time}")
+            print(f"[PASS] Current MT5 Server Time: {current_time}")
             print(f"   Hour: {current_time.hour}")
         else:
-            print("❌ Failed to get server time from MT5")
+            print("[FAIL] Failed to get server time from MT5")
             mt5.shutdown()
             return False
     except Exception as e:
-        print(f"❌ Error getting server time: {e}")
+        print(f"[FAIL] Error getting server time: {e}")
         mt5.shutdown()
         return False
 
     # Test the get_current_session method
     try:
         session = schedule_manager.get_current_session(current_time)
-        print(f"✅ Current Session: {session}")
+        print(f"[PASS] Current Session: {session}")
 
         # Test with different hours to verify logic
         test_hours = [0, 6, 9, 12, 15, 18, 22]
@@ -59,17 +59,17 @@ def test_session_detection():
             print(f"  Hour {hour:2d}:00 → {test_session}")
 
     except AttributeError as e:
-        print(f"❌ Method still missing: {e}")
+        print(f"[FAIL] Method still missing: {e}")
         mt5.shutdown()
         return False
     except Exception as e:
-        print(f"❌ Error testing session detection: {e}")
+        print(f"[FAIL] Error testing session detection: {e}")
         mt5.shutdown()
         return False
 
     mt5.shutdown()
     print("\n" + "=" * 60)
-    print("🎉 Session Detection Test PASSED!")
+    print("[SUCCESS] Session Detection Test PASSED!")
     print("The get_current_session method is working correctly.")
     print("=" * 60)
     return True

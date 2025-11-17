@@ -276,13 +276,13 @@ class TradingEngine:
             # 1. Check data freshness if orchestrator available
             if orchestrator and hasattr(orchestrator, 'log_system_health'):
                 if not orchestrator.log_system_health():
-                    self.logger.error("❌ Trade rejected - System health check failed")
+                    self.logger.error("[FAIL] Trade rejected - System health check failed")
                     return None
 
             # 2. Check daily limits
             if orchestrator and hasattr(orchestrator, 'daily_limit_tracker'):
                 if not orchestrator.daily_limit_tracker.can_trade(signal['symbol']):
-                    self.logger.error(f"❌ Trade rejected - Daily limit reached for {signal['symbol']}")
+                    self.logger.error(f"[FAIL] Trade rejected - Daily limit reached for {signal['symbol']}")
                     return None
 
             # 3. Validate position size
@@ -297,7 +297,7 @@ class TradingEngine:
                     signal.get('position_size', 0),
                     account_balance
                 ):
-                    self.logger.error("❌ Trade rejected - Position size validation failed")
+                    self.logger.error("[FAIL] Trade rejected - Position size validation failed")
                     self.logger.error(f"   Symbol: {signal['symbol']}")
                     self.logger.error(f"   Position size: {signal.get('position_size', 0)}")
                     self.logger.error(f"   Account balance: ${account_balance:,.2f}")
@@ -307,7 +307,7 @@ class TradingEngine:
             try:
                 result = await self._execute_trade_safe(signal)
             except Exception as e:
-                self.logger.error(f"❌ Trade rejected - Execution error: {e}")
+                self.logger.error(f"[FAIL] Trade rejected - Execution error: {e}")
                 return None
 
             # 5. Record trade in daily tracker
@@ -490,7 +490,7 @@ class TradingEngine:
             
             if result is None:
                 error = mt5.last_error()
-                self.logger.error(f"❌ Order send returned None: {error}")
+                self.logger.error(f"[FAIL] Order send returned None: {error}")
                 return {
                     'success': False,
                     'error': f"MT5 connection error: {error}",
@@ -500,10 +500,10 @@ class TradingEngine:
             # Log the raw result for debugging
             self.logger.debug(f"MT5 Result - retcode: {result.retcode}, comment: {result.comment}")
             
-            # ✅ CHECK FOR SUCCESS (THIS IS THE CRITICAL FIX!)
+            # [PASS] CHECK FOR SUCCESS (THIS IS THE CRITICAL FIX!)
             if result.retcode in self.SUCCESS_CODES:
                 # SUCCESS - Order was placed or executed
-                self.logger.info(f"✅ Order placed successfully!")
+                self.logger.info(f"[PASS] Order placed successfully!")
                 self.logger.info(f"   Ticket: {result.order}")
                 self.logger.info(f"   Retcode: {result.retcode} ({self._get_retcode_description(result.retcode)})")
                 self.logger.info(f"   Comment: {result.comment}")
@@ -517,10 +517,10 @@ class TradingEngine:
                     'volume': result.volume if hasattr(result, 'volume') else None
                 }
             
-            # ❌ FAILURE - Order was rejected or failed
+            # [FAIL] FAILURE - Order was rejected or failed
             else:
                 error_desc = self._get_retcode_description(result.retcode)
-                self.logger.warning(f"❌ Order rejected!")
+                self.logger.warning(f"[FAIL] Order rejected!")
                 self.logger.warning(f"   Retcode: {result.retcode} ({error_desc})")
                 self.logger.warning(f"   Comment: {result.comment}")
                 
@@ -536,7 +536,7 @@ class TradingEngine:
                 }
                 
         except Exception as e:
-            self.logger.error(f"❌ Exception during order execution: {e}", exc_info=True)
+            self.logger.error(f"[FAIL] Exception during order execution: {e}", exc_info=True)
             return {
                 'success': False,
                 'error': str(e),
@@ -626,7 +626,7 @@ class TradingEngine:
             "type_filling": mt5.ORDER_FILLING_IOC,
         }
         
-        self.logger.info(f"📤 Placing pending order: {symbol} {volume} lots @ {price}")
+        self.logger.info(f"[EMOJI] Placing pending order: {symbol} {volume} lots @ {price}")
         self.logger.info(f"   Type: {self._get_order_type_name(order_type)}")
         self.logger.info(f"   SL: {sl}, TP: {tp}")
         

@@ -85,10 +85,10 @@ def close_position_safely(position, reason="Risk management"):
 
     result = mt5.order_send(request)
     if result.retcode == mt5.TRADE_RETCODE_DONE:
-        logger.info(f"✅ Closed {position.symbol} position, profit: {position.profit:.2f}")
+        logger.info(f"[PASS] Closed {position.symbol} position, profit: {position.profit:.2f}")
         return True
     else:
-        logger.error(f"❌ Failed to close {position.symbol}: {result.comment}")
+        logger.error(f"[FAIL] Failed to close {position.symbol}: {result.comment}")
         return False
 
 def monitor_positions():

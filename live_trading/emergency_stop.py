@@ -59,42 +59,42 @@ class EmergencyStop:
 
             # Try to initialize MT5
             if not mt5.initialize():
-                logger.error("❌ Failed to initialize MT5 - MT5 terminal may not be running")
+                logger.error("[FAIL] Failed to initialize MT5 - MT5 terminal may not be running")
                 return False
 
             # Check terminal connection
             terminal_info = mt5.terminal_info()
             if terminal_info is None:
-                logger.error("❌ Failed to get MT5 terminal info")
+                logger.error("[FAIL] Failed to get MT5 terminal info")
                 return False
 
-            logger.info(f"✅ MT5 Terminal: {terminal_info.name}")
+            logger.info(f"[PASS] MT5 Terminal: {terminal_info.name}")
 
             # Check account login status
             account_info = mt5.account_info()
             if account_info is None:
-                logger.error("❌ No MT5 account logged in - cannot trade!")
+                logger.error("[FAIL] No MT5 account logged in - cannot trade!")
                 logger.error("Please login to your MT5 account first")
                 return False
 
-            logger.info(f"✅ MT5 Account: {account_info.login} ({account_info.name})")
-            logger.info(f"✅ Account Balance: ${account_info.balance:.2f}")
+            logger.info(f"[PASS] MT5 Account: {account_info.login} ({account_info.name})")
+            logger.info(f"[PASS] Account Balance: ${account_info.balance:.2f}")
 
             # Verify trading is allowed
             if not terminal_info.trade_allowed:
-                logger.error("❌ Trading is not allowed in MT5 terminal")
+                logger.error("[FAIL] Trading is not allowed in MT5 terminal")
                 return False
 
             if account_info.trade_expert != 1:
-                logger.error("❌ Automated trading is not enabled for this account")
+                logger.error("[FAIL] Automated trading is not enabled for this account")
                 logger.error("Please enable automated trading in MT5: Tools → Options → Expert Advisors → Allow automated trading")
                 return False
 
-            logger.info("✅ MT5 connection and trading capability verified")
+            logger.info("[PASS] MT5 connection and trading capability verified")
             return True
 
         except Exception as e:
-            logger.error(f"💥 Failed to initialize MT5: {e}")
+            logger.error(f"[EMOJI] Failed to initialize MT5: {e}")
             return False
 
     def test_trading_capability(self):
@@ -105,20 +105,20 @@ class EmergencyStop:
             # Try to get a simple symbol info to test connection
             symbol_info = mt5.symbol_info("EURUSD")
             if symbol_info is None:
-                logger.error("❌ Cannot get symbol info - MT5 connection issue")
+                logger.error("[FAIL] Cannot get symbol info - MT5 connection issue")
                 return False
 
             # Try a minimal order check (this won't actually place an order)
             # We check if the order_send function is callable
             if not hasattr(mt5, 'order_send'):
-                logger.error("❌ MT5 order_send function not available")
+                logger.error("[FAIL] MT5 order_send function not available")
                 return False
 
-            logger.info("✅ Trading capability test passed")
+            logger.info("[PASS] Trading capability test passed")
             return True
 
         except Exception as e:
-            logger.error(f"💥 Trading capability test failed: {e}")
+            logger.error(f"[EMOJI] Trading capability test failed: {e}")
             return False
 
     def close_all_positions(self):
@@ -152,20 +152,20 @@ class EmergencyStop:
                     # Check if symbol is available
                     symbol_info = mt5.symbol_info(position.symbol)
                     if symbol_info is None:
-                        logger.error(f"❌ Symbol {position.symbol} is not available in MT5")
+                        logger.error(f"[FAIL] Symbol {position.symbol} is not available in MT5")
                         failed_count += 1
                         continue
 
                     # Select the symbol for trading
                     if not mt5.symbol_select(position.symbol, True):
-                        logger.error(f"❌ Failed to select symbol {position.symbol} for trading")
+                        logger.error(f"[FAIL] Failed to select symbol {position.symbol} for trading")
                         failed_count += 1
                         continue
 
                     # Get current price for the symbol
                     symbol_tick = mt5.symbol_info_tick(position.symbol)
                     if symbol_tick is None:
-                        logger.error(f"❌ Failed to get tick data for {position.symbol} - symbol may not be available")
+                        logger.error(f"[FAIL] Failed to get tick data for {position.symbol} - symbol may not be available")
                         failed_count += 1
                         continue
 
@@ -204,26 +204,26 @@ class EmergencyStop:
                         'type_time': mt5.ORDER_TIME_GTC,
                     }
 
-                    logger.info(f"📤 Sending close request: symbol={request['symbol']}, volume={request['volume']}, price={request['price']}")
+                    logger.info(f"[EMOJI] Sending close request: symbol={request['symbol']}, volume={request['volume']}, price={request['price']}")
 
                     # Send order
                     result = mt5.order_send(request)
-                    logger.info(f"📥 Order send result: {result}")
+                    logger.info(f"[EMOJI] Order send result: {result}")
 
                     if result and result.retcode == mt5.TRADE_RETCODE_DONE:
-                        logger.info(f"✅ Successfully closed {position.symbol} position {position.ticket}")
+                        logger.info(f"[PASS] Successfully closed {position.symbol} position {position.ticket}")
                         closed_count += 1
                     else:
                         error_code = result.retcode if result else 'NO_RESULT'
                         error_comment = getattr(result, 'comment', 'Unknown error') if result else 'No result returned'
-                        logger.error(f"❌ Failed to close {position.symbol} position {position.ticket}: retcode={error_code}, comment={error_comment}")
+                        logger.error(f"[FAIL] Failed to close {position.symbol} position {position.ticket}: retcode={error_code}, comment={error_comment}")
                         failed_count += 1
 
                 except Exception as e:
-                    logger.error(f"💥 Exception closing position {position.ticket}: {e}")
+                    logger.error(f"[EMOJI] Exception closing position {position.ticket}: {e}")
                     failed_count += 1
 
-            logger.info(f"📊 Close Results: {closed_count} successful, {failed_count} failed out of {len(our_positions)} total positions")
+            logger.info(f"[CHART] Close Results: {closed_count} successful, {failed_count} failed out of {len(our_positions)} total positions")
             return closed_count
 
         except Exception as e:
@@ -299,19 +299,19 @@ class EmergencyStop:
 
         # Initialize MT5
         if not self.initialize_mt5():
-            logger.error("❌ Failed to initialize MT5 - cannot proceed with emergency stop")
+            logger.error("[FAIL] Failed to initialize MT5 - cannot proceed with emergency stop")
             return False
 
         # Test trading capability before proceeding
         if not self.test_trading_capability():
-            logger.error("❌ Trading capability test failed - cannot proceed with emergency stop")
+            logger.error("[FAIL] Trading capability test failed - cannot proceed with emergency stop")
             logger.error("Please ensure MT5 is logged in and automated trading is enabled")
             return False
 
         # Close all positions
         positions_closed = self.close_all_positions()
         if positions_closed == 0 and len(mt5.positions_get() or []) > 0:
-            logger.error("❌ Failed to close all positions - emergency stop incomplete")
+            logger.error("[FAIL] Failed to close all positions - emergency stop incomplete")
             return False
         elif positions_closed > 0:
             logger.info(f"Emergency stop: Closed {positions_closed} positions")

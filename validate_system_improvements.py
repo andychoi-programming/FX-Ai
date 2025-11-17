@@ -25,7 +25,7 @@ def validate_system_improvements():
     issues_found = []
 
     # 1. Model Retraining Check
-    print("\n1. 🔄 MODEL RETRAINING CHECK")
+    print("\n1. [CYCLE] MODEL RETRAINING CHECK")
     print("-" * 40)
     try:
         # Check if retraining methods exist in trading orchestrator
@@ -33,49 +33,49 @@ def validate_system_improvements():
         orchestrator_methods = dir(TradingOrchestrator)
 
         if '_maintain_learning_systems' in orchestrator_methods:
-            print("✅ Learning system maintenance method exists")
+            print("[PASS] Learning system maintenance method exists")
         else:
-            print("❌ Learning system maintenance method missing")
+            print("[FAIL] Learning system maintenance method missing")
             issues_found.append("Missing learning system maintenance")
 
         # Check for circuit breakers - verified in code review
-        print("✅ Circuit breakers implemented (verified in code)")
+        print("[PASS] Circuit breakers implemented (verified in code)")
 
     except Exception as e:
-        print(f"❌ Error checking model retraining: {e}")
+        print(f"[FAIL] Error checking model retraining: {e}")
         issues_found.append(f"Model retraining check failed: {e}")
 
     # 2. Async/Sync Integration Check
-    print("\n2. 🔄 ASYNC/SYNC INTEGRATION CHECK")
+    print("\n2. [CYCLE] ASYNC/SYNC INTEGRATION CHECK")
     print("-" * 40)
     try:
         sentiment_analyzer = SentimentAnalyzer(config)
         methods = dir(sentiment_analyzer)
 
         if 'is_data_fresh' in methods:
-            print("✅ Data freshness checks implemented")
+            print("[PASS] Data freshness checks implemented")
         else:
-            print("❌ Data freshness checks missing")
+            print("[FAIL] Data freshness checks missing")
             issues_found.append("Missing data freshness checks")
 
         if '_analyze_with_timeout' in methods:
-            print("✅ Timeout protection implemented")
+            print("[PASS] Timeout protection implemented")
         else:
-            print("❌ Timeout protection missing")
+            print("[FAIL] Timeout protection missing")
             issues_found.append("Missing timeout protection")
 
     except Exception as e:
-        print(f"❌ Error checking async/sync integration: {e}")
+        print(f"[FAIL] Error checking async/sync integration: {e}")
         issues_found.append(f"Async/sync check failed: {e}")
 
     # 3. Feature Engineering Consistency
-    print("\n3. 🎯 FEATURE ENGINEERING CONSISTENCY")
+    print("\n3. [TARGET] FEATURE ENGINEERING CONSISTENCY")
     print("-" * 40)
     try:
         ml_predictor = MLPredictor(config)
 
         if hasattr(ml_predictor, 'validate_feature_consistency'):
-            print("✅ Feature consistency validation implemented")
+            print("[PASS] Feature consistency validation implemented")
 
             # Test with complete feature set
             test_features = {
@@ -95,112 +95,112 @@ def validate_system_improvements():
             }
 
             if ml_predictor.validate_feature_consistency(test_features):
-                print("✅ Feature validation working correctly")
+                print("[PASS] Feature validation working correctly")
             else:
-                print("❌ Feature validation failed")
+                print("[FAIL] Feature validation failed")
                 issues_found.append("Feature validation not working")
         else:
-            print("❌ Feature consistency validation missing")
+            print("[FAIL] Feature consistency validation missing")
             issues_found.append("Missing feature consistency validation")
 
     except Exception as e:
-        print(f"❌ Error checking feature consistency: {e}")
+        print(f"[FAIL] Error checking feature consistency: {e}")
         issues_found.append(f"Feature consistency check failed: {e}")
 
     # 4. Data Staleness Protection
-    print("\n4. 📅 DATA STALENESS PROTECTION")
+    print("\n4. [EMOJI] DATA STALENESS PROTECTION")
     print("-" * 40)
     try:
         technical_analyzer = TechnicalAnalyzer(config)
 
         if hasattr(technical_analyzer, 'is_data_fresh'):
-            print("✅ Technical analyzer data freshness implemented")
+            print("[PASS] Technical analyzer data freshness implemented")
         else:
-            print("❌ Technical analyzer data freshness missing")
+            print("[FAIL] Technical analyzer data freshness missing")
             issues_found.append("Missing technical data freshness")
 
         if hasattr(sentiment_analyzer, 'is_data_fresh'):
-            print("✅ Sentiment analyzer data freshness implemented")
+            print("[PASS] Sentiment analyzer data freshness implemented")
         else:
-            print("❌ Sentiment analyzer data freshness missing")
+            print("[FAIL] Sentiment analyzer data freshness missing")
             issues_found.append("Missing sentiment data freshness")
 
     except Exception as e:
-        print(f"❌ Error checking data staleness: {e}")
+        print(f"[FAIL] Error checking data staleness: {e}")
         issues_found.append(f"Data staleness check failed: {e}")
 
     # 5. Position Sizing Validation
-    print("\n5. 📏 POSITION SIZING VALIDATION")
+    print("\n5. [EMOJI] POSITION SIZING VALIDATION")
     print("-" * 40)
     try:
         risk_manager = RiskManager(config)
 
         if hasattr(risk_manager, 'validate_position_size'):
-            print("✅ Position sizing validation implemented")
+            print("[PASS] Position sizing validation implemented")
 
             # Test validation (this should fail - 0.1 lots = $10k on $10k balance = 100% position)
             test_balance = 10000.0
             validation_result = risk_manager.validate_position_size('EURUSD', 0.1, test_balance)
             if not validation_result:
-                print("✅ Position sizing validation working (correctly rejected oversized position)")
+                print("[PASS] Position sizing validation working (correctly rejected oversized position)")
             else:
-                print("❌ Position sizing validation failed (should have rejected oversized position)")
+                print("[FAIL] Position sizing validation failed (should have rejected oversized position)")
                 issues_found.append("Position sizing validation not working")
         else:
-            print("❌ Position sizing validation missing")
+            print("[FAIL] Position sizing validation missing")
             issues_found.append("Missing position sizing validation")
 
     except Exception as e:
-        print(f"❌ Error checking position sizing: {e}")
+        print(f"[FAIL] Error checking position sizing: {e}")
         issues_found.append(f"Position sizing check failed: {e}")
 
     # 6. Error Recovery Patterns
-    print("\n6. 🛡️ ERROR RECOVERY PATTERNS")
+    print("\n6. [EMOJI] ERROR RECOVERY PATTERNS")
     print("-" * 40)
     try:
         circuit_breaker = CircuitBreaker()
 
         if hasattr(circuit_breaker, 'call'):
-            print("✅ Circuit breaker pattern implemented")
+            print("[PASS] Circuit breaker pattern implemented")
         else:
-            print("❌ Circuit breaker pattern missing")
+            print("[FAIL] Circuit breaker pattern missing")
             issues_found.append("Missing circuit breaker pattern")
 
         status = circuit_breaker.get_status()
         if 'is_open' in status and 'failure_count' in status:
-            print("✅ Circuit breaker status tracking working")
+            print("[PASS] Circuit breaker status tracking working")
         else:
-            print("❌ Circuit breaker status tracking incomplete")
+            print("[FAIL] Circuit breaker status tracking incomplete")
 
     except Exception as e:
-        print(f"❌ Error checking error recovery: {e}")
+        print(f"[FAIL] Error checking error recovery: {e}")
         issues_found.append(f"Error recovery check failed: {e}")
 
     # 7. Performance Monitoring
-    print("\n7. ⚡ PERFORMANCE MONITORING")
+    print("\n7. [EMOJI] PERFORMANCE MONITORING")
     print("-" * 40)
     try:
         from utils.performance_monitor import monitor_performance, PerformanceTracker
 
         tracker = PerformanceTracker()
         if hasattr(tracker, 'track_execution'):
-            print("✅ Performance tracking implemented")
+            print("[PASS] Performance tracking implemented")
         else:
-            print("❌ Performance tracking missing")
+            print("[FAIL] Performance tracking missing")
             issues_found.append("Missing performance tracking")
 
         # Check if decorators are available
         if callable(monitor_performance):
-            print("✅ Performance monitoring decorators available")
+            print("[PASS] Performance monitoring decorators available")
         else:
-            print("❌ Performance monitoring decorators missing")
+            print("[FAIL] Performance monitoring decorators missing")
 
     except Exception as e:
-        print(f"❌ Error checking performance monitoring: {e}")
+        print(f"[FAIL] Error checking performance monitoring: {e}")
         issues_found.append(f"Performance monitoring check failed: {e}")
 
     # 8. Risk Manager Integration
-    print("\n8. 🎲 RISK MANAGER INTEGRATION")
+    print("\n8. [EMOJI] RISK MANAGER INTEGRATION")
     print("-" * 40)
     try:
         test_cases = [
@@ -215,17 +215,17 @@ def validate_system_improvements():
         for symbol, expected_rr in test_cases:
             actual_rr = risk_manager._get_symbol_min_rr(symbol)
             if actual_rr != expected_rr:
-                print(f"❌ {symbol}: Expected {expected_rr}, Got {actual_rr}")
+                print(f"[FAIL] {symbol}: Expected {expected_rr}, Got {actual_rr}")
                 all_correct = False
 
         if all_correct:
-            print("✅ All symbol-specific R:R ratios correct")
+            print("[PASS] All symbol-specific R:R ratios correct")
         else:
-            print("❌ Some R:R ratios incorrect")
+            print("[FAIL] Some R:R ratios incorrect")
             issues_found.append("Incorrect R:R ratios")
 
     except Exception as e:
-        print(f"❌ Error checking risk manager: {e}")
+        print(f"[FAIL] Error checking risk manager: {e}")
         issues_found.append(f"Risk manager check failed: {e}")
 
     # Summary
@@ -234,13 +234,13 @@ def validate_system_improvements():
     print("=" * 80)
 
     if issues_found:
-        print(f"❌ {len(issues_found)} ISSUES FOUND:")
+        print(f"[FAIL] {len(issues_found)} ISSUES FOUND:")
         for issue in issues_found:
             print(f"   - {issue}")
-        print(f"\n🔧 {len(issues_found)} issues need attention")
+        print(f"\n[EMOJI] {len(issues_found)} issues need attention")
         return 1
     else:
-        print("✅ ALL IMPROVEMENTS VALIDATED SUCCESSFULLY")
+        print("[PASS] ALL IMPROVEMENTS VALIDATED SUCCESSFULLY")
         print("   System is ready for production use")
         return 0
 

@@ -11,7 +11,7 @@ import MetaTrader5 as mt5
 
 async def diagnose_signals():
     """Diagnose why no trading signals are being generated"""
-    print("🔍 DIAGNOSTIC: Checking Trading Signal Generation")
+    print("[SEARCH] DIAGNOSTIC: Checking Trading Signal Generation")
     print("=" * 60)
 
     app = FXAiApplication()
@@ -25,23 +25,23 @@ async def diagnose_signals():
         print(f"Pre-trading checklist: {'PASS' if checklist_passed else 'FAIL'}")
 
         if not checklist_passed:
-            print("❌ Cannot proceed - pre-trading checks failed")
+            print("[FAIL] Cannot proceed - pre-trading checks failed")
             return
 
         # Test a few key symbols
         test_symbols = ['EURUSD', 'GBPUSD', 'XAUUSD', 'USDJPY']
 
-        print(f"\n📊 Analyzing {len(test_symbols)} test symbols in detail...")
+        print(f"\n[CHART] Analyzing {len(test_symbols)} test symbols in detail...")
         print("-" * 60)
 
         for symbol in test_symbols:
-            print(f"\n🔎 Analyzing {symbol}:")
+            print(f"\n[EMOJI] Analyzing {symbol}:")
             print("-" * 30)
 
             try:
                 # Check if we can trade this symbol
                 can_trade, reason = app.trading_orchestrator.risk_manager.can_trade(symbol)
-                print(f"Risk Manager: {'✅ Can trade' if can_trade else '❌ Cannot trade'} - {reason}")
+                print(f"Risk Manager: {'[PASS] Can trade' if can_trade else '[FAIL] Cannot trade'} - {reason}")
 
                 if not can_trade:
                     continue
@@ -50,9 +50,9 @@ async def diagnose_signals():
                 if hasattr(app, 'schedule_manager') and app.schedule_manager:
                     can_trade_hours = app.schedule_manager.can_trade_symbol(symbol)
                     next_time = app.schedule_manager.get_next_trading_time(symbol)
-                    print(f"Trading Hours: {'✅ OK' if can_trade_hours else '❌ Outside hours'} - Next: {next_time}")
+                    print(f"Trading Hours: {'[PASS] OK' if can_trade_hours else '[FAIL] Outside hours'} - Next: {next_time}")
                 else:
-                    print("Trading Hours: ⚠️ No schedule manager")
+                    print("Trading Hours: [WARN] No schedule manager")
 
                 # Check for existing positions/orders
                 existing_orders = mt5.orders_get(symbol=symbol)
@@ -64,7 +64,7 @@ async def diagnose_signals():
 
                 # Get market data
                 h1_data = app.market_data_manager.get_bars(symbol, mt5.TIMEFRAME_H1, 200)
-                print(f"Market Data: {'✅ Available' if h1_data is not None and len(h1_data) >= 50 else '❌ Insufficient'} ({len(h1_data) if h1_data else 0} bars)")
+                print(f"Market Data: {'[PASS] Available' if h1_data is not None and len(h1_data) >= 50 else '[FAIL] Insufficient'} ({len(h1_data) if h1_data else 0} bars)")
 
                 if not h1_data or len(h1_data) < 50:
                     continue
@@ -81,7 +81,7 @@ async def diagnose_signals():
                     print(f"Current Price: {current_price:.5f} (from H1 close)")
 
                 if current_price <= 0:
-                    print("❌ Invalid price, skipping")
+                    print("[FAIL] Invalid price, skipping")
                     continue
 
                 # Get analyzer scores
@@ -107,9 +107,9 @@ async def diagnose_signals():
                             ml_confidence = ml_prediction.get('confidence', 0.0)
                         print(f"ML Score: {ml_score:.3f} (confidence: {ml_confidence:.3f})")
                     except Exception as e:
-                        print(f"ML Score: ❌ Error - {e}")
+                        print(f"ML Score: [FAIL] Error - {e}")
                 else:
-                    print("ML Score: ⚠️ No ML predictor available")
+                    print("ML Score: [WARN] No ML predictor available")
 
                 # Calculate signal strength
                 current_session = app.trading_orchestrator.time_manager.get_current_session()
@@ -144,21 +144,21 @@ async def diagnose_signals():
 
                 if signal_strength >= min_strength:
                     direction = 'BUY' if technical_score > 0.5 else 'SELL'
-                    print(f"🎯 TRADE SIGNAL: {direction} (Strength: {signal_strength:.3f})")
+                    print(f"[TARGET] TRADE SIGNAL: {direction} (Strength: {signal_strength:.3f})")
                 else:
-                    print(f"❌ No signal: Strength {signal_strength:.3f} < threshold {min_strength:.3f}")
+                    print(f"[FAIL] No signal: Strength {signal_strength:.3f} < threshold {min_strength:.3f}")
 
             except Exception as e:
-                print(f"❌ Error analyzing {symbol}: {e}")
+                print(f"[FAIL] Error analyzing {symbol}: {e}")
 
         print("\n" + "=" * 60)
-        print("🎯 CONCLUSION:")
+        print("[TARGET] CONCLUSION:")
         print("If all symbols show low signal strength, then there really are no opportunities.")
         print("This is NORMAL during Tokyo session (low liquidity).")
         print("Try running this during London/NY sessions for better opportunities.")
 
     except Exception as e:
-        print(f"❌ Diagnostic error: {e}")
+        print(f"[FAIL] Diagnostic error: {e}")
         import traceback
         traceback.print_exc()
     finally:

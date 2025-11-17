@@ -291,7 +291,7 @@ class OrderManager:
         final_distance = max(atr_distance, min_distance, broker_min_distance)
 
         logger.debug(
-            f"{symbol} ({pair_type}): Stop calc - ATR: {atr:.5f} × {atr_multiplier} = {atr_distance:.5f}, "
+            f"{symbol} ({pair_type}): Stop calc - ATR: {atr:.5f} [X] {atr_multiplier} = {atr_distance:.5f}, "
             f"Min: {min_distance:.5f}, Broker: {broker_min_distance:.5f}, Final: {final_distance:.5f}"
         )
 

@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize MT5
 if not mt5.initialize():
-    print("❌ Failed to initialize MT5")
+    print("[FAIL] Failed to initialize MT5")
     quit()
 
 # Test with a safe order (far from current price)
@@ -34,14 +34,14 @@ request = {
     "type_filling": mt5.ORDER_FILLING_IOC,
 }
 
-print(f"\n📤 Sending test order...")
+print(f"\n[EMOJI] Sending test order...")
 print(f"   Symbol: {symbol}")
 print(f"   Price: {test_price}")
 print(f"   Current: {current_price}")
 
 result = mt5.order_send(request)
 
-print(f"\n📊 RESULT:")
+print(f"\n[CHART] RESULT:")
 print(f"   retcode: {result.retcode}")
 print(f"   comment: {result.comment}")
 print(f"   order: {result.order}")
@@ -50,7 +50,7 @@ print(f"   order: {result.order}")
 SUCCESS_CODES = [10008, 10009, 10010]
 
 if result.retcode in SUCCESS_CODES:
-    print(f"\n✅ SUCCESS! Order placed with ticket {result.order}")
+    print(f"\n[PASS] SUCCESS! Order placed with ticket {result.order}")
     print(f"   This is the CORRECT interpretation!")
     
     # Clean up - cancel the test order
@@ -59,8 +59,8 @@ if result.retcode in SUCCESS_CODES:
         "order": result.order
     }
     cancel_result = mt5.order_send(cancel_request)
-    print(f"\n🧹 Test order cancelled (ticket {result.order})")
+    print(f"\n[EMOJI] Test order cancelled (ticket {result.order})")
 else:
-    print(f"\n❌ FAILURE! Order rejected: {result.comment}")
+    print(f"\n[FAIL] FAILURE! Order rejected: {result.comment}")
 
 mt5.shutdown()

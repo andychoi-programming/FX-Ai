@@ -8,7 +8,7 @@ mt5.initialize()
 time_manager = TimeManager()
 current_session = time_manager.get_current_session()
 
-print(f"🔍 SESSION DETECTION ANALYSIS")
+print(f"[SEARCH] SESSION DETECTION ANALYSIS")
 print(f"Current session detected: {current_session}")
 
 # Get current MT5 time
@@ -34,6 +34,6 @@ if tick:
     print(f"Match: {current_session == expected}")
 
 else:
-    print("❌ Cannot get MT5 time")
+    print("[FAIL] Cannot get MT5 time")
 
 mt5.shutdown()

@@ -68,7 +68,7 @@ class MLPredictor:
 
         # Log the retraining event prominently
         self.logger.info("=" * 70)
-        self.logger.info("🤖 MODEL RETRAINING INITIATED")
+        self.logger.info("[EMOJI] MODEL RETRAINING INITIATED")
         self.logger.info("=" * 70)
 
         if symbols is None:
@@ -87,17 +87,17 @@ class MLPredictor:
                     self._train_model(symbol, data_dict[symbol])
 
                     duration = time.time() - start_time
-                    self.logger.info(f"✅ {symbol} retrained in {duration:.2f}s")
+                    self.logger.info(f"[PASS] {symbol} retrained in {duration:.2f}s")
                 elif symbol in self.models:
-                    self.logger.warning(f"⚠️ {symbol} skipped - insufficient data or no data provided")
+                    self.logger.warning(f"[WARN] {symbol} skipped - insufficient data or no data provided")
                 else:
-                    self.logger.warning(f"⚠️ {symbol} skipped - no existing model to update")
+                    self.logger.warning(f"[WARN] {symbol} skipped - no existing model to update")
 
             except Exception as e:
-                self.logger.error(f"❌ Failed to retrain {symbol}: {e}")
+                self.logger.error(f"[FAIL] Failed to retrain {symbol}: {e}")
 
         self.logger.info("=" * 70)
-        self.logger.info("🤖 MODEL RETRAINING COMPLETED")
+        self.logger.info("[EMOJI] MODEL RETRAINING COMPLETED")
         self.logger.info("=" * 70)
 
     def validate_feature_consistency(self, features: Union[pd.DataFrame, Dict]) -> bool:

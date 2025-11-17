@@ -15,7 +15,7 @@ sys.path.insert(0, str(project_root))
 
 def check_rr_consistency():
     """Check risk-reward ratio consistency"""
-    print("🔍 Checking Risk-Reward Ratio Consistency...")
+    print("[SEARCH] Checking Risk-Reward Ratio Consistency...")
 
     try:
         from utils.config_loader import ConfigLoader
@@ -25,7 +25,7 @@ def check_rr_consistency():
         rr_ratios = trading_rules.get('take_profit_rules', {}).get('rr_ratios', {})
 
         if not rr_ratios:
-            print("❌ No RR ratios found in configuration")
+            print("[FAIL] No RR ratios found in configuration")
             return False
 
         # Check all symbols have ratios
@@ -36,7 +36,7 @@ def check_rr_consistency():
                 missing_ratios.append(symbol)
 
         if missing_ratios:
-            print(f"❌ Missing RR ratios for: {missing_ratios}")
+            print(f"[FAIL] Missing RR ratios for: {missing_ratios}")
             return False
 
         # Check ratio ranges are reasonable
@@ -50,25 +50,25 @@ def check_rr_consistency():
                 invalid_ratios.append(f"{symbol}({ratio})")
 
         if invalid_ratios:
-            print(f"⚠️  Unusual RR ratios: {invalid_ratios}")
+            print(f"[WARN]  Unusual RR ratios: {invalid_ratios}")
             print(f"   Expected range: {min_ratio}:1 to {max_ratio}:1")
 
-        print(f"✅ All {len(rr_ratios)} symbols have RR ratios configured")
+        print(f"[PASS] All {len(rr_ratios)} symbols have RR ratios configured")
         return True
 
     except Exception as e:
-        print(f"❌ RR consistency check failed: {e}")
+        print(f"[FAIL] RR consistency check failed: {e}")
         return False
 
 def check_schedule_format():
     """Check symbol schedule format"""
-    print("\n🔍 Checking Symbol Schedule Format...")
+    print("\n[SEARCH] Checking Symbol Schedule Format...")
 
     try:
         # Check if symbol_schedules.json exists
         schedule_file = 'config/symbol_schedules.json'
         if not os.path.exists(schedule_file):
-            print("⚠️  No symbol_schedules.json found")
+            print("[WARN]  No symbol_schedules.json found")
             print("   System will use default 24-hour trading")
             return True
 
@@ -77,7 +77,7 @@ def check_schedule_format():
 
         symbol_schedules = schedules.get('symbol_schedules', {})
         if not symbol_schedules:
-            print("⚠️  Empty symbol schedules")
+            print("[WARN]  Empty symbol schedules")
             return True
 
         # Check format
@@ -85,23 +85,23 @@ def check_schedule_format():
         first_schedule = symbol_schedules[first_symbol]
 
         if 'start_hour' in first_schedule and 'end_hour' in first_schedule:
-            print("⚠️  Using start_hour/end_hour format")
+            print("[WARN]  Using start_hour/end_hour format")
             print("   This format is supported but optimal_hours array is preferred")
             return True
         elif 'optimal_hours' in first_schedule:
-            print("✅ Using optimal_hours array format (preferred)")
+            print("[PASS] Using optimal_hours array format (preferred)")
             return True
         else:
-            print("❌ Unknown schedule format")
+            print("[FAIL] Unknown schedule format")
             return False
 
     except Exception as e:
-        print(f"❌ Schedule format check failed: {e}")
+        print(f"[FAIL] Schedule format check failed: {e}")
         return False
 
 def check_24_hour_trading():
     """Check 24-hour trading setup"""
-    print("\n🔍 Checking 24-Hour Trading Setup...")
+    print("\n[SEARCH] Checking 24-Hour Trading Setup...")
 
     try:
         from utils.config_loader import ConfigLoader
@@ -112,24 +112,24 @@ def check_24_hour_trading():
         # Check if 24-hour trading is enabled
         day_trading_only = time_restrictions.get('day_trading_only', True)
         if day_trading_only:
-            print("✅ Day trading only: True")
+            print("[PASS] Day trading only: True")
         else:
-            print("⚠️  24-hour trading enabled")
+            print("[WARN]  24-hour trading enabled")
 
         # Check force close time
         mt5_times = time_restrictions.get('mt5_trading_times', {})
         force_close = mt5_times.get('mt5_force_close_time', '23:55')
-        print(f"✅ Force close time: {force_close} GMT")
+        print(f"[PASS] Force close time: {force_close} GMT")
 
         return True
 
     except Exception as e:
-        print(f"❌ 24-hour trading check failed: {e}")
+        print(f"[FAIL] 24-hour trading check failed: {e}")
         return False
 
 def check_trading_rules():
     """Check trading rules configuration"""
-    print("\n🔍 Checking Trading Rules Configuration...")
+    print("\n[SEARCH] Checking Trading Rules Configuration...")
 
     try:
         from utils.config_loader import ConfigLoader
@@ -142,26 +142,26 @@ def check_trading_rules():
         max_positions = position_limits.get('max_positions', 30)
         max_per_symbol = position_limits.get('max_positions_per_symbol', 1)
 
-        print(f"✅ Max positions: {max_positions}")
-        print(f"✅ Max per symbol: {max_per_symbol}")
+        print(f"[PASS] Max positions: {max_positions}")
+        print(f"[PASS] Max per symbol: {max_per_symbol}")
 
         # Check risk limits
         risk_limits = trading_rules.get('risk_limits', {})
         risk_per_trade = risk_limits.get('risk_per_trade', 50.0)
         max_daily_loss = risk_limits.get('max_daily_loss', 500.0)
 
-        print(f"✅ Risk per trade: ${risk_per_trade}")
-        print(f"✅ Max daily loss: ${max_daily_loss}")
+        print(f"[PASS] Risk per trade: ${risk_per_trade}")
+        print(f"[PASS] Max daily loss: ${max_daily_loss}")
 
         return True
 
     except Exception as e:
-        print(f"❌ Trading rules check failed: {e}")
+        print(f"[FAIL] Trading rules check failed: {e}")
         return False
 
 def main():
     """Run configuration validation"""
-    print("🔍 VALIDATING YOUR CONFIGURATION")
+    print("[SEARCH] VALIDATING YOUR CONFIGURATION")
     print("=" * 50)
 
     checks = [
@@ -179,16 +179,16 @@ def main():
         if check_func():
             passed += 1
         else:
-            print(f"❌ {name} check failed")
+            print(f"[FAIL] {name} check failed")
 
     print("\n" + "=" * 50)
 
     if passed == total:
-        print("✅ No critical issues - Configuration is valid")
+        print("[PASS] No critical issues - Configuration is valid")
         print("   Warnings are acceptable and don't prevent deployment")
         return 0
     else:
-        print("❌ Critical configuration issues found")
+        print("[FAIL] Critical configuration issues found")
         print("   Please resolve before deployment")
         return 1
 

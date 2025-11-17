@@ -14,7 +14,7 @@ async def check():
     # Get data
     h1_data = app.market_data_manager.get_bars(symbol, mt5.TIMEFRAME_H1, 200)
     if h1_data is None:
-        print("❌ No data")
+        print("[FAIL] No data")
         return
 
     market_data = {'H1': h1_data}
@@ -30,7 +30,7 @@ async def check():
     # Get threshold
     threshold = app.time_manager.get_session_signal_threshold(app.config)
 
-    print(f"🔍 CURRENT STATUS for {symbol}:")
+    print(f"[SEARCH] CURRENT STATUS for {symbol}:")
     print(f"   Technical:   {tech:.3f}")
     print(f"   Fundamental: {fund:.3f}")
     print(f"   Sentiment:   {sent:.3f}")
@@ -39,14 +39,14 @@ async def check():
     print()
 
     if signal >= threshold:
-        print(f"✅ SIGNAL ABOVE THRESHOLD - WOULD TRADE!")
+        print(f"[PASS] SIGNAL ABOVE THRESHOLD - WOULD TRADE!")
         print(f"   Gap: +{signal - threshold:.3f} (strong enough)")
     else:
         gap = threshold - signal
-        print(f"❌ SIGNAL BELOW THRESHOLD - BLOCKED")
+        print(f"[FAIL] SIGNAL BELOW THRESHOLD - BLOCKED")
         print(f"   Gap: -{gap:.3f} (need to be {gap:.3f} stronger)")
         print()
-        print(f"💡 To enable trading:")
+        print(f"[INFO] To enable trading:")
         print(f"   Option 1: Lower threshold to {signal - 0.02:.3f}")
         print(f"   Option 2: Wait for stronger market signals")
 

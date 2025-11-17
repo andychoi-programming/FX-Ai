@@ -15,14 +15,14 @@ def add_sl_tp_to_positions():
 
     # Initialize MT5
     if not mt5.initialize():
-        print("❌ MT5 initialization failed")
+        print("[FAIL] MT5 initialization failed")
         return False
 
     try:
         # Get all positions
         positions = mt5.positions_get()
         if not positions:
-            print("ℹ️  No positions found")
+            print("ℹ[EMOJI]  No positions found")
             return True
 
         print(f"Found {len(positions)} position(s):")
@@ -46,7 +46,7 @@ def add_sl_tp_to_positions():
 
             # Skip if already has SL/TP
             if pos.sl > 0 and pos.tp > 0:
-                print("  ✅ Already has SL/TP - skipping")
+                print("  [PASS] Already has SL/TP - skipping")
                 continue
 
             # Calculate suggested SL/TP
@@ -103,10 +103,10 @@ def add_sl_tp_to_positions():
 
                     result = mt5.order_send(request)
                     if result.retcode == mt5.TRADE_RETCODE_DONE:
-                        print(f"  ✅ SL/TP applied successfully")
+                        print(f"  [PASS] SL/TP applied successfully")
                         print(f"     SL: {suggested_sl:.5f}, TP: {suggested_tp:.5f}")
                     else:
-                        print(f"  ❌ Failed to apply SL/TP: {result.comment}")
+                        print(f"  [FAIL] Failed to apply SL/TP: {result.comment}")
                     break
                 elif response == 'custom':
                     try:
@@ -122,12 +122,12 @@ def add_sl_tp_to_positions():
 
                         result = mt5.order_send(request)
                         if result.retcode == mt5.TRADE_RETCODE_DONE:
-                            print(f"  ✅ Custom SL/TP applied successfully")
+                            print(f"  [PASS] Custom SL/TP applied successfully")
                             print(f"     SL: {custom_sl:.5f}, TP: {custom_tp:.5f}")
                         else:
-                            print(f"  ❌ Failed to apply custom SL/TP: {result.comment}")
+                            print(f"  [FAIL] Failed to apply custom SL/TP: {result.comment}")
                     except ValueError:
-                        print("  ❌ Invalid number format")
+                        print("  [FAIL] Invalid number format")
                         continue
                     break
                 else:
@@ -138,7 +138,7 @@ def add_sl_tp_to_positions():
         print("=" * 60)
 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[FAIL] Error: {e}")
         return False
     finally:
         mt5.shutdown()
@@ -153,13 +153,13 @@ def close_positions_safely():
 
     # Initialize MT5
     if not mt5.initialize():
-        print("❌ MT5 initialization failed")
+        print("[FAIL] MT5 initialization failed")
         return False
 
     try:
         positions = mt5.positions_get()
         if not positions:
-            print("ℹ️  No positions to close")
+            print("ℹ[EMOJI]  No positions to close")
             return True
 
         total_profit = sum(pos.profit for pos in positions)
@@ -188,16 +188,16 @@ def close_positions_safely():
 
                 result = mt5.order_send(request)
                 if result.retcode == mt5.TRADE_RETCODE_DONE:
-                    print(f"✅ {symbol} closed successfully - Realized P&L: ${profit:.2f}")
+                    print(f"[PASS] {symbol} closed successfully - Realized P&L: ${profit:.2f}")
                 else:
-                    print(f"❌ Failed to close {symbol}: {result.comment}")
+                    print(f"[FAIL] Failed to close {symbol}: {result.comment}")
 
         print("\n" + "=" * 60)
         print("Position closure complete")
         print("=" * 60)
 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[FAIL] Error: {e}")
         return False
     finally:
         mt5.shutdown()

@@ -20,7 +20,7 @@ def check_market():
     )
 
     if not mt5.connect():
-        print("❌ Cannot connect to MT5")
+        print("[FAIL] Cannot connect to MT5")
         return
 
     print("Market Status Check")
@@ -39,13 +39,13 @@ def check_market():
         print(f"Hour (server time): {hour}")
 
         if weekday >= 5:  # Saturday or Sunday
-            print("⚠️  WARNING: It's weekend - Forex markets are closed!")
+            print("[WARN]  WARNING: It's weekend - Forex markets are closed!")
         elif hour < 1 or hour > 23:  # Outside typical trading hours
-            print("⚠️  WARNING: Outside typical trading hours (01:00-23:00 GMT)")
+            print("[WARN]  WARNING: Outside typical trading hours (01:00-23:00 GMT)")
         else:
-            print("✓ Within typical trading hours")
+            print("[OK] Within typical trading hours")
     else:
-        print("❌ Could not get server time")
+        print("[FAIL] Could not get server time")
 
     # Check account info
     account = mt5.get_account_info()
@@ -65,9 +65,9 @@ def check_market():
 
     for symbol in test_symbols:
         if mt5.symbol_select(symbol, True):
-            print(f"✓ Enabled {symbol}")
+            print(f"[OK] Enabled {symbol}")
         else:
-            print(f"✗ Failed to enable {symbol}")
+            print(f"[EMOJI] Failed to enable {symbol}")
 
     print("\nRechecking symbols after enabling:")
     print("="*40)
@@ -86,18 +86,18 @@ def check_market():
 
             # Check if symbol is properly configured
             if not symbol_info.get('visible', False):
-                print("  Status: ✗ Symbol not visible - need to enable in MT5")
+                print("  Status: [EMOJI] Symbol not visible - need to enable in MT5")
             elif not symbol_info.get('select', False):
-                print("  Status: ✗ Symbol not selectable - need to select in MT5")
+                print("  Status: [EMOJI] Symbol not selectable - need to select in MT5")
             elif not symbol_info.get('trade_allowed', False):
-                print("  Status: ✗ Trading not allowed for this symbol")
+                print("  Status: [EMOJI] Trading not allowed for this symbol")
             elif symbol_info.get('bid', 0) == 0:
-                print("  Status: ✗ Market closed or no liquidity")
+                print("  Status: [EMOJI] Market closed or no liquidity")
             else:
-                print("  Status: ✓ Market open and tradable")
+                print("  Status: [OK] Market open and tradable")
         else:
             print(f"\n{symbol}:")
-            print("  Status: ✗ Symbol not found in MT5")
+            print("  Status: [EMOJI] Symbol not found in MT5")
 
     mt5.disconnect()
 

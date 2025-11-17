@@ -55,20 +55,20 @@ class SignalThresholdManager:
             adjustment = -0.05  # Lower threshold (more aggressive)
             final_threshold += adjustment
             adjustments.append(f"Optimal session (-0.05)")
-            self.logger.info(f"         🎯 {symbol} OPTIMAL for {session}: threshold {base_threshold:.3f} → {final_threshold:.3f}")
+            self.logger.info(f"         [TARGET] {symbol} OPTIMAL for {session}: threshold {base_threshold:.3f} → {final_threshold:.3f}")
 
         elif optimal_for_base or optimal_for_quote:
             # One currency active - OKAY
             adjustment = 0.0  # Standard threshold
             adjustments.append(f"Acceptable session (0.00)")
-            self.logger.info(f"         ⚖️ {symbol} ACCEPTABLE for {session}: threshold {base_threshold:.3f}")
+            self.logger.info(f"         [EMOJI] {symbol} ACCEPTABLE for {session}: threshold {base_threshold:.3f}")
 
         else:
             # Neither currency active - POOR
             adjustment = +0.10  # Higher threshold (more selective)
             final_threshold += adjustment
             adjustments.append(f"Sub-optimal session (+0.10)")
-            self.logger.warning(f"         ⚠️ {symbol} SUB-OPTIMAL for {session}: threshold {base_threshold:.3f} → {final_threshold:.3f}")
+            self.logger.warning(f"         [WARN] {symbol} SUB-OPTIMAL for {session}: threshold {base_threshold:.3f} → {final_threshold:.3f}")
 
         # 2. Smart defaults adjustment (if available)
         if self.adaptive_learning and current_time:
@@ -81,14 +81,14 @@ class SignalThresholdManager:
                     adjustment = smart_threshold - final_threshold
                     final_threshold = smart_threshold
                     adjustments.append(f"Smart defaults ({adjustment:+.3f})")
-                    self.logger.info(f"         🧠 SMART ADJUSTMENT: {smart_reason} (confidence: {confidence:.1f})")
+                    self.logger.info(f"         [EMOJI] SMART ADJUSTMENT: {smart_reason} (confidence: {confidence:.1f})")
 
             except Exception as e:
                 self.logger.debug(f"         Smart defaults unavailable: {e}")
 
         # Log final threshold
         if len(adjustments) > 1:
-            self.logger.info(f"         📊 FINAL THRESHOLD: {final_threshold:.3f} (Base: {base_threshold:.3f}, Adjustments: {', '.join(adjustments)})")
+            self.logger.info(f"         [CHART] FINAL THRESHOLD: {final_threshold:.3f} (Base: {base_threshold:.3f}, Adjustments: {', '.join(adjustments)})")
 
         return final_threshold
 
@@ -301,7 +301,7 @@ class TradingOrchestrator:
         start_time = time_module.time()
 
         self.logger.info("=" * 80)
-        self.logger.info("🔍 TRADING OPPORTUNITY CHECK - DETAILED ANALYSIS")
+        self.logger.info("[SEARCH] TRADING OPPORTUNITY CHECK - DETAILED ANALYSIS")
         self.logger.info("=" * 80)
 
         try:
@@ -314,11 +314,11 @@ class TradingOrchestrator:
             threshold = self.config.get('trading', {}).get('min_signal_strength', 0.250)
             symbols = self.config.get('trading', {}).get('symbols', [])
 
-            self.logger.info(f"📊 Server Time: {server_time}")
-            self.logger.info(f"🕐 Current Session: {current_session}")
-            self.logger.info(f"🎯 Signal Threshold: {threshold}")
-            self.logger.info(f"📈 Symbols to analyze: {symbols}")
-            self.logger.info(f"🔄 Loop Count: {self.loop_count}")
+            self.logger.info(f"[CHART] Server Time: {server_time}")
+            self.logger.info(f"[TIME] Current Session: {current_session}")
+            self.logger.info(f"[TARGET] Signal Threshold: {threshold}")
+            self.logger.info(f"[UP] Symbols to analyze: {symbols}")
+            self.logger.info(f"[CYCLE] Loop Count: {self.loop_count}")
             self.logger.info("-" * 80)
 
             # Initialize counters
@@ -335,12 +335,12 @@ class TradingOrchestrator:
             # Analyze each symbol with detailed logging
             for i, symbol in enumerate(symbols, 1):
                 try:
-                    self.logger.info(f"[{i:2d}/{len(symbols):2d}] 🔍 ANALYZING {symbol}...")
+                    self.logger.info(f"[{i:2d}/{len(symbols):2d}] [SEARCH] ANALYZING {symbol}...")
 
                     # Check risk manager approval
                     can_trade, reason = self.risk_manager.can_trade(symbol)
                     if not can_trade:
-                        self.logger.info(f"         🚫 RISK FILTER: {reason}")
+                        self.logger.info(f"         [BLOCKED] RISK FILTER: {reason}")
                         symbols_skipped_risk += 1
                         continue
 
@@ -348,7 +348,7 @@ class TradingOrchestrator:
                     if hasattr(self.app, 'schedule_manager') and self.app.schedule_manager:
                         if not self.app.schedule_manager.can_trade_symbol(symbol, self.app.get_current_mt5_time()):
                             next_time = self.app.schedule_manager.get_next_trading_time(symbol)
-                            self.logger.info(f"         ⏰ HOURS FILTER: Outside trading hours, next: {next_time}")
+                            self.logger.info(f"         [CLOCK] HOURS FILTER: Outside trading hours, next: {next_time}")
                             symbols_skipped_hours += 1
                             continue
 
@@ -358,7 +358,7 @@ class TradingOrchestrator:
                     if existing_orders and len(existing_orders) > 0:
                         our_orders = [order for order in existing_orders if hasattr(order, 'magic') and order.magic == self.app.magic_number]
                         if len(our_orders) > 0:
-                            self.logger.info(f"         📋 PENDING FILTER: {len(our_orders)} pending order(s)")
+                            self.logger.info(f"         [LIST] PENDING FILTER: {len(our_orders)} pending order(s)")
                             symbols_skipped_pending += 1
                             has_pending_orders = True
 
@@ -368,19 +368,19 @@ class TradingOrchestrator:
                     # Check for existing positions
                     existing_positions = mt5.positions_get(symbol=symbol)
                     if existing_positions and len(existing_positions) > 0:
-                        self.logger.info(f"         📊 POSITION FILTER: {len(existing_positions)} open position(s)")
+                        self.logger.info(f"         [CHART] POSITION FILTER: {len(existing_positions)} open position(s)")
                         symbols_skipped_position += 1
                         continue
 
                     # Generate trading signal with detailed logging
-                    self.logger.info(f"         ⚡ Generating signal...")
+                    self.logger.info(f"         [EMOJI] Generating signal...")
                     signal = await self._generate_trading_signal(symbol)
 
                     if signal:
                         signal_strength = signal.get('signal_strength', 0)
                         direction = signal.get('direction', 'NONE')
 
-                        self.logger.info(f"         📈 SIGNAL: {signal_strength:.4f} | Direction: {direction}")
+                        self.logger.info(f"         [UP] SIGNAL: {signal_strength:.4f} | Direction: {direction}")
 
                         # Get dynamic threshold based on symbol-session matching
                         dynamic_threshold = self.threshold_manager.get_dynamic_threshold(symbol, current_session, threshold, server_time)
@@ -388,8 +388,8 @@ class TradingOrchestrator:
                         # Compare to dynamic threshold
                         if signal_strength >= dynamic_threshold:
                             signals_above_threshold += 1
-                            self.logger.info(f"         ✅ ABOVE THRESHOLD ({signal_strength:.4f} >= {dynamic_threshold:.4f})")
-                            self.logger.info(f"         🚀 ATTEMPTING TRADE...")
+                            self.logger.info(f"         [PASS] ABOVE THRESHOLD ({signal_strength:.4f} >= {dynamic_threshold:.4f})")
+                            self.logger.info(f"         [TRADE] ATTEMPTING TRADE...")
 
                             trades_attempted += 1
 
@@ -399,7 +399,7 @@ class TradingOrchestrator:
                             if trade_result and trade_result.get('success', False):
                                 trades_successful += 1
                                 ticket = trade_result.get('ticket', 'N/A')
-                                self.logger.info(f"         ✅ TRADE SUCCESSFUL: Ticket #{ticket}")
+                                self.logger.info(f"         [PASS] TRADE SUCCESSFUL: Ticket #{ticket}")
 
                                 # Record trade for daily limit tracking
                                 self.risk_manager.record_trade(symbol)
@@ -414,45 +414,45 @@ class TradingOrchestrator:
                                     asyncio.create_task(self.monitor_trade(
                                         trade_result.get('ticket', 0), trade_result))
                                 else:
-                                    self.logger.info(f"         🧪 DRY RUN: Simulating monitoring for #{ticket}")
+                                    self.logger.info(f"         [EMOJI] DRY RUN: Simulating monitoring for #{ticket}")
                             else:
                                 error_msg = trade_result.get('error', 'Unknown error') if trade_result else 'Trade execution failed'
-                                self.logger.error(f"         ❌ TRADE FAILED: {error_msg}")
+                                self.logger.error(f"         [FAIL] TRADE FAILED: {error_msg}")
                         else:
                             signals_below_threshold += 1
-                            self.logger.info(f"         ❌ BELOW THRESHOLD ({signal_strength:.4f} < {dynamic_threshold:.4f})")
+                            self.logger.info(f"         [FAIL] BELOW THRESHOLD ({signal_strength:.4f} < {dynamic_threshold:.4f})")
                     else:
                         symbols_no_signal += 1
-                        self.logger.info(f"         📉 NO SIGNAL: Insufficient strength or data")
+                        self.logger.info(f"         [DOWN] NO SIGNAL: Insufficient strength or data")
 
                 except Exception as e:
-                    self.logger.error(f"[{symbol}] 💥 EXCEPTION during analysis: {e}", exc_info=True)
+                    self.logger.error(f"[{symbol}] [EMOJI] EXCEPTION during analysis: {e}", exc_info=True)
 
             # Comprehensive summary
             elapsed = time_module.time() - start_time
 
             self.logger.info("=" * 80)
-            self.logger.info("📊 OPPORTUNITY CHECK SUMMARY")
+            self.logger.info("[CHART] OPPORTUNITY CHECK SUMMARY")
             self.logger.info("=" * 80)
-            self.logger.info(f"⏱️  Analysis Time: {elapsed:.2f} seconds")
-            self.logger.info(f"📈 Signals Above Threshold: {signals_above_threshold}")
-            self.logger.info(f"📉 Signals Below Threshold: {signals_below_threshold}")
-            self.logger.info(f"🚀 Trades Attempted: {trades_attempted}")
-            self.logger.info(f"✅ Trades Successful: {trades_successful}")
-            self.logger.info(f"🚫 Skipped - Risk: {symbols_skipped_risk}")
-            self.logger.info(f"⏰ Skipped - Hours: {symbols_skipped_hours}")
-            self.logger.info(f"📋 Skipped - Pending: {symbols_skipped_pending}")
-            self.logger.info(f"📊 Skipped - Position: {symbols_skipped_position}")
-            self.logger.info(f"📉 No Signal: {symbols_no_signal}")
+            self.logger.info(f"[TIMER]  Analysis Time: {elapsed:.2f} seconds")
+            self.logger.info(f"[UP] Signals Above Threshold: {signals_above_threshold}")
+            self.logger.info(f"[DOWN] Signals Below Threshold: {signals_below_threshold}")
+            self.logger.info(f"[TRADE] Trades Attempted: {trades_attempted}")
+            self.logger.info(f"[PASS] Trades Successful: {trades_successful}")
+            self.logger.info(f"[BLOCKED] Skipped - Risk: {symbols_skipped_risk}")
+            self.logger.info(f"[CLOCK] Skipped - Hours: {symbols_skipped_hours}")
+            self.logger.info(f"[LIST] Skipped - Pending: {symbols_skipped_pending}")
+            self.logger.info(f"[CHART] Skipped - Position: {symbols_skipped_position}")
+            self.logger.info(f"[DOWN] No Signal: {symbols_no_signal}")
             self.logger.info("=" * 80)
 
             # Success rate logging
             if trades_attempted > 0:
                 success_rate = (trades_successful / trades_attempted) * 100
-                self.logger.info(f"🎯 Trade Success Rate: {success_rate:.1f}% ({trades_successful}/{trades_attempted})")
+                self.logger.info(f"[TARGET] Trade Success Rate: {success_rate:.1f}% ({trades_successful}/{trades_attempted})")
 
         except Exception as e:
-            self.logger.error(f"💥 CRITICAL ERROR in opportunity check: {e}", exc_info=True)
+            self.logger.error(f"[EMOJI] CRITICAL ERROR in opportunity check: {e}", exc_info=True)
 
     async def _generate_trading_signal(self, symbol: str) -> Optional[Dict[str, Any]]:
         """
@@ -767,7 +767,7 @@ class TradingOrchestrator:
         """Log comprehensive performance metrics"""
         metrics = self.performance_tracker.get_metrics_report()
 
-        self.logger.info("⚡ PERFORMANCE METRICS:")
+        self.logger.info("[EMOJI] PERFORMANCE METRICS:")
 
         # Show slowest operations
         slowest = sorted(metrics.items(), key=lambda x: x[1]['avg'], reverse=True)[:5]

@@ -62,7 +62,7 @@ def train_all_models():
 
         for symbol in symbols:
             try:
-                print(f"📈 Training model for {symbol}...")
+                print(f"[UP] Training model for {symbol}...")
 
                 # Get historical data (last 1000 bars for training)
                 data = data_manager.get_bars(symbol, 16385, 1000)  # 16385 = H1 timeframe
@@ -87,7 +87,7 @@ def train_all_models():
                 # Train the model
                 ml_predictor._load_or_train_model(symbol, data, 'H1')
 
-                print(f"   ✅ Model trained for {symbol}")
+                print(f"   [PASS] Model trained for {symbol}")
                 trained_count += 1
 
             except Exception as e:
@@ -97,14 +97,14 @@ def train_all_models():
         print(f"\n{'='*60}")
         print(f"TRAINING COMPLETE")
         print(f"{'='*60}")
-        print(f"✅ Successfully trained {trained_count}/{len(symbols)} models")
-        print(f"📁 Models saved to: {ml_predictor.model_dir}")
+        print(f"[PASS] Successfully trained {trained_count}/{len(symbols)} models")
+        print(f"[EMOJI] Models saved to: {ml_predictor.model_dir}")
 
         if trained_count > 0:
-            print("\n🚀 Ready for live trading!")
+            print("\n[TRADE] Ready for live trading!")
             print("   Run: python main.py")
         else:
-            print("\n❌ No models were trained - check logs for errors")        # Cleanup
+            print("\n[FAIL] No models were trained - check logs for errors")        # Cleanup
         mt5.disconnect()
 
     except Exception as e:

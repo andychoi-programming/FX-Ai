@@ -6,11 +6,11 @@ from datetime import datetime
 
 db_path = "data/performance_history.db"
 
-print("🔧 SQLITE DAILY TRADE COUNTER RESET")
+print("[EMOJI] SQLITE DAILY TRADE COUNTER RESET")
 print("=" * 45)
 
 if not os.path.exists(db_path):
-    print(f"❌ Database not found: {db_path}")
+    print(f"[FAIL] Database not found: {db_path}")
     exit(1)
 
 try:
@@ -21,7 +21,7 @@ try:
     cursor.execute("SELECT symbol, trade_date, trade_count FROM daily_trade_counts")
     rows = cursor.fetchall()
 
-    print("📊 Current trade counts in database:")
+    print("[CHART] Current trade counts in database:")
     if rows:
         for symbol, trade_date, count in rows:
             print(f"   {symbol}: {count} trades on {trade_date}")
@@ -49,7 +49,7 @@ try:
     cursor.execute("SELECT symbol, trade_date, trade_count FROM daily_trade_counts")
     rows = cursor.fetchall()
 
-    print("\n✅ After reset:")
+    print("\n[PASS] After reset:")
     if rows:
         for symbol, trade_date, count in rows:
             print(f"   {symbol}: {count} trades on {trade_date}")
@@ -58,9 +58,9 @@ try:
 
     conn.close()
 
-    print("\n✅ DATABASE RESET COMPLETE")
+    print("\n[PASS] DATABASE RESET COMPLETE")
     print("   Daily trade counters have been reset to 0")
     print("   System will allow 5 trades per symbol today")
 
 except Exception as e:
-    print(f"❌ Error resetting database: {e}")
+    print(f"[FAIL] Error resetting database: {e}")
