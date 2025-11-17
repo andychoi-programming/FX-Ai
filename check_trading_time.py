@@ -2,8 +2,10 @@
 """
 Check current time for optimal trading hours
 """
+
 from datetime import datetime
 import pytz
+
 
 def check_trading_time():
     print("🕐 TRADING TIME CHECK")
@@ -47,6 +49,7 @@ def check_trading_time():
         print("⚠️  Very early Asian session - Very low liquidity")
         print("   (Not recommended for trading)")
         return False
+
 
 if __name__ == "__main__":
     check_trading_time()
