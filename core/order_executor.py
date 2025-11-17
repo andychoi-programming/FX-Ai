@@ -181,8 +181,18 @@ class OrderManager:
         return await self._place_market_order(symbol, signal, volume, stop_loss, take_profit, signal_data)
 
     def _get_atr(self, symbol: str, period: int = 14) -> float:
-        """Get ATR value for symbol"""
-
+        """Get ATR value for symbol - try technical analyzer first, fallback to manual calculation"""
+        
+        # Try to get ATR from technical analyzer if available
+        if hasattr(self, 'technical_analyzer') and self.technical_analyzer:
+            try:
+                atr_value = self.technical_analyzer.get_atr(symbol, period)
+                if atr_value and atr_value > 0:
+                    return atr_value
+            except Exception as e:
+                logger.debug(f"Technical analyzer ATR failed for {symbol}: {e}")
+        
+        # Fallback to manual calculation
         try:
             # Get recent price data
             rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_H1, 0, period + 1)
@@ -614,11 +624,12 @@ class OrderManager:
 class OrderExecutor:
     """Handles order execution and validation through MT5"""
 
-    def __init__(self, mt5_connector, config: dict, risk_manager=None):
+    def __init__(self, mt5_connector, config: dict, risk_manager=None, technical_analyzer=None):
         """Initialize order executor"""
         self.mt5 = mt5_connector
         self.config = config
         self.risk_manager = risk_manager  # Add risk manager
+        self.technical_analyzer = technical_analyzer  # Add technical analyzer
         self.magic_number = config.get('trading', {}).get('magic_number')
         self.max_slippage = config.get('trading', {}).get('max_slippage')
         self.min_risk_reward_ratio = config.get('trading', {}).get('min_risk_reward_ratio')
