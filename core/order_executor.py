@@ -256,7 +256,7 @@ class OrderManager:
         if symbol_info is None:
             return 0.001  # Conservative fallback
 
-        min_distance = self._calculate_min_stop_distance(symbol, symbol_info)
+        min_distance = self.order_executor._calculate_min_stop_distance(symbol, symbol_info)
         broker_min_distance = min_distance * 1.5  # 1.5x broker minimum for safety
 
         # Get ATR multipliers from config
@@ -367,7 +367,7 @@ class OrderManager:
             if symbol_info is None:
                 return False, f"Symbol {symbol} not found"
 
-            min_distance = self._calculate_min_stop_distance(symbol, symbol_info)
+            min_distance = self.order_executor._calculate_min_stop_distance(symbol, symbol_info)
 
             if signal == "BUY":
                 # Buy stop must be above current price
