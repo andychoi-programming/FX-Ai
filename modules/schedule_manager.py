@@ -100,9 +100,22 @@ class ScheduleManager:
         Returns:
             bool: True if symbol can be traded now, False otherwise
         """
-        # Get current time (server time from system)
+        # Get current time (server time from MT5 if available, otherwise local)
         if current_time is None:
-            now = datetime.now()
+            try:
+                # Try to get MT5 server time
+                import MetaTrader5 as mt5
+                if mt5.terminal_info() is not None:
+                    server_time = mt5.server_time()
+                    if server_time:
+                        now = datetime.fromtimestamp(server_time)
+                    else:
+                        now = datetime.now()
+                else:
+                    now = datetime.now()
+            except:
+                # Fallback to local time if MT5 not available
+                now = datetime.now()
         else:
             now = current_time
         current_hour = now.hour
@@ -147,7 +160,21 @@ class ScheduleManager:
         force_hour = self.global_settings.get('force_close_hour', 23)
         force_minute = self.global_settings.get('force_close_minute', 45)
 
-        now = datetime.now()
+        # Use MT5 server time if available, otherwise fallback to local time
+        try:
+            # Try to get MT5 server time
+            import MetaTrader5 as mt5
+            if mt5.terminal_info() is not None:
+                server_time = mt5.server_time()
+                if server_time:
+                    now = datetime.fromtimestamp(server_time)
+                else:
+                    now = datetime.now()
+            else:
+                now = datetime.now()
+        except:
+            # Fallback to local time if MT5 not available
+            now = datetime.now()
 
         # Close during the force close window (e.g., 23:45-23:59)
         if now.hour == force_hour and now.minute >= force_minute:
