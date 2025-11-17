@@ -202,114 +202,114 @@ class MT5Connector:
                 return df
             return None
 
-    def place_order(self, symbol: str, order_type: str, volume: float,
-                   price: Optional[float] = None, sl: Optional[float] = None, tp: Optional[float] = None,
-                   deviation: int = 10, comment: str = "", magic: int = 0) -> Dict:
+    async def place_order(
+        self,
+        symbol: str,
+        order_type: str,
+        volume: float,
+        price: Optional[float] = None,
+        stop_loss: Optional[float] = None,
+        take_profit: Optional[float] = None,
+        deviation: int = 20,
+        magic: int = 234000,
+        comment: str = "",
+        signal_data: Optional[Dict] = None
+    ) -> Dict:
         """
-        Place an order
-
-        Args:
-            symbol: Trading symbol
-            order_type: 'buy', 'sell', 'buy_limit', 'sell_limit', 'buy_stop', 'sell_stop'
-            volume: Position size in lots
-            price: Order price (for pending orders)
-            sl: Stop loss price
-            tp: Take profit price
-            deviation: Maximum price deviation
-            comment: Order comment
-            magic: Expert Advisor ID
+        Place order with proper SL/TP handling for both market and pending orders
         """
-        with self._mt5_lock:  # Thread-safe MT5 access
+        try:
             # Get symbol info
-            symbol_info = mt5.symbol_info(symbol)  # type: ignore
+            symbol_info = mt5.symbol_info(symbol)
             if symbol_info is None:
                 return {'success': False, 'error': f'Symbol {symbol} not found'}
-
-            # Check if symbol is available for trading
-            if not symbol_info.visible:
-                if not mt5.symbol_select(symbol, True):  # type: ignore
-                    return {'success': False, 'error': f'Failed to select {symbol}'}
-
-            # Prepare order request
-            request = {
-                'action': mt5.TRADE_ACTION_DEAL,
-                'symbol': symbol,
-                'volume': volume,
-                'deviation': deviation,
-                'magic': magic,
-                'comment': comment,
-            }
-
-            # Set order type
-            order_type_map = {
+            
+            # Determine if this is a pending order
+            is_pending = 'stop' in order_type.lower() or 'limit' in order_type.lower()
+            
+            # Map order type
+            type_dict = {
                 'buy': mt5.ORDER_TYPE_BUY,
                 'sell': mt5.ORDER_TYPE_SELL,
-                'buy_limit': mt5.ORDER_TYPE_BUY_LIMIT,
-                'sell_limit': mt5.ORDER_TYPE_SELL_LIMIT,
                 'buy_stop': mt5.ORDER_TYPE_BUY_STOP,
                 'sell_stop': mt5.ORDER_TYPE_SELL_STOP,
+                'buy_limit': mt5.ORDER_TYPE_BUY_LIMIT,
+                'sell_limit': mt5.ORDER_TYPE_SELL_LIMIT
             }
-
-            request['type'] = order_type_map.get(order_type.lower())
-            if request['type'] is None:
+            
+            mt5_order_type = type_dict.get(order_type.lower())
+            if mt5_order_type is None:
                 return {'success': False, 'error': f'Invalid order type: {order_type}'}
-
-            # Set price for market orders
-            if request['type'] in [mt5.ORDER_TYPE_BUY, mt5.ORDER_TYPE_SELL]:
-                tick = mt5.symbol_info_tick(symbol)  # type: ignore
+            
+            # Get current price if not provided
+            if price is None:
+                tick = mt5.symbol_info_tick(symbol)
                 if tick is None:
-                    return {'success': False, 'error': 'Failed to get current price'}
-
-                if request['type'] == mt5.ORDER_TYPE_BUY:
-                    request['price'] = tick.ask
-                else:
-                    request['price'] = tick.bid
-            else:
-                # Pending order - price required
-                if price is None:
-                    return {'success': False, 'error': 'Price required for pending orders'}
-                request['price'] = price
-                request['action'] = mt5.TRADE_ACTION_PENDING
-
-            # Set stop loss and take profit
-            if sl is not None:
-                request['sl'] = sl
-            if tp is not None:
-                request['tp'] = tp
-
-            # Normalize lot size
-            lot_min = symbol_info.volume_min
-            lot_max = symbol_info.volume_max
-            lot_step = symbol_info.volume_step
-
-            volume = max(lot_min, min(lot_max, volume))
-            volume = round(volume / lot_step) * lot_step
-            request['volume'] = round(volume, 2)
-
+                    return {'success': False, 'error': f'Failed to get tick for {symbol}'}
+                price = tick.ask if 'buy' in order_type.lower() else tick.bid
+            
+            # Normalize prices to symbol's digit precision
+            point = symbol_info.point
+            digits = symbol_info.digits
+            
+            price = round(price / point) * point
+            
+            # CRITICAL: For pending orders, use 'sl' and 'tp' parameters
+            # For market orders, these are applied directly
+            request = {
+                "action": mt5.TRADE_ACTION_PENDING if is_pending else mt5.TRADE_ACTION_DEAL,
+                "symbol": symbol,
+                "volume": volume,
+                "type": mt5_order_type,
+                "price": price,
+                "deviation": deviation,
+                "magic": magic,
+                "comment": comment,
+                "type_time": mt5.ORDER_TIME_DAY,  # Order valid until end of day
+                "type_filling": mt5.ORDER_FILLING_IOC,
+            }
+            
+            # Add SL/TP if provided - NORMALIZED to symbol digits
+            if stop_loss is not None:
+                request["sl"] = round(stop_loss, digits)
+            
+            if take_profit is not None:
+                request["tp"] = round(take_profit, digits)
+            
             # Send order
-            result = mt5.order_send(request)  # type: ignore
-
+            result = mt5.order_send(request)
+            
             if result is None:
-                return {'success': False, 'error': 'Order send failed - no response'}
-
-            # Define success codes
-            SUCCESS_CODES = [10008, 10009, 10010]  # PLACED, DONE, DONE_PARTIAL
-
-            if result.retcode in SUCCESS_CODES:
-                return {
-                    'success': True,
-                    'order': result.order,
-                    'deal': result.deal,
-                    'volume': result.volume,
-                    'price': result.price,
-                    'comment': result.comment
-                }
-            else:
+                return {'success': False, 'error': 'order_send returned None'}
+            
+            # Check result
+            if result.retcode != mt5.TRADE_RETCODE_DONE:
                 return {
                     'success': False,
                     'error': f'Order failed: {result.comment}',
                     'retcode': result.retcode
                 }
+            
+            # Log success
+            order_info = {
+                'success': True,
+                'order': result.order,
+                'volume': result.volume,
+                'price': result.price,
+                'sl': stop_loss,
+                'tp': take_profit,
+                'comment': result.comment
+            }
+            
+            self.logger.info(f"[ORDER PLACED] {symbol} {order_type.upper()} | "
+                            f"Vol: {volume:.2f} | Price: {price:.5f} | "
+                            f"SL: {stop_loss:.5f} | TP: {take_profit:.5f}")
+            
+            return order_info
+            
+        except Exception as e:
+            self.logger.error(f"Error placing order: {e}")
+            return {'success': False, 'error': str(e)}
 
     def close_position(self, ticket: int, deviation: int = 10) -> Dict:
         """Close an open position by ticket"""
