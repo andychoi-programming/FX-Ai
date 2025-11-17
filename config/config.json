@@ -964,7 +964,7 @@
   "pip_calculations": {
     "metals_pip_divisor": 10,
     "pip_values_per_001_lot": {
-      "XAUUSD": 0.0667,
+      "XAUUSD": 1.00,
       "XAGUSD": 0.40,
       "default_forex": 0.001,
       "default_jpy": 0.01
