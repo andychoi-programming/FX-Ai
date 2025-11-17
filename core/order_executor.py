@@ -246,7 +246,7 @@ class OrderManager:
         if symbol_info is None:
             return 0.001  # Conservative fallback
 
-        min_distance = self.order_executor._calculate_min_stop_distance(symbol, symbol_info)
+        min_distance = self._calculate_min_stop_distance(symbol, symbol_info)
         broker_min_distance = min_distance * 1.5  # 1.5x broker minimum for safety
 
         # Get ATR multipliers from config
@@ -357,7 +357,7 @@ class OrderManager:
             if symbol_info is None:
                 return False, f"Symbol {symbol} not found"
 
-            min_distance = self.order_executor._calculate_min_stop_distance(symbol, symbol_info)
+            min_distance = self._calculate_min_stop_distance(symbol, symbol_info)
 
             if signal == "BUY":
                 # Buy stop must be above current price
@@ -476,7 +476,7 @@ class OrderManager:
                 return {'managed': 0, 'cancelled': 0, 'errors': 0}
 
             # Filter to only our system's orders
-            our_orders = [order for order in orders if hasattr(order, 'magic') and order.magic == self.order_executor.magic_number]
+            our_orders = [order for order in orders if hasattr(order, 'magic') and order.magic == self.magic_number]
             total_pending = len(our_orders)
             managed = 0
             cancelled = 0
@@ -1202,7 +1202,7 @@ class OrderExecutor:
                 if "XAU" in symbol or "GOLD" in symbol:
                     pip_size = symbol_info.point * 10  # Gold: 1 pip = 10 points
                 elif "XAG" in symbol or "SILVER" in symbol:
-                    pip_size = symbol_info.point * 10  # Silver: 1 pip = 10 points (0.1 price units)
+                    pip_size = symbol_info.point  # Silver: 1 pip = 1 point (0.01 price units)
                 elif symbol_info.digits == 3 or symbol_info.digits == 5:
                     pip_size = symbol_info.point * 10
                 else:

@@ -98,7 +98,7 @@ def train_all_models():
         print(f"TRAINING COMPLETE")
         print(f"{'='*60}")
         print(f"[PASS] Successfully trained {trained_count}/{len(symbols)} models")
-        print(f"[EMOJI] Models saved to: {ml_predictor.model_dir}")
+        print(f"[SAVE] Models saved to: {ml_predictor.model_dir}")
 
         if trained_count > 0:
             print("\n[TRADE] Ready for live trading!")

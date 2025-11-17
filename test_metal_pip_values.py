@@ -21,9 +21,9 @@ print(f"Actual Risk: ${actual_risk:.2f}")
 print(f"Error: ${abs(actual_risk - risk_amount):.2f}")
 
 if abs(actual_risk - risk_amount) < 1.0:
-    print("✅ XAUUSD calculation CORRECT")
+    print("[PASS] XAUUSD calculation CORRECT")
 else:
-    print(f"❌ XAUUSD calculation WRONG - Off by ${abs(actual_risk - risk_amount):.2f}")
+    print(f"[FAIL] XAUUSD calculation WRONG - Off by ${abs(actual_risk - risk_amount):.2f}")
 
 print("\n" + "="*60)
 print("XAGUSD (Silver) Testing")
@@ -41,6 +41,6 @@ print(f"Actual Risk: ${actual_risk:.2f}")
 print(f"Error: ${abs(actual_risk - risk_amount):.2f}")
 
 if abs(actual_risk - risk_amount) < 1.0:
-    print("✅ XAGUSD calculation CORRECT")
+    print("[PASS] XAGUSD calculation CORRECT")
 else:
-    print(f"❌ XAGUSD calculation WRONG - Off by ${abs(actual_risk - risk_amount):.2f}")
+    print(f"[FAIL] XAGUSD calculation WRONG - Off by ${abs(actual_risk - risk_amount):.2f}")

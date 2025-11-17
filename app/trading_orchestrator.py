@@ -61,7 +61,7 @@ class SignalThresholdManager:
             # One currency active - OKAY
             adjustment = 0.0  # Standard threshold
             adjustments.append(f"Acceptable session (0.00)")
-            self.logger.info(f"         [EMOJI] {symbol} ACCEPTABLE for {session}: threshold {base_threshold:.3f}")
+            self.logger.info(f"         [INFO] {symbol} ACCEPTABLE for {session}: threshold {base_threshold:.3f}")
 
         else:
             # Neither currency active - POOR
@@ -81,7 +81,7 @@ class SignalThresholdManager:
                     adjustment = smart_threshold - final_threshold
                     final_threshold = smart_threshold
                     adjustments.append(f"Smart defaults ({adjustment:+.3f})")
-                    self.logger.info(f"         [EMOJI] SMART ADJUSTMENT: {smart_reason} (confidence: {confidence:.1f})")
+                    self.logger.info(f"         [ADJUST] SMART ADJUSTMENT: {smart_reason} (confidence: {confidence:.1f})")
 
             except Exception as e:
                 self.logger.debug(f"         Smart defaults unavailable: {e}")
@@ -373,7 +373,7 @@ class TradingOrchestrator:
                         continue
 
                     # Generate trading signal with detailed logging
-                    self.logger.info(f"         [EMOJI] Generating signal...")
+                    self.logger.info(f"         [SIGNAL] Generating signal...")
                     signal = await self._generate_trading_signal(symbol)
 
                     if signal:
@@ -414,7 +414,7 @@ class TradingOrchestrator:
                                     asyncio.create_task(self.monitor_trade(
                                         trade_result.get('ticket', 0), trade_result))
                                 else:
-                                    self.logger.info(f"         [EMOJI] DRY RUN: Simulating monitoring for #{ticket}")
+                                    self.logger.info(f"         [DRYRUN] DRY RUN: Simulating monitoring for #{ticket}")
                             else:
                                 error_msg = trade_result.get('error', 'Unknown error') if trade_result else 'Trade execution failed'
                                 self.logger.error(f"         [FAIL] TRADE FAILED: {error_msg}")
@@ -426,7 +426,7 @@ class TradingOrchestrator:
                         self.logger.info(f"         [DOWN] NO SIGNAL: Insufficient strength or data")
 
                 except Exception as e:
-                    self.logger.error(f"[{symbol}] [EMOJI] EXCEPTION during analysis: {e}", exc_info=True)
+                    self.logger.error(f"[{symbol}] [ERROR] EXCEPTION during analysis: {e}", exc_info=True)
 
             # Comprehensive summary
             elapsed = time_module.time() - start_time
@@ -452,7 +452,7 @@ class TradingOrchestrator:
                 self.logger.info(f"[TARGET] Trade Success Rate: {success_rate:.1f}% ({trades_successful}/{trades_attempted})")
 
         except Exception as e:
-            self.logger.error(f"[EMOJI] CRITICAL ERROR in opportunity check: {e}", exc_info=True)
+            self.logger.error(f"[ERROR] CRITICAL ERROR in opportunity check: {e}", exc_info=True)
 
     async def _generate_trading_signal(self, symbol: str) -> Optional[Dict[str, Any]]:
         """
@@ -767,7 +767,7 @@ class TradingOrchestrator:
         """Log comprehensive performance metrics"""
         metrics = self.performance_tracker.get_metrics_report()
 
-        self.logger.info("[EMOJI] PERFORMANCE METRICS:")
+        self.logger.info("[METRICS] PERFORMANCE METRICS:")
 
         # Show slowest operations
         slowest = sorted(metrics.items(), key=lambda x: x[1]['avg'], reverse=True)[:5]

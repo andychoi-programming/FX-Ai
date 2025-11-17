@@ -68,7 +68,7 @@ class MLPredictor:
 
         # Log the retraining event prominently
         self.logger.info("=" * 70)
-        self.logger.info("[EMOJI] MODEL RETRAINING INITIATED")
+        self.logger.info("[TRAIN] MODEL RETRAINING INITIATED")
         self.logger.info("=" * 70)
 
         if symbols is None:
@@ -97,7 +97,7 @@ class MLPredictor:
                 self.logger.error(f"[FAIL] Failed to retrain {symbol}: {e}")
 
         self.logger.info("=" * 70)
-        self.logger.info("[EMOJI] MODEL RETRAINING COMPLETED")
+        self.logger.info("[TRAIN] MODEL RETRAINING COMPLETED")
         self.logger.info("=" * 70)
 
     def validate_feature_consistency(self, features: Union[pd.DataFrame, Dict]) -> bool:

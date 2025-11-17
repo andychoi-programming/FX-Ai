@@ -632,7 +632,7 @@ class TradingEngine:
             "type_filling": mt5.ORDER_FILLING_IOC,
         }
         
-        self.logger.info(f"[EMOJI] Placing pending order: {symbol} {volume} lots @ {price}")
+        self.logger.info(f"[ORDER] Placing pending order: {symbol} {volume} lots @ {price}")
         self.logger.info(f"   Type: {self._get_order_type_name(order_type)}")
         self.logger.info(f"   SL: {sl}, TP: {tp}")
         

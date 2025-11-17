@@ -94,7 +94,7 @@ class EmergencyStop:
             return True
 
         except Exception as e:
-            logger.error(f"[EMOJI] Failed to initialize MT5: {e}")
+            logger.error(f"[FAIL] Failed to initialize MT5: {e}")
             return False
 
     def test_trading_capability(self):
@@ -118,7 +118,7 @@ class EmergencyStop:
             return True
 
         except Exception as e:
-            logger.error(f"[EMOJI] Trading capability test failed: {e}")
+            logger.error(f"[FAIL] Trading capability test failed: {e}")
             return False
 
     def close_all_positions(self):
@@ -204,11 +204,11 @@ class EmergencyStop:
                         'type_time': mt5.ORDER_TIME_GTC,
                     }
 
-                    logger.info(f"[EMOJI] Sending close request: symbol={request['symbol']}, volume={request['volume']}, price={request['price']}")
+                    logger.info(f"[ORDER] Sending close request: symbol={request['symbol']}, volume={request['volume']}, price={request['price']}")
 
                     # Send order
                     result = mt5.order_send(request)
-                    logger.info(f"[EMOJI] Order send result: {result}")
+                    logger.info(f"[ORDER] Order send result: {result}")
 
                     if result and result.retcode == mt5.TRADE_RETCODE_DONE:
                         logger.info(f"[PASS] Successfully closed {position.symbol} position {position.ticket}")
@@ -220,7 +220,7 @@ class EmergencyStop:
                         failed_count += 1
 
                 except Exception as e:
-                    logger.error(f"[EMOJI] Exception closing position {position.ticket}: {e}")
+                    logger.error(f"[ERROR] Exception closing position {position.ticket}: {e}")
                     failed_count += 1
 
             logger.info(f"[CHART] Close Results: {closed_count} successful, {failed_count} failed out of {len(our_positions)} total positions")
