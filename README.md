@@ -4,7 +4,7 @@
 ![Version](https://img.shields.io/badge/version-3.0-blue)
 ![Python](https://img.shields.io/badge/python-3.8+-blue)
 ![License](https://img.shields.io/badge/license-proprietary-red)
-![Trades](https://img.shields.io/badge/trades-911+-success)
+![Trades](https://img.shields.io/badge/trades-912+-success)
 
 ## Advanced ML-Powered Forex Trading System
 
@@ -377,7 +377,7 @@ The system includes comprehensive logging and monitoring. Check the `logs/` dire
 
 - **Main Application Log**: `logs/FX-Ai_YYYY_MM_DD.log`
 - **Crash/Error Log**: `logs/crash_log.txt`
-- **Performance Data**: `data/performance_history.db` (SQLite database with 911+ trades)
+- **Performance Data**: `data/performance_history.db` (SQLite database with 912+ trades)
 
 ### Real-time Monitoring Features
 
@@ -443,7 +443,7 @@ FX-Ai/
 │   └── __init__.py
 ├── data/                            # Data management
 │   ├── market_data_manager.py       # Market data handling
-│   └── performance_history.db       # SQLite trade database (233KB)
+│   └── performance_history.db       # SQLite trade database (284KB)
 ├── live_trading/                    # Live trading components
 │   ├── fundamental_monitor.py       # Real-time fundamental monitoring
 │   ├── dynamic_parameter_manager.py # Parameter optimization
