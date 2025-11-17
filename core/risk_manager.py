@@ -386,7 +386,8 @@ class RiskManager:
             # Risk per 0.01 lot = 500 * $0.10 = $50
             # So for $50 risk with 500 pip SL = 0.01 lots
             
-            pip_value_per_001_lot = 0.10  # $0.10 per pip for 0.01 lot
+            pip_values_config = self.config.get('pip_calculations', {}).get('pip_values_per_001_lot', {})
+            pip_value_per_001_lot = pip_values_config.get('XAUUSD', 0.10)  # $0.10 per pip for 0.01 lot
             lot_size = risk_amount / (stop_loss_pips * pip_value_per_001_lot * 100)
             
         elif "XAG" in symbol:  # Silver  
@@ -397,7 +398,8 @@ class RiskManager:
             # Risk per 0.01 lot = 500 * $0.40 = $200
             # Need 0.25 lots for $50 risk
             
-            pip_value_per_001_lot = 0.40  # $0.40 per pip for 0.01 lot
+            pip_values_config = self.config.get('pip_calculations', {}).get('pip_values_per_001_lot', {})
+            pip_value_per_001_lot = pip_values_config.get('XAGUSD', 0.40)  # $0.40 per pip for 0.01 lot
             lot_size = risk_amount / (stop_loss_pips * pip_value_per_001_lot)
             
             # Check if we can trade with broker's minimum

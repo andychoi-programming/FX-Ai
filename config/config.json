@@ -963,7 +963,19 @@
   },
   "pip_calculations": {
     "metals_pip_divisor": 10,
-    "_comment": "Pip calculation divisors for different asset classes"
+    "pip_values_per_001_lot": {
+      "XAUUSD": 0.10,
+      "XAGUSD": 0.40,
+      "default_forex": 0.001,
+      "default_jpy": 0.01
+    },
+    "pip_values": {
+      "XAUUSD": 0.10,
+      "XAGUSD": 0.01,
+      "default_forex": 0.0001,
+      "default_jpy": 0.01
+    },
+    "_comment": "Pip calculation divisors and pip values for different asset classes. XAUUSD pip value is $0.10 per pip per lot (100 oz contract)"
   },
   "validation_ranges": {
     "risk_reward_ratio_min": 1.5,
