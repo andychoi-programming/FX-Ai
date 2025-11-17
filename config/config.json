@@ -161,7 +161,7 @@
       "sl_atr_multiplier_cross": 2.5,
       "sl_atr_multiplier_jpy": 2.5,
       "sl_atr_multiplier_gold": 1.5,
-      "sl_atr_multiplier_silver": 2.0,
+      "sl_atr_multiplier_silver": 3.0,
       "professional_minimums": {
         "EURUSD": 0.0010,
         "GBPUSD": 0.0015,
