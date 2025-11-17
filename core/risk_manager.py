@@ -293,7 +293,12 @@ class RiskManager:
                 # Get conversion rate
                 if quote_currency == "JPY":
                     # For XXX/JPY crosses - pip value in USD
-                    pip_value_per_lot = (0.01 * 100000) / tick.bid  # Use the cross pair price, not USDJPY
+                    # Use USDJPY rate for consistent pip value across all JPY pairs
+                    usdjpy_tick = mt5.symbol_info_tick("USDJPY")  # type: ignore
+                    if usdjpy_tick:
+                        pip_value_per_lot = (0.01 * 100000) / usdjpy_tick.bid
+                    else:
+                        pip_value_per_lot = 9.26  # Fallback based on current calculations
                 else:
                     # For other crosses like EURGBP
                     # Need GBP/USD rate to convert GBP pips to USD
@@ -392,15 +397,15 @@ class RiskManager:
             
         elif "XAG" in symbol:  # Silver  
             # For Silver: 1 pip = $0.001 movement = $50 per lot
-            # 1 pip = $50 for 1 lot, $5 for 0.1 lot, $0.40 for 0.01 lot
+            # 1 pip = $50 for 1 lot, $5 for 0.1 lot, $0.50 for 0.01 lot
             
             # If stop loss is 500 pips
-            # Risk per 0.01 lot = 500 * $0.40 = $200
-            # Need 0.25 lots for $50 risk
+            # Risk per 0.01 lot = 500 * $0.50 = $250
+            # Need 0.20 lots for $50 risk
             
             pip_values_config = self.config.get('pip_calculations', {}).get('pip_values_per_001_lot', {})
-            pip_value_per_001_lot = pip_values_config.get('XAGUSD', 0.40)  # $0.40 per pip for 0.01 lot
-            lot_size = risk_amount / (stop_loss_pips * pip_value_per_001_lot)
+            pip_value_per_001_lot = pip_values_config.get('XAGUSD', 0.50)  # $0.50 per pip for 0.01 lot
+            lot_size = risk_amount / (stop_loss_pips * pip_value_per_001_lot * 100)
             
             # Check if we can trade with broker's minimum
             min_lot = symbol_info.volume_min
@@ -1046,7 +1051,12 @@ class RiskManager:
                 # Get conversion rate
                 if quote_currency == "JPY":
                     # For XXX/JPY crosses - pip value in USD
-                    pip_value_per_lot = (0.01 * 100000) / tick.bid  # Use the cross pair price, not USDJPY
+                    # Use USDJPY rate for consistent pip value across all JPY pairs
+                    usdjpy_tick = mt5.symbol_info_tick("USDJPY")  # type: ignore
+                    if usdjpy_tick:
+                        pip_value_per_lot = (0.01 * 100000) / usdjpy_tick.bid
+                    else:
+                        pip_value_per_lot = 9.26  # Fallback based on current calculations
                 else:
                     # For other crosses like EURGBP
                     # Need GBP/USD rate to convert GBP pips to USD
