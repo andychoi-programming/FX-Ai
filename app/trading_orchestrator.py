@@ -1069,21 +1069,21 @@ class TradingOrchestrator:
         except Exception as e:
             self.logger.error(f"Error checking open position exits for ticket {ticket}: {e}")
 
-    async def _close_position_immediately(self, ticket: int, trade_data: dict, close_time):
+    async def _close_position_immediately(self, ticket: int, trade_data: dict, close_reason: str):
         """Close position immediately after market close time."""
         try:
             self.logger.info(
-                f"Immediately closing {trade_data['symbol']} position - after {close_time.strftime('%H:%M')} MT5 time")
+                f"Immediately closing {trade_data['symbol']} position - {close_reason}")
             
             # Set closure reason in trade_data for database recording
-            trade_data['closure_reason'] = f"immediate_close_after_{close_time.strftime('%H:%M')}"
+            trade_data['closure_reason'] = close_reason
             
             close_result = await self.trading_engine.close_position_by_ticket(ticket)
             if close_result:
                 self.logger.info("Successfully closed position for immediate time-based exit")
                 # Store closure reason in pending experience for RL learning
                 if hasattr(self.reinforcement_agent, 'pending_experiences') and ticket in self.reinforcement_agent.pending_experiences:
-                    self.reinforcement_agent.pending_experiences[ticket]['closure_reason'] = f"immediate_close_after_{close_time.strftime('%H:%M')}"
+                    self.reinforcement_agent.pending_experiences[ticket]['closure_reason'] = close_reason
             else:
                 self.logger.warning("Failed to close position for immediate time-based exit")
         except Exception as e:
@@ -1581,6 +1581,9 @@ class TradingOrchestrator:
                 health_indicators.append("System: Stopped")
 
             # Check pending orders health
+            # First manage any stale orders
+            await self._manage_pending_orders()
+            
             pending_health = self.trading_engine.order_executor.check_pending_orders_health()
             total_pending = pending_health.get('total_pending', 0)
             issues = pending_health.get('issues', [])
@@ -1603,7 +1606,7 @@ class TradingOrchestrator:
         if 'JPY' in symbol:
             return 0.01
         elif 'XAU' in symbol or 'XAG' in symbol:
-            return 0.01 if 'XAG' in symbol else 0.1
+            return 0.01 if 'XAG' in symbol else 0.15  # Adjusted for XAUUSD risk calculation
         else:
             return 0.0001
 

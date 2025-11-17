@@ -68,7 +68,7 @@
         "check_interval_seconds": 60,
         "stale_order_threshold_hours": 1,
         "price_movement_cancel_threshold": 0.02,
-        "max_pending_orders": 10,
+        "max_pending_orders": 30,
         "cancel_stale_orders": true,
         "cancel_on_signal_change": true
       },

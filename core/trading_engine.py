@@ -329,6 +329,12 @@ class TradingEngine:
         try:
             symbol = signal['symbol']
             direction = signal['direction']
+            
+            # Calculate position size if not provided
+            if 'position_size' not in signal:
+                default_sl_pips = self.config.get('trading', {}).get('default_sl_pips', 20)
+                signal['position_size'] = self.risk_manager.calculate_position_size(symbol, default_sl_pips)
+            
             volume = signal['position_size']
             stop_loss = signal.get('stop_loss')
             take_profit = signal.get('take_profit')

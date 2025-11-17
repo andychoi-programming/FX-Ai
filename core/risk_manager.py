@@ -391,18 +391,18 @@ class RiskManager:
             
         elif "XAG" in symbol:  # Silver  
             # For Silver: 1 pip = $0.001 movement = $50 per lot
-            # 1 pip = $50 for 1 lot, $5 for 0.1 lot, $0.50 for 0.01 lot
+            # 1 pip = $50 for 1 lot, $5 for 0.1 lot, $0.40 for 0.01 lot
             
             # If stop loss is 500 pips
-            # Risk per 0.01 lot = 500 * $0.50 = $250 (too much!)
-            # Need 0.002 lots for $50 risk
+            # Risk per 0.01 lot = 500 * $0.40 = $200
+            # Need 0.25 lots for $50 risk
             
-            pip_value_per_001_lot = 0.50  # $0.50 per pip for 0.01 lot
-            lot_size = risk_amount / (stop_loss_pips * pip_value_per_001_lot * 100)
+            pip_value_per_001_lot = 0.40  # $0.40 per pip for 0.01 lot
+            lot_size = risk_amount / (stop_loss_pips * pip_value_per_001_lot)
             
             # Check if we can trade with broker's minimum
             min_lot = symbol_info.volume_min
-            min_risk = stop_loss_pips * pip_value_per_001_lot * min_lot * 100
+            min_risk = stop_loss_pips * pip_value_per_001_lot * min_lot
             
             if min_risk > risk_amount:
                 logger.warning(f"Cannot trade {symbol}: Minimum risk ${min_risk:.2f} > ${risk_amount}")

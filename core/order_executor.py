@@ -396,8 +396,8 @@ class OrderManager:
             stop_pips = stop_distance / pip_size
 
             # Use risk manager for position sizing if available
-            if hasattr(self.order_executor, 'risk_manager') and self.order_executor.risk_manager:
-                return self.order_executor.risk_manager.calculate_position_size(symbol, stop_pips)
+            if hasattr(self, 'risk_manager') and self.risk_manager:
+                return self.risk_manager.calculate_position_size(symbol, stop_pips)
 
             # Fallback calculation
             risk_amount = self.config.get('trading', {}).get('risk_per_trade', 50.0)
@@ -529,7 +529,7 @@ class OrderManager:
     def _is_order_stale(self, order) -> bool:
         """Check if order is stale"""
 
-        current_time = datetime.now().timestamp()
+        current_time = self.mt5.get_server_time().timestamp() if self.mt5 else datetime.now().timestamp()
         order_time = getattr(order, 'time_setup', 0)
         stale_seconds = self.stale_threshold_hours * 3600
         return (current_time - order_time) > stale_seconds
@@ -639,11 +639,12 @@ class OrderExecutor:
             issues = []
 
             # Check for too many pending orders
-            if total_pending > 10:
+            max_pending = self.config.get('trading', {}).get('order_management', {}).get('pending_order_management', {}).get('max_pending_orders', 10)
+            if total_pending > max_pending:
                 issues.append(f"Too many pending orders: {total_pending}")
 
             # Check for stale orders (>1 hour old)
-            current_time = datetime.now().timestamp()
+            current_time = self.mt5.get_server_time().timestamp() if self.mt5 else datetime.now().timestamp()
             stale_count = 0
             for order in orders:
                 order_time = getattr(order, 'time_setup', 0)

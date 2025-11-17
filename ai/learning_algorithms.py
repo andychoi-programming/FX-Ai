@@ -857,3 +857,68 @@ class LearningAlgorithms:
         except Exception as e:
             logger.error(f"Error getting trade data for {symbol}: {e}")
             return pd.DataFrame()
+
+    def analyze_economic_calendar_impact(self) -> dict:
+        """Analyze economic calendar impact on trading performance"""
+        try:
+            # Placeholder implementation - analyze how economic events affect performance
+            return {
+                'impact_detected': False,
+                'recommendations': [],
+                'confidence': 0.0
+            }
+        except Exception as e:
+            logger.error(f"Error analyzing economic calendar impact: {e}")
+            return {'impact_detected': False, 'error': str(e)}
+
+    def analyze_interest_rate_impact(self) -> dict:
+        """Analyze interest rate impact on trading performance"""
+        try:
+            # Placeholder implementation - analyze how interest rates affect performance
+            return {
+                'impact_detected': False,
+                'recommendations': [],
+                'confidence': 0.0
+            }
+        except Exception as e:
+            logger.error(f"Error analyzing interest rate impact: {e}")
+            return {'impact_detected': False, 'error': str(e)}
+
+    def optimize_fundamental_weights(self) -> dict:
+        """Optimize fundamental analysis weights"""
+        try:
+            # Placeholder implementation
+            return {
+                'weights_updated': False,
+                'new_weights': {},
+                'performance_improvement': 0.0
+            }
+        except Exception as e:
+            logger.error(f"Error optimizing fundamental weights: {e}")
+            return {'weights_updated': False, 'error': str(e)}
+
+    def optimize_sentiment_parameters(self) -> dict:
+        """Optimize sentiment analysis parameters"""
+        try:
+            # Placeholder implementation
+            return {
+                'parameters_updated': False,
+                'new_parameters': {},
+                'performance_improvement': 0.0
+            }
+        except Exception as e:
+            logger.error(f"Error optimizing sentiment parameters: {e}")
+            return {'parameters_updated': False, 'error': str(e)}
+
+    def analyze_adjustment_performance(self) -> dict:
+        """Analyze performance of parameter adjustments"""
+        try:
+            # Placeholder implementation
+            return {
+                'adjustments_analyzed': 0,
+                'successful_adjustments': 0,
+                'performance_impact': 0.0
+            }
+        except Exception as e:
+            logger.error(f"Error analyzing adjustment performance: {e}")
+            return {'adjustments_analyzed': 0, 'error': str(e)}
