@@ -59,7 +59,7 @@ python -c "from app.application import FXAiApplication; import asyncio; app = FX
 
 - **Live Learning Philosophy**: Unlike traditional systems that rely on backtesting, FX-Ai learns exclusively from live trading performance, continuously adapting to real market conditions
 - **Stop Order Precision**: Advanced BUY_STOP/SELL_STOP system for optimal entry timing (not market orders)
-- **30+ Currency Pairs**: Comprehensive coverage with symbol-specific optimization
+- **30+ Currency Pairs**: Comprehensive coverage with symbol-specific optimization (all symbols now available for trading)
 - **3:1 Risk-Reward Minimum**: Disciplined risk management on every trade
 - **Real-time Fundamental Monitoring**: Automated protection during news events
 - **Adaptive ML Models**: Self-improving system based on actual trade outcomes
@@ -133,6 +133,8 @@ This approach ensures the system adapts to current market dynamics rather than o
 **Cross Pairs:** EURGBP, EURJPY, GBPJPY, AUDJPY, EURCAD, GBPAUD, EURNZD, GBPNZD, etc.
 **Metals:** XAUUSD (Gold), XAGUSD (Silver)
 
+*All 30 symbols are now actively available for trading with full risk management and ML model support.*
+
 ## Configuration
 
 ### Main Configuration Files
@@ -144,6 +146,8 @@ This approach ensures the system adapts to current market dynamics rather than o
 ### Configuration Improvements (v2.0+)
 
 **Recent Enhancement**: All previously hardcoded values have been moved to configuration files for improved maintainability and flexibility. The system now supports full parameterization without code changes.
+
+**Latest Update (v3.0)**: Trading symbols expanded from 6 to all 30 available symbols, removing previous restrictions and enabling full market coverage.
 
 #### New Configurable Sections
 
@@ -203,12 +207,17 @@ The following sections have been added to `config/config.json` to eliminate hard
 
 ```json
 "schedule_symbols": [
-  "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD",
-  "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"
+  "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "NZDUSD", "USDCAD",
+  "EURAUD", "EURCAD", "EURCHF", "EURGBP", "EURJPY", "EURNZD",
+  "GBPAUD", "GBPCAD", "GBPCHF", "GBPJPY", "GBPNZD",
+  "AUDCAD", "AUDCHF", "AUDJPY", "AUDNZD",
+  "NZDCAD", "NZDCHF", "NZDJPY",
+  "CADCHF", "CADJPY", "CHFJPY",
+  "XAUUSD", "XAGUSD"
 ]
 ```
 
-- List of symbols for schedule management and trading
+- List of all 30 symbols available for trading and schedule management
 
 **Performance Thresholds** (`performance_thresholds`):
 
@@ -281,6 +290,7 @@ The system uses separate configuration for trading hours to enable optimal 24-ho
 - **24-Hour Support**: Continuous trading capability across all sessions
 - **Force Close**: All positions closed at 23:45 GMT daily
 - **Session Flexibility**: No overlap requirements for single-session trading
+- **Full Symbol Coverage**: All 30 symbols now available for simultaneous trading
 
 ### Risk Management Settings
 
@@ -535,7 +545,7 @@ The `.vscode/` directory includes:
 ### Current Model Status
 
 - **911+ Historical Trades** recorded in performance database
-- **30+ Currency Pairs** with trained models (M15 and H1 timeframes)
+- **30+ Currency Pairs** with trained models (M15 and H1 timeframes) - all symbols now actively traded
 - **Model Archives**: Automatic backup system with timestamped versions
 - **Adaptive Learning**: Continuous model improvement based on trade outcomes
 
@@ -757,7 +767,7 @@ All stop order placements are recorded in the learning database for AI analysis:
 ### Pre-Deployment Checklist
 
 - [ ] MT5 connection successful
-- [ ] All 30 symbols loading correctly
+- [ ] All 30 symbols loading correctly (full symbol coverage enabled)
 - [ ] ML models present in `models/` directory
 - [ ] Configuration files validated
 - [ ] Demo account configured in `.env`
