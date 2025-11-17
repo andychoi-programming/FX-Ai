@@ -999,7 +999,12 @@ class OrderExecutor:
             current_price = (tick.ask + tick.bid) / 2  # Use mid price as reference
 
             # Get stop order distance configuration - FORCE PIP-BASED
-            pending_config = self.config.get('trading', {}).get('pending_order_distances', {})
+            trading_config = self.config.get('trading', {})
+            if not isinstance(trading_config, dict):
+                trading_config = {}
+            pending_config = trading_config.get('pending_order_distances', {})
+            if not isinstance(pending_config, dict):
+                pending_config = {}
             distance_type = 'pips'  # Force pip-based distances
 
             if distance_type == 'percentage':

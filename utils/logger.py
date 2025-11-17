@@ -562,8 +562,8 @@ class UnicodeSafeStreamHandler(logging.StreamHandler):
         """
         try:
             super().emit(record)
-        except UnicodeEncodeError:
-            # Handle Unicode encoding errors by replacing problematic characters
+        except Exception as e:
+            # Handle any encoding errors by replacing problematic characters
             try:
                 # Get the formatted message
                 msg = self.format(record)
@@ -578,6 +578,9 @@ class UnicodeSafeStreamHandler(logging.StreamHandler):
                 try:
                     safe_error = f"[Unicode encoding error in log message]\n"
                     self.stream.write(safe_error)
+                    self.flush()
+                except Exception:
+                    pass  # Last resort, do nothing
                     self.flush()
                 except Exception:
                     pass  # Last resort - ignore the error
