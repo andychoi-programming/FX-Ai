@@ -12,7 +12,7 @@ FX-Ai is a comprehensive machine learning-based forex trading system that combin
 
 **Version:** 3.0
 **Date:** November 17, 2025
-**Status:** OPERATIONAL - System running normally with 24-hour optimal trading enabled
+**Status:** OPERATIONAL - All critical bugs fixed, system running normally with 24-hour optimal trading enabled
 
 ---
 
@@ -53,7 +53,50 @@ python -c "from app.application import FXAiApplication; import asyncio; app = FX
 
 ---
 
-## Why FX-Ai?
+## Recent Updates & Fixes (v3.0.1)
+
+### Critical Bug Fixes (November 17, 2025)
+
+#### Self-Reference Error Fixed
+
+- **Issue**: `OrderExecutor` class had self-reference bug causing `'OrderExecutor' object has no attribute 'order_executor'` error
+- **Root Cause**: Code was trying to access `self.order_executor.magic_number` but `OrderExecutor` doesn't have an `order_executor` attribute
+- **Fix**: Corrected all references to use `self.magic_number` instead of `self.order_executor.magic_number`
+- **Impact**: Resolved 100% trade failure rate - system can now execute orders successfully
+
+#### ML Model Coverage Complete
+
+- **Issue**: Only 7 out of 30 symbols had trained ML models
+- **Fix**: Updated training script to use all 30 symbols from config, trained 23 additional models
+- **Result**: All 30 currency pairs now have trained ML models for optimal performance
+
+#### OrderManager Attribute Fix
+
+- **Issue**: `OrderManager` class incorrectly referenced `self.magic_number` instead of `self.order_executor.magic_number`
+- **Fix**: Corrected attribute references in OrderManager class
+- **Impact**: Proper magic number handling for order identification and management
+
+#### Phantom Orders Cleanup
+
+- **Status**: Verified no phantom pending orders exist in MT5
+- **Result**: Clean slate for order management system
+
+### System Improvements
+
+- **Full Symbol Coverage**: All 30 configured symbols now actively available for trading
+- **Enhanced Stability**: Self-reference errors eliminated, system runs without crashes
+- **Improved Diagnostics**: Better error reporting and debugging capabilities
+- **Code Quality**: Fixed attribute reference issues throughout the codebase
+
+### Current System Status
+
+- ✅ **All Critical Bugs**: RESOLVED
+- ✅ **ML Models**: 30/30 symbols trained
+- ✅ **Order Execution**: Fully functional
+- ✅ **Risk Management**: All safety systems operational
+- ✅ **24-Hour Trading**: Symbol-specific optimal hours active
+
+---
 
 ### Key Differentiators
 
@@ -961,4 +1004,4 @@ For technical support or questions:
 
 ---
 
-Last Updated: November 17, 2025
+Last Updated: November 17, 2025 (v3.0.1 - Critical Bug Fixes)

@@ -52,8 +52,8 @@ def train_all_models():
         
         ml_predictor = MLPredictor(config)
 
-        # Symbols to train
-        symbols = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD']
+        # Symbols to train - get from config
+        symbols = config.get('trading', {}).get('symbols', ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'])
 
         print(f"Training models for {len(symbols)} symbols...")
         print("This may take several minutes...\n")
