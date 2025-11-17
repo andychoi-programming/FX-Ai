@@ -191,8 +191,8 @@
         "CADCHF": 0.0012,
         "CADJPY": 0.15,
         "CHFJPY": 0.20,
-        "XAUUSD": 3.0,
-        "XAGUSD": 0.30
+        "XAUUSD": 5.0,
+        "XAGUSD": 0.50
       },
       "default_sl_pips": 15,
       "max_sl_pips": 50,
