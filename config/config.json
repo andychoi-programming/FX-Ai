@@ -9,7 +9,13 @@
   },
   "trading": {
     "symbols": [
-      "AUDUSD", "NZDUSD", "AUDJPY", "NZDJPY", "AUDNZD", "USDJPY"
+      "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "NZDUSD", "USDCAD",
+      "EURAUD", "EURCAD", "EURCHF", "EURGBP", "EURJPY", "EURNZD",
+      "GBPAUD", "GBPCAD", "GBPCHF", "GBPJPY", "GBPNZD",
+      "AUDCAD", "AUDCHF", "AUDJPY", "AUDNZD",
+      "NZDCAD", "NZDCHF", "NZDJPY",
+      "CADCHF", "CADJPY", "CHFJPY",
+      "XAUUSD", "XAGUSD"
     ],
     "risk_per_trade": 50.0,
     "risk_type": "fixed_dollar",

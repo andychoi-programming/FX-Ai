@@ -4,14 +4,14 @@
 ![Version](https://img.shields.io/badge/version-3.0-blue)
 ![Python](https://img.shields.io/badge/python-3.8+-blue)
 ![License](https://img.shields.io/badge/license-proprietary-red)
-![Trades](https://img.shields.io/badge/trades-494+-success)
+![Trades](https://img.shields.io/badge/trades-911+-success)
 
 ## Advanced ML-Powered Forex Trading System
 
 FX-Ai is a comprehensive machine learning-based forex trading system that combines trained ML models with advanced risk management for automated trading across multiple currency pairs and timeframes.
 
 **Version:** 3.0
-**Date:** November 13, 2025
+**Date:** November 17, 2025
 **Status:** OPERATIONAL - System running normally with 24-hour optimal trading enabled
 
 ---
@@ -53,7 +53,7 @@ python -c "from app.application import FXAiApplication; import asyncio; app = FX
 
 ---
 
-## 🚀 Why FX-Ai?
+## Why FX-Ai?
 
 ### Key Differentiators
 
@@ -69,7 +69,7 @@ python -c "from app.application import FXAiApplication; import asyncio; app = FX
 
 ## System Architecture
 
-### 🧠 Live Learning vs Backtesting
+### Live Learning vs Backtesting
 
 FX-Ai makes a **deliberate architectural decision** to focus on live learning rather than historical backtesting:
 
@@ -88,25 +88,25 @@ This approach ensures the system adapts to current market dynamics rather than o
 │   (Live Data)   │
 └────────┬────────┘
          │
-         ▼
+         v
 ┌─────────────────┐      ┌──────────────────┐
-│  MT5 Connector  │◄────►│  Market Data     │
+│  MT5 Connector  │<---->│  Market Data     │
 │  (Clock Sync)   │      │  Manager         │
 └────────┬────────┘      └──────────────────┘
          │
-         ▼
+         v
 ┌─────────────────┐      ┌──────────────────┐
-│ Trading Engine  │◄────►│  ML Predictor    │
+│ Trading Engine  │<---->│  ML Predictor    │
 │ (Stop Orders)   │      │  (30+ Models)    │
 └────────┬────────┘      └──────────────────┘
          │
-         ▼
+         v
 ┌─────────────────┐      ┌──────────────────┐
-│  Risk Manager   │◄────►│  Fundamental     │
+│  Risk Manager   │<---->│  Fundamental     │
 │  (3:1 R:R)      │      │  Monitor         │
 └────────┬────────┘      └──────────────────┘
          │
-         ▼
+         v
 ┌─────────────────┐
 │  Performance DB │
 │  (Learning)     │
@@ -324,7 +324,7 @@ The system includes comprehensive logging and monitoring. Check the `logs/` dire
 
 - **Main Application Log**: `logs/FX-Ai_YYYY_MM_DD.log`
 - **Crash/Error Log**: `logs/crash_log.txt`
-- **Performance Data**: `data/performance_history.db` (SQLite database with 494+ trades)
+- **Performance Data**: `data/performance_history.db` (SQLite database with 911+ trades)
 
 ### Real-time Monitoring Features
 
@@ -423,7 +423,7 @@ FX-Ai/
 
 - **Python**: 3.8 or higher (3.9-3.10 recommended, tested)
 - **MetaTrader 5**: Terminal installed and running
-  - Enable Algo Trading in MT5 Tools → Options → Expert Advisors
+  - Enable Algo Trading in MT5 Tools -> Options -> Expert Advisors
   - Allow DLL imports and external expert imports
 - **MT5 Account**: Valid trading account (TIOMarkets demo recommended for testing)
 - **Operating System**:
@@ -502,7 +502,7 @@ FX-Ai/
 
 ---
 
-## 💻 Development Workflow
+## Development Workflow
 
 ### Recommended Setup
 
@@ -534,7 +534,7 @@ The `.vscode/` directory includes:
 
 ### Current Model Status
 
-- **494+ Historical Trades** recorded in performance database
+- **911+ Historical Trades** recorded in performance database
 - **30+ Currency Pairs** with trained models (M15 and H1 timeframes)
 - **Model Archives**: Automatic backup system with timestamped versions
 - **Adaptive Learning**: Continuous model improvement based on trade outcomes
@@ -752,7 +752,7 @@ All stop order placements are recorded in the learning database for AI analysis:
 
 ---
 
-## 🧪 Testing & Validation
+## Testing & Validation
 
 ### Pre-Deployment Checklist
 
@@ -841,7 +841,7 @@ python -c "from utils.config_loader import ConfigLoader; config = ConfigLoader()
 
 ---
 
-## ❓ Frequently Asked Questions
+## Frequently Asked Questions
 
 **Q: Why no backtesting?**
 A: FX-Ai deliberately focuses on live learning to avoid overfitting to historical data and adapt to current market conditions.
@@ -868,7 +868,7 @@ A: System automatically pauses. Positions closed Friday 23:45 GMT.
 
 ## Performance Expectations
 
-### Realistic Goals (Based on 494+ Historical Trades)
+### Realistic Goals (Based on 911+ Historical Trades)
 
 - **Monthly Return**: 5-15% (depending on account size and market conditions)
 - **Win Rate**: 55-70% (with proper risk management)
@@ -878,11 +878,11 @@ A: System automatically pauses. Positions closed Friday 23:45 GMT.
 
 ### Risk Warnings
 
-⚠️ **Past Performance Does Not Guarantee Future Results**
-⚠️ **Forex Trading Involves Risk of Loss**
-⚠️ **Never Risk More Than You Can Afford to Lose**
-⚠️ **Always Test on Demo Account First**
-⚠️ **This System is Continuously Learning - Results May Vary**
+WARNING: **Past Performance Does Not Guarantee Future Results**
+WARNING: **Forex Trading Involves Risk of Loss**
+WARNING: **Never Risk More Than You Can Afford to Lose**
+WARNING: **Always Test on Demo Account First**
+WARNING: **This System is Continuously Learning - Results May Vary**
 
 ---
 
@@ -927,7 +927,7 @@ The system uses SQLite database (`data/performance_history.db`) with 24+ tables:
 - **performance_***: Performance metrics and statistics
 - **learning_***: Machine learning model data
 
-**Database Size**: ~233KB (494+ trades recorded)
+**Database Size**: ~233KB (911+ trades recorded)
 **Backup**: Automatic model backups in `models_archive/` and `models_backup/`
 
 ---
@@ -951,4 +951,4 @@ For technical support or questions:
 
 ---
 
-Last Updated: November 13, 2025
+Last Updated: November 17, 2025
