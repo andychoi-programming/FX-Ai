@@ -49,6 +49,9 @@ class ScheduleManager:
             self.global_settings = config.get('global_settings', {})
             self.schedules = config.get('symbol_schedules', {})
 
+            self.logger.info(f"ScheduleManager loaded global_settings: {self.global_settings}")
+            self.logger.info(f"ScheduleManager loaded {len(self.schedules)} symbol schedules")
+
             if not self.schedules:
                 self.logger.warning("No symbol schedules found, using defaults")
                 self._use_default_schedules()
@@ -168,19 +171,23 @@ class ScheduleManager:
                 server_time = mt5.server_time()
                 if server_time:
                     now = datetime.fromtimestamp(server_time)
+                    self.logger.debug(f"ScheduleManager using MT5 server time: {now} (force close: {force_hour:02d}:{force_minute:02d})")
                 else:
                     now = datetime.now()
+                    self.logger.debug(f"ScheduleManager MT5 server_time() returned None, using local time: {now}")
             else:
                 now = datetime.now()
-        except:
+                self.logger.debug(f"ScheduleManager MT5 not connected, using local time: {now}")
+        except Exception as e:
             # Fallback to local time if MT5 not available
             now = datetime.now()
+            self.logger.debug(f"ScheduleManager error getting MT5 time: {e}, using local time: {now}")
 
         # Close during the force close window (e.g., 23:45-23:59)
-        if now.hour == force_hour and now.minute >= force_minute:
-            return True
+        should_close = now.hour == force_hour and now.minute >= force_minute
+        self.logger.debug(f"ScheduleManager force close check: {now.hour:02d}:{now.minute:02d} >= {force_hour:02d}:{force_minute:02d} = {should_close}")
 
-        return False
+        return should_close
 
     def get_schedule_info(self, symbol):
         """
