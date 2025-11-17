@@ -87,7 +87,7 @@ class EmergencyStop:
 
             if account_info.trade_expert != 1:
                 logger.error("[FAIL] Automated trading is not enabled for this account")
-                logger.error("Please enable automated trading in MT5: Tools → Options → Expert Advisors → Allow automated trading")
+                logger.error("Please enable automated trading in MT5: Tools -> Options -> Expert Advisors -> Allow automated trading")
                 return False
 
             logger.info("[PASS] MT5 connection and trading capability verified")

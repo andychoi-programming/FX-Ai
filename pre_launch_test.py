@@ -129,9 +129,9 @@ def pre_launch_test():
             print(f"[PASS] Existing Orders: {orders_count}")
 
             if positions_count > 0:
-                print("ℹ[EMOJI]  INFO: Existing positions detected - review in MT5 terminal")
+                print("[INFO]  INFO: Existing positions detected - review in MT5 terminal")
             if orders_count > 0:
-                print("ℹ[EMOJI]  INFO: Existing orders detected - review in MT5 terminal")
+                print("[INFO]  INFO: Existing orders detected - review in MT5 terminal")
 
         except Exception as e:
             print(f"[FAIL] Order/position check failed: {e}")

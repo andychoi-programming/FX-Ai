@@ -55,7 +55,7 @@ class SignalThresholdManager:
             adjustment = -0.05  # Lower threshold (more aggressive)
             final_threshold += adjustment
             adjustments.append(f"Optimal session (-0.05)")
-            self.logger.info(f"         [TARGET] {symbol} OPTIMAL for {session}: threshold {base_threshold:.3f} → {final_threshold:.3f}")
+            self.logger.info(f"         [TARGET] {symbol} OPTIMAL for {session}: threshold {base_threshold:.3f} -> {final_threshold:.3f}")
 
         elif optimal_for_base or optimal_for_quote:
             # One currency active - OKAY
@@ -68,7 +68,7 @@ class SignalThresholdManager:
             adjustment = +0.10  # Higher threshold (more selective)
             final_threshold += adjustment
             adjustments.append(f"Sub-optimal session (+0.10)")
-            self.logger.warning(f"         [WARN] {symbol} SUB-OPTIMAL for {session}: threshold {base_threshold:.3f} → {final_threshold:.3f}")
+            self.logger.warning(f"         [WARN] {symbol} SUB-OPTIMAL for {session}: threshold {base_threshold:.3f} -> {final_threshold:.3f}")
 
         # 2. Smart defaults adjustment (if available)
         if self.adaptive_learning and current_time:

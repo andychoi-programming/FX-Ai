@@ -56,7 +56,7 @@ def test_session_detection():
         for hour in test_hours:
             test_time = current_time.replace(hour=hour)
             test_session = schedule_manager.get_current_session(test_time)
-            print(f"  Hour {hour:2d}:00 → {test_session}")
+            print(f"  Hour {hour:2d}:00 -> {test_session}")
 
     except AttributeError as e:
         print(f"[FAIL] Method still missing: {e}")

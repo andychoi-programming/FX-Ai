@@ -42,7 +42,7 @@ if os.path.exists(db_path):
         print(f"[FAIL] Error reading database: {e}")
 
 else:
-    print(f"ℹ[EMOJI]  Database not found at {db_path} - this is normal for first run")
+    print(f"[INFO]  Database not found at {db_path} - this is normal for first run")
 
 print("\n[CYCLE] In-Memory Reset:")
 print("   The system will automatically reset in-memory counters on next startup")

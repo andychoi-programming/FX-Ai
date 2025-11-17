@@ -1327,6 +1327,13 @@ class OrderExecutor:
                         "type_time": mt5.ORDER_TIME_DAY,  # Expire at end of trading day
                     }
 
+                    # Add SL/TP for pending orders (they are set at order placement)
+                    if trade_action == mt5.TRADE_ACTION_PENDING:
+                        if stop_loss is not None:
+                            request["sl"] = stop_loss
+                        if take_profit is not None:
+                            request["tp"] = take_profit
+
                     # Add filling mode only for market orders
                     if trade_action == mt5.TRADE_ACTION_DEAL:
                         request["deviation"] = self.max_slippage

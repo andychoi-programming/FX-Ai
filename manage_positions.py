@@ -22,7 +22,7 @@ def add_sl_tp_to_positions():
         # Get all positions
         positions = mt5.positions_get()
         if not positions:
-            print("ℹ[EMOJI]  No positions found")
+            print("[INFO]  No positions found")
             return True
 
         print(f"Found {len(positions)} position(s):")
@@ -159,7 +159,7 @@ def close_positions_safely():
     try:
         positions = mt5.positions_get()
         if not positions:
-            print("ℹ[EMOJI]  No positions to close")
+            print("[INFO]  No positions to close")
             return True
 
         total_profit = sum(pos.profit for pos in positions)

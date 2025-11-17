@@ -259,10 +259,10 @@ class ScheduleManager:
         Determine the current trading session based on MT5 server time (GMT+2).
 
         Market sessions in UTC:
-        - Sydney: 22:00-07:00 UTC → 00:00-09:00 GMT+2
-        - Tokyo: 00:00-09:00 UTC → 02:00-11:00 GMT+2
-        - London: 08:00-16:30 UTC → 10:00-18:30 GMT+2
-        - New York: 13:00-22:00 UTC → 15:00-00:00 GMT+2
+        - Sydney: 22:00-07:00 UTC -> 00:00-09:00 GMT+2
+        - Tokyo: 00:00-09:00 UTC -> 02:00-11:00 GMT+2
+        - London: 08:00-16:30 UTC -> 10:00-18:30 GMT+2
+        - New York: 13:00-22:00 UTC -> 15:00-00:00 GMT+2
 
         Args:
             current_time: datetime object (uses MT5 server time if None)
