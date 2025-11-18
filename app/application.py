@@ -203,7 +203,17 @@ class FXAiApplication:
         self.logger.info("FX-AI SESSION SUMMARY")
         self.logger.info("=" * 60)
 
-        duration = datetime.now(timezone.utc) - self.session_stats['start_time']
+        # Get current time (ensure it's offset-aware)
+        current_time = self.get_current_mt5_time()
+        start_time = self.session_stats['start_time']
+
+        # Ensure both times are offset-aware for subtraction
+        if start_time.tzinfo is None:
+            start_time = start_time.replace(tzinfo=timezone.utc)
+        if current_time.tzinfo is None:
+            current_time = current_time.replace(tzinfo=timezone.utc)
+
+        duration = current_time - start_time
         hours = duration.total_seconds() / 3600
 
         self.logger.info(f"Session Duration: {hours:.2f} hours")
