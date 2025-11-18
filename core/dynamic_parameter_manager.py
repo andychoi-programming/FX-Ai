@@ -2,32 +2,23 @@ import json
 from pathlib import Path
 from typing import Dict, Tuple, List
 import logging
+from core.parameter_manager import ParameterManager
 
-class DynamicParameterManager:
+class DynamicParameterManager(ParameterManager):
     """Manages dynamic trading parameters optimized for each symbol and timeframe"""
 
-    def __init__(self, config: Dict):
-        self.config = config
-        self.symbols = config['trading']['symbols']
-        self.parameters_file = Path("models/parameter_optimization/optimal_parameters.json")
-        self.parameters = {}
+    def __init__(self, config_manager):
+        """
+        Initialize dynamic parameter manager
+
+        Args:
+            config_manager: ConfigManager instance
+        """
+        # Initialize parent ParameterManager
+        super().__init__(config_manager)
+
+        # Additional dynamic features
         self.logger = logging.getLogger(__name__)
-
-        self._load_parameters()
-
-    def _load_parameters(self):
-        """Load optimized parameters from file"""
-        if self.parameters_file.exists():
-            try:
-                with open(self.parameters_file, 'r') as f:
-                    self.parameters = json.load(f)
-                self.logger.info(f"Loaded optimized parameters for {len(self.parameters)} symbols")
-            except Exception as e:
-                self.logger.error(f"Failed to load parameters: {e}")
-                self.parameters = {}
-        else:
-            self.logger.warning("Optimized parameters file not found, using defaults")
-            self.parameters = {}
 
     def get_optimal_parameters(self, symbol: str, timeframe: str = 'H1') -> Dict:
         """

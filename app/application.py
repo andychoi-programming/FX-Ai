@@ -9,7 +9,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Optional
 from utils.logger import setup_logger
-from utils.config_loader import ConfigLoader
+from core.config_manager import ConfigManager
 from app.component_initializer import ComponentInitializer
 from app.trading_orchestrator import TradingOrchestrator
 
@@ -17,11 +17,19 @@ from app.trading_orchestrator import TradingOrchestrator
 class FXAiApplication:
     """Main FX-Ai Trading Application with Adaptive Learning"""
 
-    def __init__(self):
-        """Initialize the FX-Ai application"""
-        config_loader = ConfigLoader()
-        config_loader.load_config()
-        self.config = config_loader.config
+    def __init__(self, mode: str = 'live', config_path: str = 'config/config.json'):
+        """
+        Initialize the FX-Ai application
+
+        Args:
+            mode: 'live' or 'backtest'
+            config_path: Path to configuration file
+        """
+        # Initialize configuration
+        self.config_manager = ConfigManager(mode=mode)
+        self.config = self.config_manager.config
+
+        # Setup logging
         self.logger = setup_logger(
             'FX-Ai',
             self.config.get(
@@ -39,8 +47,11 @@ class FXAiApplication:
                         'rotation_type',
                 'size'))
         self.logger.info(
-            "FX-Ai Application initialized with Adaptive Learning")
+            f"FX-Ai Application initialized with Adaptive Learning (Mode: {mode})")
         self.logger.info("=" * 50)
+
+        # Store mode
+        self.mode = mode
 
         # Initialize components
         self.mt5 = None

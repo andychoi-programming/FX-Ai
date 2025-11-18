@@ -9,14 +9,23 @@ import logging
 import sys
 import traceback
 import os
+import argparse
 from app.application import FXAiApplication
 
 
 def main():
     """Main entry point with crash protection"""
+    parser = argparse.ArgumentParser(description='FX-Ai Trading System')
+    parser.add_argument('--mode', choices=['live', 'backtest'], default='live',
+                       help='Trading mode (default: live)')
+    parser.add_argument('--config', default='config/config.json',
+                       help='Configuration file path')
+
+    args = parser.parse_args()
+
     try:
         # Create and run application
-        app = FXAiApplication()
+        app = FXAiApplication(mode=args.mode, config_path=args.config)
 
         # Run async main
         asyncio.run(app.run())
