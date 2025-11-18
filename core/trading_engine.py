@@ -369,11 +369,14 @@ class TradingEngine:
             # Calculate position size if not provided
             if 'position_size' not in signal:
                 default_sl_pips = self.config.get('trading', {}).get('default_sl_pips', 20)
+                print(f"🔍 [TradingEngine] About to calculate position size for {symbol}")
                 self.logger.info(f"🔍 [TradingEngine] Calculating position size for {symbol} with default_sl_pips={default_sl_pips}")
                 signal['position_size'] = self.risk_manager.calculate_position_size(symbol, default_sl_pips)
+                print(f"🔍 [TradingEngine] Position size calculated: {signal['position_size']}")
                 self.logger.info(f"🔍 [TradingEngine] Calculated position_size: {signal['position_size']}")
             
             volume = signal['position_size']
+            print(f"🔍 [TradingEngine] Volume set to: {volume}")
             stop_loss = signal.get('stop_loss')
             take_profit = signal.get('take_profit')
             entry_price = signal.get('entry_price')
@@ -428,7 +431,10 @@ class TradingEngine:
             return result
 
         except Exception as e:
-            logger.error(f"Error executing trade for {signal.get('symbol', 'unknown')}: {e}")
+            logger.error(f"❌ CRITICAL: Error executing trade for {signal.get('symbol', 'unknown')}: {e}")
+            logger.error(f"   Signal details: {signal}")
+            import traceback
+            logger.error(f"   Traceback: {traceback.format_exc()}")
             return None
 
     async def manage_positions(self, symbol: str, time_manager=None, adaptive_learning=None):

@@ -378,6 +378,7 @@ def setup_logger(name: str = 'FX-Ai', level: str = 'INFO',
                     when='midnight',
                     interval=1,
                     backupCount=backup_count,
+                    encoding='utf-8',
                     mt5_connector=mt5_connector,
                     clock_sync=clock_sync
                 )
@@ -485,6 +486,7 @@ def add_file_handler(logger: logging.Logger, log_file: str,
                 when='midnight',
                 interval=1,
                 backupCount=backup_count,
+                encoding='utf-8',
                 mt5_connector=mt5_connector,
                 clock_sync=clock_sync
             )
