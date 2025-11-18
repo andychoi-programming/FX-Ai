@@ -686,14 +686,25 @@ class OrderManager:
         """Get ATR from technical analyzer"""
         try:
             if hasattr(self, 'technical_analyzer') and self.technical_analyzer:
-                return self.technical_analyzer.get_atr(symbol)
-            # Default ATR values
+                atr_value = self.technical_analyzer.get_atr(symbol)
+                if atr_value and atr_value > 0:
+                    # For metals, ATR should be in price units (dollars)
+                    # Validate ATR is reasonable for the symbol
+                    if symbol == 'XAUUSD':
+                        # Gold ATR should be between $1-20 at current prices
+                        atr_value = max(1.0, min(atr_value, 20.0))
+                    elif symbol == 'XAGUSD':
+                        # Silver ATR should be between $0.05-2.0 at current prices
+                        atr_value = max(0.05, min(atr_value, 2.0))
+                    return atr_value
+
+            # Default ATR values based on symbol type (in price units for metals)
             if 'JPY' in symbol:
                 return 1.0
             elif symbol == 'XAUUSD':
-                return 10.0
+                return 3.0  # More realistic $3 ATR for gold
             elif symbol == 'XAGUSD':
-                return 0.5
+                return 0.15  # More realistic $0.15 ATR for silver
             else:
                 return 0.001
         except:
@@ -728,14 +739,22 @@ class OrderExecutor:
             if hasattr(self, 'technical_analyzer') and self.technical_analyzer:
                 atr_value = self.technical_analyzer.get_atr(symbol, period)
                 if atr_value and atr_value > 0:
+                    # For metals, ATR should be in price units (dollars)
+                    # Validate ATR is reasonable for the symbol
+                    if symbol == 'XAUUSD':
+                        # Gold ATR should be between $1-20 at current prices
+                        atr_value = max(1.0, min(atr_value, 20.0))
+                    elif symbol == 'XAGUSD':
+                        # Silver ATR should be between $0.05-2.0 at current prices
+                        atr_value = max(0.05, min(atr_value, 2.0))
                     return atr_value
-            # Default ATR values based on symbol type
+            # Default ATR values based on symbol type (in price units for metals)
             if 'JPY' in symbol:
                 return 1.0
             elif symbol == 'XAUUSD':
-                return 10.0
+                return 3.0  # More realistic $3 ATR for gold
             elif symbol == 'XAGUSD':
-                return 0.5
+                return 0.15  # More realistic $0.15 ATR for silver
             else:
                 return 0.001
         except Exception as e:
@@ -744,9 +763,9 @@ class OrderExecutor:
             if 'JPY' in symbol:
                 return 1.0
             elif symbol == 'XAUUSD':
-                return 10.0
+                return 3.0
             elif symbol == 'XAGUSD':
-                return 0.5
+                return 0.15
             else:
                 return 0.001
 
@@ -1626,30 +1645,48 @@ class OrderExecutor:
                 # For metals, use ATR-based calculations instead of fixed pips
                 if symbol in ['XAUUSD', 'XAGUSD']:
                     logger.info(f"🔍 [{symbol}] USING ATR-BASED CALCULATION")
-                    # Get ATR value
+                    # Get ATR value (for metals, ATR should be in price units)
                     atr = self.order_manager._get_atr(symbol)
-                    
+
                     # Get ATR multipliers from config
                     trading_rules = config.get('trading_rules', {}).get('stop_loss_rules', {})
                     if symbol == 'XAUUSD':
-                        sl_multiplier = trading_rules.get('sl_atr_multiplier_gold', 1.5)
-                        tp_multiplier = config.get('trading_rules', {}).get('take_profit_rules', {}).get('tp_atr_multiplier_metals', 4.0)
+                        # Gold needs much larger multipliers due to volatility
+                        sl_multiplier = trading_rules.get('sl_atr_multiplier_gold', 2.5)  # Increased from 1.5
+                        tp_multiplier = config.get('trading_rules', {}).get('take_profit_rules', {}).get('tp_atr_multiplier_metals', 5.0)  # Increased from 4.0
+                        # Minimum SL distance for gold: $5.00 (500 pips at current price)
+                        min_sl_distance = 5.00
+                        min_tp_distance = 10.00
                     elif symbol == 'XAGUSD':
-                        sl_multiplier = trading_rules.get('sl_atr_multiplier_silver', 1.5)
-                        tp_multiplier = config.get('trading_rules', {}).get('take_profit_rules', {}).get('tp_atr_multiplier_metals', 4.0)
-                    
+                        # Silver needs larger multipliers too
+                        sl_multiplier = trading_rules.get('sl_atr_multiplier_silver', 2.5)  # Increased from 1.5
+                        tp_multiplier = config.get('trading_rules', {}).get('take_profit_rules', {}).get('tp_atr_multiplier_metals', 5.0)  # Increased from 4.0
+                        # Minimum SL distance for silver: $0.25 (250 pips at current price)
+                        min_sl_distance = 0.25
+                        min_tp_distance = 0.50
+
                     # Calculate ATR-based distances
-                    sl_distance = atr * sl_multiplier
-                    tp_distance = atr * tp_multiplier
-                    
+                    sl_distance = max(atr * sl_multiplier, min_sl_distance)
+                    tp_distance = max(atr * tp_multiplier, min_tp_distance)
+
+                    # Ensure minimum professional distances for metals
+                    if symbol == 'XAUUSD':
+                        sl_distance = max(sl_distance, 5.00)  # Minimum $5.00 SL for gold
+                        tp_distance = max(tp_distance, 10.00)  # Minimum $10.00 TP for gold
+                    elif symbol == 'XAGUSD':
+                        sl_distance = max(sl_distance, 0.25)  # Minimum $0.25 SL for silver
+                        tp_distance = max(tp_distance, 0.50)  # Minimum $0.50 TP for silver
+
                     # DEBUG LOGGING FOR METALS
                     logger.info(f"🔍 [{symbol}] ATR-BASED SL/TP CALCULATION:")
                     logger.info(f"   ATR Value: ${atr:.5f}")
                     logger.info(f"   SL Multiplier: {sl_multiplier}")
                     logger.info(f"   TP Multiplier: {tp_multiplier}")
-                    logger.info(f"   SL Distance: ${sl_distance:.5f}")
-                    logger.info(f"   TP Distance: ${tp_distance:.5f}")
-                    
+                    logger.info(f"   Raw SL Distance: ${atr * sl_multiplier:.5f}")
+                    logger.info(f"   Raw TP Distance: ${atr * tp_multiplier:.5f}")
+                    logger.info(f"   Final SL Distance: ${sl_distance:.5f}")
+                    logger.info(f"   Final TP Distance: ${tp_distance:.5f}")
+
                     # Apply ATR-based SL/TP
                     if order_type.lower() == 'buy_stop':
                         stop_loss = price - sl_distance
