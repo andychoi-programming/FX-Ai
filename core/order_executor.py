@@ -3,6 +3,7 @@ import asyncio
 from datetime import datetime
 from typing import Dict, Optional
 import MetaTrader5 as mt5
+import numpy as np
 from ai.learning_database import LearningDatabase
 
 logger = logging.getLogger(__name__)
@@ -85,7 +86,7 @@ class OrderManager:
             atr = self._get_atr(symbol)
 
             # Calculate optimal stop distance
-            stop_distance = self.order_executor._calculate_stop_distance(symbol, signal, atr, signal_data)
+            stop_distance = self._calculate_stop_distance(symbol, signal, atr, signal_data)
 
             # Calculate stop order price
             if signal == "BUY":
@@ -94,24 +95,24 @@ class OrderManager:
                 stop_price = current_price - stop_distance
 
             # Validate stop order before placing
-            is_valid, validation_error = self.order_executor._validate_stop_order(symbol, signal, stop_price, current_price)
+            is_valid, validation_error = self._validate_stop_order(symbol, signal, stop_price, current_price)
             if not is_valid:
                 return {'success': False, 'error': validation_error}
 
             # Calculate volume if not provided
             if volume is None:
-                volume = self.order_executor._calculate_position_size(symbol, stop_price, stop_loss or (stop_price - stop_distance))
+                volume = self._calculate_position_size(symbol, stop_price, stop_loss or (stop_price - stop_distance))
 
             # Calculate SL/TP if not provided
             if stop_loss is None or take_profit is None:
-                sl_price, tp_price = self.order_executor._calculate_sl_tp(symbol, signal, stop_price, atr)
+                sl_price, tp_price = self._calculate_sl_tp(symbol, signal, stop_price, atr)
                 if stop_loss is None:
                     stop_loss = sl_price
                 if take_profit is None:
                     take_profit = tp_price
 
             # Set order expiration
-            expiration = self.order_executor._calculate_order_expiration()
+            expiration = self._calculate_order_expiration()
 
             # Place the stop order
             return await self.order_executor.place_order(
@@ -147,11 +148,11 @@ class OrderManager:
             if volume is None:
                 # For market orders, estimate SL distance for position sizing
                 estimated_sl_distance = atr * 2  # Conservative estimate
-                volume = self.order_executor._calculate_position_size(symbol, current_price, current_price - estimated_sl_distance)
+                volume = self._calculate_position_size(symbol, current_price, current_price - estimated_sl_distance)
 
             # Calculate SL/TP if not provided
             if stop_loss is None or take_profit is None:
-                sl_price, tp_price = self.order_executor._calculate_sl_tp(symbol, signal, current_price, atr)
+                sl_price, tp_price = self._calculate_sl_tp(symbol, signal, current_price, atr)
                 if stop_loss is None:
                     stop_loss = sl_price
                 if take_profit is None:
@@ -199,7 +200,7 @@ class OrderManager:
             rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_H1, 0, period + 1)
             if rates is None or len(rates) < period + 1:
                 # Fallback to config-based ATR estimate
-                return self.order_executor._get_fallback_atr(symbol)
+                return self._get_fallback_atr(symbol)
 
             # Calculate ATR manually - rates is a numpy structured array
             highs = [rate['high'] for rate in rates]
@@ -257,7 +258,7 @@ class OrderManager:
         if symbol_info is None:
             return 0.001  # Conservative fallback
 
-        min_distance = self.order_executor._calculate_min_stop_distance(symbol, symbol_info)
+        min_distance = self._calculate_min_stop_distance(symbol, symbol_info)
         broker_min_distance = min_distance * 1.5  # 1.5x broker minimum for safety
 
         # Get ATR multipliers from config
@@ -368,7 +369,7 @@ class OrderManager:
             if symbol_info is None:
                 return False, f"Symbol {symbol} not found"
 
-            min_distance = self.order_executor._calculate_min_stop_distance(symbol, symbol_info)
+            min_distance = self._calculate_min_stop_distance(symbol, symbol_info)
 
             if signal == "BUY":
                 # Buy stop must be above current price
@@ -641,6 +642,137 @@ class OrderExecutor:
 
         # Initialize order manager
         self.order_manager = OrderManager(self.mt5, self.config, self)
+
+    def _calculate_stop_distance(self, symbol: str, direction: str, atr_value: float = None) -> float:
+        """
+        Calculate stop loss distance based on ATR and symbol type
+        
+        Args:
+            symbol: Trading symbol
+            direction: 'BUY' or 'SELL'
+            atr_value: Current ATR value (optional)
+            
+        Returns:
+            Stop loss distance in price units
+        """
+        try:
+            # Get symbol info
+            symbol_info = mt5.symbol_info(symbol)
+            if not symbol_info:
+                self.logger.error(f"Cannot get symbol info for {symbol}")
+                return 0.0
+                
+            # Get ATR value if not provided
+            if atr_value is None:
+                # Fetch current ATR from technical analyzer
+                if hasattr(self, 'technical_analyzer'):
+                    atr_value = self.technical_analyzer.get_atr(symbol)
+                else:
+                    # Default ATR calculation
+                    rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_H1, 0, 14)
+                    if rates is not None and len(rates) >= 14:
+                        high_low = rates['high'] - rates['low']
+                        atr_value = np.mean(high_low[-14:])
+                    else:
+                        atr_value = 20 * symbol_info.point  # Default 20 pips
+            
+            # Determine multiplier based on symbol type
+            if symbol in ['XAUUSD', 'XAGUSD']:
+                # Metals use different multiplier
+                sl_multiplier = self.config.get('trading_rules', {}).get('stop_loss_rules', {}).get('sl_atr_multiplier_metals', 2.5)
+            else:
+                # Forex pairs
+                sl_multiplier = self.config.get('trading_rules', {}).get('stop_loss_rules', {}).get('sl_atr_multiplier_forex', 3.0)
+            
+            # Calculate base stop distance
+            stop_distance = atr_value * sl_multiplier
+            
+            # Apply min/max constraints
+            min_sl_pips = self.config.get('trading_rules', {}).get('stop_loss_rules', {}).get('min_sl_pips', 10)
+            max_sl_pips = self.config.get('trading_rules', {}).get('stop_loss_rules', {}).get('max_sl_pips', 50)
+            
+            min_sl_distance = min_sl_pips * symbol_info.point
+            max_sl_distance = max_sl_pips * symbol_info.point
+            
+            # Constrain stop distance
+            stop_distance = max(min_sl_distance, min(stop_distance, max_sl_distance))
+            
+            self.logger.info(f"{symbol}: Calculated stop distance: {stop_distance:.5f} ({stop_distance/symbol_info.point:.1f} pips)")
+            
+            return stop_distance
+            
+        except Exception as e:
+            self.logger.error(f"Error calculating stop distance for {symbol}: {e}")
+            # Return default stop distance
+            default_pips = 20
+            if symbol_info:
+                return default_pips * symbol_info.point
+            return 0.0
+
+    def _calculate_take_profit_distance(self, symbol: str, direction: str, atr_value: float = None) -> float:
+        """
+        Calculate take profit distance based on ATR and symbol type
+        
+        Args:
+            symbol: Trading symbol
+            direction: 'BUY' or 'SELL'
+            atr_value: Current ATR value (optional)
+            
+        Returns:
+            Take profit distance in price units
+        """
+        try:
+            # Get symbol info
+            symbol_info = mt5.symbol_info(symbol)
+            if not symbol_info:
+                self.logger.error(f"Cannot get symbol info for {symbol}")
+                return 0.0
+                
+            # Get ATR value if not provided
+            # Fetch current ATR from technical analyzer
+            if hasattr(self, 'technical_analyzer'):
+                atr_value = self.technical_analyzer.get_atr(symbol)
+            else:
+                # Default ATR calculation
+                rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_H1, 0, 14)
+                if rates is not None and len(rates) >= 14:
+                    high_low = rates['high'] - rates['low']
+                    atr_value = np.mean(high_low[-14:])
+                else:
+                    atr_value = 40 * symbol_info.point  # Default 40 pips
+            
+            # Determine multiplier based on symbol type
+            if symbol in ['XAUUSD', 'XAGUSD']:
+                # Metals use different multiplier
+                tp_multiplier = self.config.get('trading_rules', {}).get('take_profit_rules', {}).get('tp_atr_multiplier_metals', 5.0)
+            else:
+                # Forex pairs
+                tp_multiplier = self.config.get('trading_rules', {}).get('take_profit_rules', {}).get('tp_atr_multiplier_forex', 6.0)
+            
+            # Calculate base TP distance
+            tp_distance = atr_value * tp_multiplier
+            
+            # Apply min/max constraints
+            min_tp_pips = self.config.get('trading_rules', {}).get('take_profit_rules', {}).get('min_tp_pips', 20)
+            max_tp_pips = self.config.get('trading_rules', {}).get('take_profit_rules', {}).get('max_tp_pips', 100)
+            
+            min_tp_distance = min_tp_pips * symbol_info.point
+            max_tp_distance = max_tp_pips * symbol_info.point
+            
+            # Constrain TP distance
+            tp_distance = max(min_tp_distance, min(tp_distance, max_tp_distance))
+            
+            self.logger.info(f"{symbol}: Calculated TP distance: {tp_distance:.5f} ({tp_distance/symbol_info.point:.1f} pips)")
+            
+            return tp_distance
+            
+        except Exception as e:
+            self.logger.error(f"Error calculating TP distance for {symbol}: {e}")
+            # Return default TP distance
+            default_pips = 40
+            if symbol_info:
+                return default_pips * symbol_info.point
+            return 0.0
 
     def check_pending_orders_health(self) -> Dict:
         """Check health of pending orders for monitoring system"""
