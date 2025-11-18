@@ -486,7 +486,7 @@ class OrderManager:
                 return {'managed': 0, 'cancelled': 0, 'errors': 0}
 
             # Filter to only our system's orders
-            our_orders = [order for order in orders if hasattr(order, 'magic') and order.magic == self.magic_number]
+            our_orders = [order for order in orders if hasattr(order, 'magic') and order.magic == self.order_executor.magic_number]
             total_pending = len(our_orders)
             managed = 0
             cancelled = 0
