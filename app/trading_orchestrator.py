@@ -221,7 +221,7 @@ class TradingOrchestrator:
                 if loop_count % 30 == 0:
                     self.logger.info(f"=== TRADING CYCLE #{loop_count} ===")
 
-                # 1. Check for time-based closure FIRST (always check after 22:00)
+                # 1. Check for time-based closure FIRST (always check after 23:45)
                 schedule_check_interval = self.config.get('trading', {}).get('schedule_check_interval_seconds', 600)
                 schedule_loops_per_check = max(1, schedule_check_interval // 10)  # Convert seconds to loop count
                 
@@ -1887,10 +1887,10 @@ class TradingOrchestrator:
             orphaned_positions = []
             now = datetime.now()
 
-            # Today's closure time (22:00)
-            today_closure = now.replace(hour=22, minute=0, second=0, microsecond=0)
+            # Today's closure time (23:45)
+            today_closure = now.replace(hour=23, minute=45, second=0, microsecond=0)
 
-            # Yesterday's closure time (22:00 yesterday)
+            # Yesterday's closure time (23:45 yesterday)
             yesterday_closure = today_closure - timedelta(days=1)
 
             for pos in positions:
@@ -1900,18 +1900,18 @@ class TradingOrchestrator:
                 is_orphaned = False
                 reason = ""
 
-                if now.hour >= 22:
-                    # After 22:00 today - close anything opened before 22:00 today
-                    # But respect active sessions (Sydney/Tokyo trade after 22:00)
+                if now.hour >= 23:
+                    # After 23:45 today - close anything opened before 23:45 today
+                    # But respect active sessions (Sydney/Tokyo trade after 23:45)
                     if open_time < today_closure and current_session not in ['sydney', 'tokyo']:
                         is_orphaned = True
-                        reason = f"opened at {open_time.strftime('%H:%M:%S')}, past today's 22:00 closure"
+                        reason = f"opened at {open_time.strftime('%H:%M:%S')}, past today's 23:45 closure"
                 else:
-                    # Before 22:00 today - close anything from yesterday or earlier
+                    # Before 23:45 today - close anything from yesterday or earlier
                     if open_time < yesterday_closure:
                         is_orphaned = True
                         age_hours = (now - open_time).total_seconds() / 3600
-                        reason = f"opened {age_hours:.1f}h ago, missed yesterday's 22:00 closure"
+                        reason = f"opened {age_hours:.1f}h ago, missed yesterday's 23:45 closure"
 
                 if is_orphaned:
                     orphaned_positions.append((pos, reason))

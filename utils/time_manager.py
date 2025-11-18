@@ -16,7 +16,7 @@ class TimeManager:
     Centralized time management for FX-Ai trading system.
 
     Handles all time-related logic including:
-    - Trading hours (22:30 MT5 server time close)
+    - Trading hours (23:45 MT5 server time close)
     - Forex market sessions and weekends
     - Time zone conversions
     - Consistent time source usage
@@ -68,14 +68,14 @@ class TimeManager:
             if isinstance(time_str, str) and ':' in time_str:
                 hours, minutes = map(int, time_str.split(':'))
                 return time(hours, minutes)
-            return time(22, 30)  # fallback
+            return time(23, 45)  # fallback
 
-        self.MT5_CLOSE_TIME = parse_time(mt5_times.get('mt5_close_time', '22:30'))
+        self.MT5_CLOSE_TIME = parse_time(mt5_times.get('mt5_close_time', '23:45'))
         self.MT5_CLOSE_BUFFER_END = parse_time(mt5_times.get('mt5_close_buffer_end', '23:59'))
         self.MT5_OPEN_TIME = parse_time(mt5_times.get('mt5_open_time', '00:00'))
         self.MT5_TRADING_START = parse_time(mt5_times.get('mt5_trading_start', '01:00'))
         self.MT5_FORCE_CLOSE_TIME = parse_time(mt5_times.get('mt5_force_close_time', '20:30'))
-        self.MT5_IMMEDIATE_CLOSE_TIME = parse_time(mt5_times.get('mt5_immediate_close_time', '22:00'))
+        self.MT5_IMMEDIATE_CLOSE_TIME = parse_time(mt5_times.get('mt5_immediate_close_time', '23:45'))
 
         self.FOREX_WEEKEND_START = forex_hours.get('weekend_start', 'Friday 17:00 EST')
         self.FOREX_WEEKEND_END = forex_hours.get('weekend_end', 'Sunday 17:00 EST')
@@ -153,7 +153,7 @@ class TimeManager:
         """
         Check if all positions should be closed.
         - Close all positions 2 hours before market close (20:30 MT5 time)
-        - Close any remaining positions immediately after 22:00 MT5 time
+        - Close any remaining positions immediately after 23:45 MT5 time
 
         Returns:
             Tuple[bool, str]: (should_close, reason)
@@ -165,12 +165,12 @@ class TimeManager:
         if self._last_closure_date == current_date:
             return False, "Already processed daily closure"
 
-        # Check if it's Friday after 22:00 (close before weekend)
+        # Check if it's Friday after 23:45 (close before weekend)
         if self._is_friday_evening_close():
             self._last_closure_date = current_date
             return True, "Friday evening - closing before weekend"
 
-        # Check if it's after immediate close time (22:00 MT5 time)
+        # Check if it's after immediate close time (23:45 MT5 time)
         current_time_only = current_time.time()
         if current_time_only >= self.MT5_IMMEDIATE_CLOSE_TIME:
             self._last_closure_date = current_date
@@ -231,7 +231,7 @@ class TimeManager:
                 return False
 
             # Within our trading hours (we start at midnight EST)
-            # Note: Forex is 24/5, but we stop at 22:30 MT5 time daily
+            # Note: Forex is 24/5, but we stop at 23:45 MT5 time daily
             return True
 
         except Exception as e:
@@ -247,7 +247,7 @@ class TimeManager:
         """
         try:
             now_est = datetime.now(self.EST)
-            return now_est.weekday() == 4 and now_est.hour >= 22  # Friday and past 22:00 EST
+            return now_est.weekday() == 4 and now_est.hour >= 23  # Friday and past 23:00 EST
         except Exception as e:
             logger.warning(f"Error checking Friday evening close: {e}")
             return False

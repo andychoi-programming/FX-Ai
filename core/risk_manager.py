@@ -122,10 +122,10 @@ class RiskManager:
                 hours, minutes = map(int, time_str.split(':'))
                 return time(hours, minutes)
             # Fallback
-            return time(22, 0)
+            return time(23, 45)
         except (ValueError, AttributeError):
-            logger.warning(f"Invalid time string '{time_str}', using fallback 22:00")
-            return time(22, 0)
+            logger.warning(f"Invalid time string '{time_str}', using fallback 23:45")
+            return time(23, 45)
     
     def _get_symbol_min_rr(self, symbol: str) -> float:
         """Get the minimum risk-reward ratio for a specific symbol"""
@@ -902,7 +902,7 @@ class RiskManager:
             
             # Get exit cutoff time from config
             time_config = self.config.get('time_restrictions', {}).get('mt5_trading_times', {})
-            exit_cutoff_str = time_config.get('exit_cutoff_time', '22:00')
+            exit_cutoff_str = time_config.get('exit_cutoff_time', '23:45')
             exit_cutoff_time = self._parse_time_string(exit_cutoff_str)
             
             if current_time_obj >= exit_cutoff_time:
