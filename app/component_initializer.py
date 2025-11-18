@@ -19,7 +19,7 @@ from ai.reinforcement_learning_agent import RLAgent
 from ai.advanced_risk_metrics import AdvancedRiskMetrics
 from ai.correlation_manager import CorrelationManager
 from ai.ml_predictor import MLPredictor
-from live_trading.dynamic_parameter_manager import DynamicParameterManager
+from core.dynamic_parameter_manager import DynamicParameterManager
 from analysis.sentiment_analyzer import SentimentAnalyzer
 from analysis.technical_analyzer import TechnicalAnalyzer
 from analysis.fundamental_analyzer import (

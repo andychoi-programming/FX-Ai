@@ -64,7 +64,9 @@ class ConfigManager:
                     if line and not line.startswith('#'):
                         if '=' in line:
                             key, value = line.split('=', 1)
-                            env_config[key.strip()] = value.strip()
+                            # Strip quotes and whitespace
+                            value = value.strip().strip('\'"')
+                            env_config[key.strip()] = value
 
         return env_config
 
