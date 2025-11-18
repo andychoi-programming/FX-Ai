@@ -86,7 +86,7 @@ class OrderManager:
             atr = self._get_atr(symbol)
 
             # Calculate optimal stop distance
-            stop_distance = self._calculate_stop_distance(symbol, signal, atr, signal_data)
+            stop_distance = self.order_executor._calculate_stop_distance(symbol, signal, atr, signal_data)
 
             # Calculate stop order price
             if signal == "BUY":
@@ -309,7 +309,7 @@ class OrderManager:
             if symbol_info is None:
                 return False, f"Symbol {symbol} not found"
 
-            min_distance = self._calculate_min_stop_distance(symbol, symbol_info)
+            min_distance = self.order_executor._calculate_min_stop_distance(symbol, symbol_info)
 
             if signal == "BUY":
                 # Buy stop must be above current price
@@ -384,7 +384,7 @@ class OrderManager:
         """Calculate stop loss and take profit prices using dynamic RR ratios"""
 
         # Calculate stop loss distance using ATR-based method
-        stop_distance = self._calculate_stop_distance(symbol, signal, atr)
+        stop_distance = self.order_executor._calculate_stop_distance(symbol, signal, atr)
 
         # Get RR ratio from config for this symbol
         rr_ratios = self.config.get('trading_rules', {}).get('take_profit_rules', {}).get('rr_ratios', {})
@@ -568,6 +568,7 @@ class OrderExecutor:
 
     def __init__(self, mt5_connector, config: dict, risk_manager=None, technical_analyzer=None):
         """Initialize order executor"""
+        self.logger = logging.getLogger(__name__)
         self.mt5 = mt5_connector
         self.config = config
         self.risk_manager = risk_manager  # Add risk manager
