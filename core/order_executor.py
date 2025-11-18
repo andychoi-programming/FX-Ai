@@ -11,9 +11,10 @@ logger = logging.getLogger(__name__)
 class OrderManager:
     """Hybrid order manager supporting multiple entry strategies"""
 
-    def __init__(self, mt5, config):
+    def __init__(self, mt5, config, order_executor=None):
         self.mt5 = mt5
         self.config = config
+        self.order_executor = order_executor  # Reference to parent OrderExecutor
         self.magic_number = self.config.get('trading', {}).get('magic_number')
 
         # Load order management settings
@@ -84,7 +85,7 @@ class OrderManager:
             atr = self._get_atr(symbol)
 
             # Calculate optimal stop distance
-            stop_distance = self._calculate_stop_distance(symbol, signal, atr, signal_data)
+            stop_distance = self.order_executor._calculate_stop_distance(symbol, signal, atr, signal_data)
 
             # Calculate stop order price
             if signal == "BUY":
@@ -93,24 +94,24 @@ class OrderManager:
                 stop_price = current_price - stop_distance
 
             # Validate stop order before placing
-            is_valid, validation_error = self._validate_stop_order(symbol, signal, stop_price, current_price)
+            is_valid, validation_error = self.order_executor._validate_stop_order(symbol, signal, stop_price, current_price)
             if not is_valid:
                 return {'success': False, 'error': validation_error}
 
             # Calculate volume if not provided
             if volume is None:
-                volume = self._calculate_position_size(symbol, stop_price, stop_loss or (stop_price - stop_distance))
+                volume = self.order_executor._calculate_position_size(symbol, stop_price, stop_loss or (stop_price - stop_distance))
 
             # Calculate SL/TP if not provided
             if stop_loss is None or take_profit is None:
-                sl_price, tp_price = self._calculate_sl_tp(symbol, signal, stop_price, atr)
+                sl_price, tp_price = self.order_executor._calculate_sl_tp(symbol, signal, stop_price, atr)
                 if stop_loss is None:
                     stop_loss = sl_price
                 if take_profit is None:
                     take_profit = tp_price
 
             # Set order expiration
-            expiration = self._calculate_order_expiration()
+            expiration = self.order_executor._calculate_order_expiration()
 
             # Place the stop order
             return await self.order_executor.place_order(
@@ -146,11 +147,11 @@ class OrderManager:
             if volume is None:
                 # For market orders, estimate SL distance for position sizing
                 estimated_sl_distance = atr * 2  # Conservative estimate
-                volume = self._calculate_position_size(symbol, current_price, current_price - estimated_sl_distance)
+                volume = self.order_executor._calculate_position_size(symbol, current_price, current_price - estimated_sl_distance)
 
             # Calculate SL/TP if not provided
             if stop_loss is None or take_profit is None:
-                sl_price, tp_price = self._calculate_sl_tp(symbol, signal, current_price, atr)
+                sl_price, tp_price = self.order_executor._calculate_sl_tp(symbol, signal, current_price, atr)
                 if stop_loss is None:
                     stop_loss = sl_price
                 if take_profit is None:
@@ -184,9 +185,9 @@ class OrderManager:
         """Get ATR value for symbol - try technical analyzer first, fallback to manual calculation"""
         
         # Try to get ATR from technical analyzer if available
-        if hasattr(self, 'technical_analyzer') and self.technical_analyzer:
+        if hasattr(self.order_executor, 'technical_analyzer') and self.order_executor.technical_analyzer:
             try:
-                atr_value = self.technical_analyzer.get_atr(symbol, period)
+                atr_value = self.order_executor.technical_analyzer.get_atr(symbol, period)
                 if atr_value and atr_value > 0:
                     return atr_value
             except Exception as e:
@@ -198,7 +199,7 @@ class OrderManager:
             rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_H1, 0, period + 1)
             if rates is None or len(rates) < period + 1:
                 # Fallback to config-based ATR estimate
-                return self._get_fallback_atr(symbol)
+                return self.order_executor._get_fallback_atr(symbol)
 
             # Calculate ATR manually - rates is a numpy structured array
             highs = [rate['high'] for rate in rates]
@@ -639,7 +640,7 @@ class OrderExecutor:
         self.learning_db = LearningDatabase()
 
         # Initialize order manager
-        self.order_manager = OrderManager(self.mt5, self.config)
+        self.order_manager = OrderManager(self.mt5, self.config, self)
 
     def check_pending_orders_health(self) -> Dict:
         """Check health of pending orders for monitoring system"""
