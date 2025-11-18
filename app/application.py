@@ -71,6 +71,9 @@ class FXAiApplication:
         self.correlation_manager = None
         self.param_manager = None
 
+        # Position synchronization manager
+        self.position_sync_manager = None
+
         # Initialize component managers
         self.component_initializer = None
         self.trading_orchestrator = None
@@ -85,6 +88,7 @@ class FXAiApplication:
 
         # Background tasks
         self.fundamental_monitor_task = None
+        self.position_sync_task = None
 
         # Performance tracking
         self.session_stats = {
@@ -183,6 +187,10 @@ class FXAiApplication:
         if self.fundamental_monitor_task and not self.fundamental_monitor_task.done():
             self.fundamental_monitor_task.cancel()
             self.logger.info("Cancelled fundamental monitoring task")
+
+        if self.position_sync_task and not self.position_sync_task.done():
+            self.position_sync_task.cancel()
+            self.logger.info("Cancelled position synchronization task")
 
         # Close MT5 connection
         if self.mt5:
@@ -288,6 +296,11 @@ class FXAiApplication:
             self.logger.error("Pre-trading checklist failed - aborting startup")
             self.shutdown()
             return
+
+        # Start position synchronization monitoring
+        if self.position_sync_manager:
+            self.position_sync_task = asyncio.create_task(self.position_sync_manager.start_monitoring())
+            self.logger.info("Started position synchronization monitoring")
 
         # Start trading loop
         try:

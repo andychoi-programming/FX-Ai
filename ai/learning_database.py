@@ -58,7 +58,15 @@ class LearningDatabase:
                 model_version TEXT,
                 session TEXT,
                 day_of_week TEXT,
-                hour_of_day INTEGER
+                hour_of_day INTEGER,
+                ticket INTEGER,
+                entry_time DATETIME,
+                exit_time DATETIME,
+                closure_reason TEXT,
+                status TEXT DEFAULT 'open',
+                forced_closure INTEGER DEFAULT 0,
+                commission REAL DEFAULT 0,
+                swap REAL DEFAULT 0
             )
         ''')
 

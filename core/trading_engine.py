@@ -441,12 +441,12 @@ class TradingEngine:
             lot_size = round(lot_size / lot_step) * lot_step
             lot_size = max(symbol_info.volume_min, min(symbol_info.volume_max, lot_size))
 
-            # Test filling modes (use IOC as primary, fallback to others)
+            # Test filling modes using order_check (safer than placing actual orders)
             filling_modes = [mt5.ORDER_FILLING_IOC, mt5.ORDER_FILLING_RETURN, mt5.ORDER_FILLING_FOK]
             working_filling = mt5.ORDER_FILLING_IOC  # Default
 
             for filling in filling_modes:
-                test_request = {
+                check_request = {
                     "action": mt5.TRADE_ACTION_DEAL,
                     "symbol": symbol,
                     "volume": lot_size,
@@ -456,30 +456,14 @@ class TradingEngine:
                     "tp": tp_price,
                     "deviation": 10,
                     "magic": self.config.get('trading', {}).get('magic_number', 123456),
-                    "comment": f"test_fill_{filling}",
+                    "comment": f"check_fill_{filling}",
                     "type_time": mt5.ORDER_TIME_GTC,
                     "type_filling": filling,
                 }
 
-                test_result = mt5.order_send(test_request)
-                if test_result and test_result.retcode == mt5.TRADE_RETCODE_DONE:
+                check_result = mt5.order_check(check_request)
+                if check_result and check_result.retcode == mt5.TRADE_RETCODE_DONE:
                     working_filling = filling
-                    # Close the test order immediately
-                    if test_result.order:
-                        close_request = {
-                            "action": mt5.TRADE_ACTION_DEAL,
-                            "symbol": symbol,
-                            "volume": lot_size,
-                            "type": mt5.ORDER_TYPE_SELL if order_type == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_BUY,
-                            "position": test_result.order,
-                            "price": prices.bid if order_type == mt5.ORDER_TYPE_BUY else prices.ask,
-                            "deviation": 10,
-                            "magic": test_request["magic"],
-                            "comment": "Close test position",
-                            "type_time": mt5.ORDER_TIME_GTC,
-                            "type_filling": filling,
-                        }
-                        mt5.order_send(close_request)
                     break
 
             # Create final order request
@@ -506,7 +490,8 @@ class TradingEngine:
             # Send order
             result = mt5.order_send(request)
 
-            if result and result.retcode == mt5.TRADE_RETCODE_DONE:
+            # Check if order was successful
+            if result is not None and hasattr(result, 'retcode') and result.retcode == mt5.TRADE_RETCODE_DONE:
                 self.logger.info(f"✅ Order executed successfully: Ticket {result.order}")
                 return {
                     'success': True,
@@ -517,16 +502,24 @@ class TradingEngine:
                     'entry_price': entry_price,
                     'sl': sl_price,
                     'tp': tp_price,
-                    'comment': result.comment
+                    'comment': result.comment if hasattr(result, 'comment') else ''
                 }
             else:
-                error = mt5.last_error()
-                self.logger.error(f"❌ Order failed: {error}")
+                # Get detailed error information
+                retcode = result.retcode if result and hasattr(result, 'retcode') else 'Unknown'
+                comment = result.comment if result and hasattr(result, 'comment') else ''
+                last_error = mt5.last_error()
+
+                error_msg = f"Order failed - Retcode: {retcode}, Comment: {comment}, Last Error: {last_error}"
+                self.logger.error(f"❌ {error_msg}")
+
                 return {
                     'success': False,
-                    'error': f'Order failed: {error}',
+                    'error': error_msg,
                     'symbol': symbol,
-                    'direction': direction
+                    'direction': direction,
+                    'retcode': retcode,
+                    'comment': comment
                 }
 
         except Exception as e:

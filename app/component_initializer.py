@@ -30,6 +30,8 @@ from core.risk_manager import RiskManager
 from schedule_manager import ScheduleManager  # type: ignore
 from core.trading_engine import TradingEngine
 from core.mt5_connector import MT5Connector
+from core.position_sync_manager import PositionSyncManager
+from ai.learning_database import LearningDatabase
 from utils.logger import setup_logger
 
 
@@ -227,6 +229,10 @@ class ComponentInitializer:
                 mt5_connector=self.app.mt5
             )
 
+            # Initialize learning database
+            self.app.logger.info("Initializing learning database...")
+            self.app.adaptive_learning.init_database()
+
             # Market Regime Detector
             self.app.logger.info("Initializing Market Regime Detector...")
             self.app.market_regime_detector = MarketRegimeDetector(self.app.config)
@@ -253,6 +259,18 @@ class ComponentInitializer:
                 self.app.fundamental_collector,
                 self.app.ml_predictor,
                 self.app.adaptive_learning  # Pass adaptive learning as last positional arg
+            )
+
+            # Initialize database
+            self.app.logger.info("Initializing learning database...")
+            db = LearningDatabase()
+            db.init_database()
+
+            # Position Sync Manager
+            self.app.logger.info("Initializing position synchronization manager...")
+            self.app.position_sync_manager = PositionSyncManager(
+                db_path=db.db_path,  # Use the same path as the learning database
+                logger=self.app.logger
             )
 
             # Sync with existing MT5 positions on startup
