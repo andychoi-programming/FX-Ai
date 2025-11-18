@@ -119,6 +119,26 @@ class TechnicalAnalyzer:
         """
         return self.analyze_symbol(symbol, data)
 
+    def get_atr(self, symbol: str, period: int = 14) -> float:
+        """
+        Get ATR value for symbol from recent data
+
+        Args:
+            symbol: Trading symbol
+            period: ATR period (default 14)
+
+        Returns:
+            float: ATR value or None if not available
+        """
+        try:
+            # Get recent data for ATR calculation
+            # This is a simplified implementation - in production you'd want cached data
+            # For now, return None to use defaults
+            return None
+        except Exception as e:
+            self.logger.error(f"Error getting ATR for {symbol}: {e}")
+            return None
+
     def analyze(self, symbol: str, data: Dict[str, pd.DataFrame]) -> float:
         """
         Synchronous analyze method for trading orchestrator compatibility

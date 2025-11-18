@@ -610,25 +610,30 @@ class OrderManager:
             if atr is None:
                 atr = self._get_atr(symbol)
 
+            logger.info(f"🔍 [OrderExecutor] {symbol} ATR: {atr:.5f}")
+
             # Base multiplier
             sl_multiplier = 3.0
 
             # Adjust for different symbols
             if symbol in ['XAUUSD', 'XAGUSD']:
-                sl_multiplier = 2.5
+                sl_multiplier = 1.0
 
             # Calculate distance
             stop_distance = atr * sl_multiplier
 
+            logger.info(f"🔍 [OrderExecutor] {symbol} SL distance before min: {stop_distance:.5f}")
+
             # Set min/max limits
             if 'JPY' in symbol:
                 stop_distance = max(0.30, min(stop_distance, 5.00))
-            elif symbol == 'XAUUSD':
-                stop_distance = max(5.0, min(stop_distance, 50.0))
-            elif symbol == 'XAGUSD':
-                stop_distance = max(0.25, min(stop_distance, 5.0))
+            elif symbol in ['XAUUSD', 'XAGUSD']:
+                # No limits for metals
+                pass
             else:
                 stop_distance = max(0.001, min(stop_distance, 0.005))
+
+            logger.info(f"🔍 [OrderExecutor] {symbol} Final SL distance: {stop_distance:.5f}")
 
             return stop_distance
 
@@ -649,25 +654,30 @@ class OrderManager:
             # Get ATR
             atr = self._get_atr(symbol)
 
+            logger.info(f"🔍 [OrderExecutor] {symbol} ATR for TP: {atr:.5f}")
+
             # Base multiplier
             tp_multiplier = 6.0
 
             # Adjust for metals
             if symbol in ['XAUUSD', 'XAGUSD']:
-                tp_multiplier = 5.0
+                tp_multiplier = 2.0
 
             # Calculate distance
             tp_distance = atr * tp_multiplier
 
+            logger.info(f"🔍 [OrderExecutor] {symbol} TP distance before min: {tp_distance:.5f}")
+
             # Apply limits
             if 'JPY' in symbol:
                 tp_distance = max(0.50, min(tp_distance, 10.00))
-            elif symbol == 'XAUUSD':
-                tp_distance = max(10.0, min(tp_distance, 100.0))
-            elif symbol == 'XAGUSD':
-                tp_distance = max(0.50, min(tp_distance, 10.0))
+            elif symbol in ['XAUUSD', 'XAGUSD']:
+                # No limits for metals
+                pass
             else:
                 tp_distance = max(0.002, min(tp_distance, 0.010))
+
+            logger.info(f"🔍 [OrderExecutor] {symbol} Final TP distance: {tp_distance:.5f}")
 
             return tp_distance
 
@@ -745,16 +755,16 @@ class OrderExecutor:
                         # Gold ATR should be between $1-20 at current prices
                         atr_value = max(1.0, min(atr_value, 20.0))
                     elif symbol == 'XAGUSD':
-                        # Silver ATR should be between $0.05-2.0 at current prices
-                        atr_value = max(0.05, min(atr_value, 2.0))
+                        # Silver ATR should be between $0.01-2.0 at current prices
+                        atr_value = max(0.01, min(atr_value, 2.0))
                     return atr_value
             # Default ATR values based on symbol type (in price units for metals)
             if 'JPY' in symbol:
                 return 1.0
             elif symbol == 'XAUUSD':
-                return 3.0  # More realistic $3 ATR for gold
+                return 2.0  # More realistic $2 ATR for gold
             elif symbol == 'XAGUSD':
-                return 0.15  # More realistic $0.15 ATR for silver
+                return 0.018  # More realistic $0.018 ATR for silver
             else:
                 return 0.001
         except Exception as e:
@@ -763,9 +773,9 @@ class OrderExecutor:
             if 'JPY' in symbol:
                 return 1.0
             elif symbol == 'XAUUSD':
-                return 3.0
+                return 2.0
             elif symbol == 'XAGUSD':
-                return 0.15
+                return 0.018
             else:
                 return 0.001
 
