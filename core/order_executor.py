@@ -83,10 +83,10 @@ class OrderManager:
                 return {'success': False, 'error': f'Failed to get tick data for {symbol}'}
 
             current_price = tick.ask if signal == "BUY" else tick.bid
-            atr = self._get_atr(symbol)
+            atr = self.order_executor._get_atr(symbol)
 
             # Calculate optimal stop distance
-            stop_distance = self._calculate_stop_distance(symbol, signal, atr, signal_data)
+            stop_distance = self.order_executor._calculate_stop_distance(symbol, signal, atr, signal_data)
 
             # Calculate stop order price
             if signal == "BUY":
@@ -95,24 +95,24 @@ class OrderManager:
                 stop_price = current_price - stop_distance
 
             # Validate stop order before placing
-            is_valid, validation_error = self._validate_stop_order(symbol, signal, stop_price, current_price)
+            is_valid, validation_error = self.order_executor._validate_stop_order(symbol, signal, stop_price, current_price)
             if not is_valid:
                 return {'success': False, 'error': validation_error}
 
             # Calculate volume if not provided
             if volume is None:
-                volume = self._calculate_position_size(symbol, stop_price, stop_loss or (stop_price - stop_distance))
+                volume = self.order_executor._calculate_position_size(symbol, stop_price, stop_loss or (stop_price - stop_distance))
 
             # Calculate SL/TP if not provided
             if stop_loss is None or take_profit is None:
-                sl_price, tp_price = self._calculate_sl_tp(symbol, signal, stop_price, atr)
+                sl_price, tp_price = self.order_executor._calculate_sl_tp(symbol, signal, stop_price, atr)
                 if stop_loss is None:
                     stop_loss = sl_price
                 if take_profit is None:
                     take_profit = tp_price
 
             # Set order expiration
-            expiration = self._calculate_order_expiration()
+            expiration = self.order_executor._calculate_order_expiration()
 
             # Place the stop order
             return await self.order_executor.place_order(
@@ -142,17 +142,17 @@ class OrderManager:
                 return {'success': False, 'error': f'Failed to get tick data for {symbol}'}
 
             current_price = tick.ask if signal == "BUY" else tick.bid
-            atr = self._get_atr(symbol)
+            atr = self.order_executor._get_atr(symbol)
 
             # Calculate volume if not provided
             if volume is None:
                 # For market orders, estimate SL distance for position sizing
                 estimated_sl_distance = atr * 2  # Conservative estimate
-                volume = self._calculate_position_size(symbol, current_price, current_price - estimated_sl_distance)
+                volume = self.order_executor._calculate_position_size(symbol, current_price, current_price - estimated_sl_distance)
 
             # Calculate SL/TP if not provided
             if stop_loss is None or take_profit is None:
-                sl_price, tp_price = self._calculate_sl_tp(symbol, signal, current_price, atr)
+                sl_price, tp_price = self.order_executor._calculate_sl_tp(symbol, signal, current_price, atr)
                 if stop_loss is None:
                     stop_loss = sl_price
                 if take_profit is None:
@@ -248,66 +248,6 @@ class OrderManager:
             return current_price * atr_fallbacks.get('silver_atr_percentage', 0.015)
         else:
             return current_price * atr_fallbacks.get('forex_atr_percentage', 0.002)
-
-    def _calculate_stop_distance(self, symbol: str, signal: str, atr: float,
-                               signal_data: Optional[Dict] = None) -> float:
-        """Calculate optimal stop distance using professional ATR multipliers"""
-
-        # Get broker minimum distance first
-        symbol_info = mt5.symbol_info(symbol)
-        if symbol_info is None:
-            return 0.001  # Conservative fallback
-
-        min_distance = self._calculate_min_stop_distance(symbol, symbol_info)
-        broker_min_distance = min_distance * 1.5  # 1.5x broker minimum for safety
-
-        # Get ATR multipliers from config
-        stop_loss_config = self.config.get('trading_rules', {}).get('stop_loss_rules', {})
-        atr_multipliers = {
-            'major': stop_loss_config.get('sl_atr_multiplier_major', 2.0),
-            'minor': stop_loss_config.get('sl_atr_multiplier_minor', 2.0),
-            'cross': stop_loss_config.get('sl_atr_multiplier_cross', 2.5),
-            'jpy': stop_loss_config.get('sl_atr_multiplier_jpy', 2.5),
-            'gold': stop_loss_config.get('sl_atr_multiplier_gold', 1.5),
-            'silver': stop_loss_config.get('sl_atr_multiplier_silver', 2.0),
-        }
-
-        # Classify symbol for ATR multiplier
-        pair_type = self._get_pair_type(symbol)
-        atr_multiplier = atr_multipliers.get(pair_type, 2.5)  # Default to cross pair multiplier
-
-        # Calculate ATR-based stop distance
-        if atr is None or atr <= 0:
-            # If ATR fails, use professional minimum as base
-            atr_distance = min_distance
-        else:
-            atr_distance = atr * atr_multiplier
-
-        # Apply risk adjustments from signal data
-        risk_multiplier = 1.0
-        if signal_data:
-            signal_strength = signal_data.get('signal_strength', 0.5)
-
-            # Increase distance for weaker signals
-            if signal_strength < 0.4:
-                risk_multiplier *= 1.3  # Less aggressive than before
-            elif signal_strength < 0.6:
-                risk_multiplier *= 1.1
-
-        atr_distance *= risk_multiplier
-
-        # Use the MAXIMUM of:
-        # 1. ATR-based distance (adaptive to volatility)
-        # 2. Professional minimum (allows normal market movement)
-        # 3. Broker requirement * 1.5 (safety margin)
-        final_distance = max(atr_distance, min_distance, broker_min_distance)
-
-        logger.debug(
-            f"{symbol} ({pair_type}): Stop calc - ATR: {atr:.5f} [X] {atr_multiplier} = {atr_distance:.5f}, "
-            f"Min: {min_distance:.5f}, Broker: {broker_min_distance:.5f}, Final: {final_distance:.5f}"
-        )
-
-        return final_distance
 
     def _get_pair_type(self, symbol: str) -> str:
         """Classify symbol for ATR multiplier selection"""
@@ -643,14 +583,16 @@ class OrderExecutor:
         # Initialize order manager
         self.order_manager = OrderManager(self.mt5, self.config, self)
 
-    def _calculate_stop_distance(self, symbol: str, direction: str, atr_value: float = None) -> float:
+    def _calculate_stop_distance(self, symbol: str, signal: str, atr: float,
+                               signal_data: Optional[Dict] = None) -> float:
         """
         Calculate stop loss distance based on ATR and symbol type
         
         Args:
             symbol: Trading symbol
-            direction: 'BUY' or 'SELL'
-            atr_value: Current ATR value (optional)
+            signal: 'BUY' or 'SELL'
+            atr: Current ATR value
+            signal_data: Additional signal data for risk adjustments (optional)
             
         Returns:
             Stop loss distance in price units
@@ -663,39 +605,55 @@ class OrderExecutor:
                 return 0.0
                 
             # Get ATR value if not provided
-            if atr_value is None:
+            if atr is None or atr <= 0:
                 # Fetch current ATR from technical analyzer
                 if hasattr(self, 'technical_analyzer'):
-                    atr_value = self.technical_analyzer.get_atr(symbol)
+                    atr = self.technical_analyzer.get_atr(symbol)
                 else:
                     # Default ATR calculation
                     rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_H1, 0, 14)
                     if rates is not None and len(rates) >= 14:
                         high_low = rates['high'] - rates['low']
-                        atr_value = np.mean(high_low[-14:])
+                        atr = np.mean(high_low[-14:])
                     else:
-                        atr_value = 20 * symbol_info.point  # Default 20 pips
+                        atr = 20 * symbol_info.point  # Default 20 pips
+            
+            # Get broker minimum distance first
+            min_distance = self._calculate_min_stop_distance(symbol, symbol_info)
+            broker_min_distance = min_distance * 1.5  # 1.5x broker minimum for safety
             
             # Determine multiplier based on symbol type
             if symbol in ['XAUUSD', 'XAGUSD']:
                 # Metals use different multiplier
-                sl_multiplier = self.config.get('trading_rules', {}).get('stop_loss_rules', {}).get('sl_atr_multiplier_metals', 2.5)
+                atr_multiplier = self.config.get('trading_rules', {}).get('stop_loss_rules', {}).get('sl_atr_multiplier_metals', 2.5)
             else:
                 # Forex pairs
-                sl_multiplier = self.config.get('trading_rules', {}).get('stop_loss_rules', {}).get('sl_atr_multiplier_forex', 3.0)
+                atr_multiplier = self.config.get('trading_rules', {}).get('stop_loss_rules', {}).get('sl_atr_multiplier_forex', 3.0)
             
-            # Calculate base stop distance
-            stop_distance = atr_value * sl_multiplier
+            # Calculate ATR-based stop distance
+            if atr is None or atr <= 0:
+                # If ATR fails, use professional minimum as base
+                atr_distance = min_distance
+            else:
+                atr_distance = atr * atr_multiplier
             
-            # Apply min/max constraints
-            min_sl_pips = self.config.get('trading_rules', {}).get('stop_loss_rules', {}).get('min_sl_pips', 10)
-            max_sl_pips = self.config.get('trading_rules', {}).get('stop_loss_rules', {}).get('max_sl_pips', 50)
+            # Apply risk adjustments from signal data
+            risk_multiplier = 1.0
+            if signal_data:
+                signal_strength = signal_data.get('signal_strength', 0.5)
+                # Increase distance for weaker signals
+                if signal_strength < 0.4:
+                    risk_multiplier *= 1.3
+                elif signal_strength < 0.6:
+                    risk_multiplier *= 1.1
             
-            min_sl_distance = min_sl_pips * symbol_info.point
-            max_sl_distance = max_sl_pips * symbol_info.point
+            atr_distance *= risk_multiplier
             
-            # Constrain stop distance
-            stop_distance = max(min_sl_distance, min(stop_distance, max_sl_distance))
+            # Use the MAXIMUM of:
+            # 1. ATR-based distance (adaptive to volatility)
+            # 2. Professional minimum (allows normal market movement)
+            # 3. Broker requirement * 1.5 (safety margin)
+            stop_distance = max(atr_distance, min_distance, broker_min_distance)
             
             self.logger.info(f"{symbol}: Calculated stop distance: {stop_distance:.5f} ({stop_distance/symbol_info.point:.1f} pips)")
             
