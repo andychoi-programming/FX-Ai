@@ -83,7 +83,7 @@ class OrderManager:
                 return {'success': False, 'error': f'Failed to get tick data for {symbol}'}
 
             current_price = tick.ask if signal == "BUY" else tick.bid
-            atr = self.order_manager._get_atr(symbol)
+            atr = self._get_atr(symbol)
 
             # Calculate optimal stop distance
             stop_distance = self._calculate_stop_distance(symbol, signal, atr, signal_data)
@@ -142,7 +142,7 @@ class OrderManager:
                 return {'success': False, 'error': f'Failed to get tick data for {symbol}'}
 
             current_price = tick.ask if signal == "BUY" else tick.bid
-            atr = self.order_manager._get_atr(symbol)
+            atr = self._get_atr(symbol)
 
             # Calculate volume if not provided
             if volume is None:

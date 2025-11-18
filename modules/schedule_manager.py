@@ -1,7 +1,7 @@
 """
 FX-Ai Schedule Manager
 Manages optimal trading hours for each symbol
-All times in MT5 SERVER time (GMT+2) - NO timezone conversions!
+All times in MT5 SERVER time (GMT+2) - system clock is synced with MT5 server!
 """
 
 import json
@@ -168,13 +168,9 @@ class ScheduleManager:
             # Try to get MT5 server time
             import MetaTrader5 as mt5
             if mt5.terminal_info() is not None:
-                server_time = mt5.server_time()
-                if server_time:
-                    now = datetime.fromtimestamp(server_time)
-                    self.logger.debug(f"ScheduleManager using MT5 server time: {now} (force close: {force_hour:02d}:{force_minute:02d})")
-                else:
-                    now = datetime.now()
-                    self.logger.debug(f"ScheduleManager MT5 server_time() returned None, using local time: {now}")
+                # MT5 synchronizes system clock with server time, so datetime.now() gives server time
+                now = datetime.now()
+                self.logger.debug(f"ScheduleManager using system time (synced with MT5 server): {now} (force close: {force_hour:02d}:{force_minute:02d})")
             else:
                 now = datetime.now()
                 self.logger.debug(f"ScheduleManager MT5 not connected, using local time: {now}")
