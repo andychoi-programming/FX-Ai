@@ -355,8 +355,143 @@ class TradingEngine:
             return None
 
     async def _execute_trade_safe(self, signal: Dict) -> Optional[Dict]:
-        """Safe trade execution without validation"""
-        return await self.execute_trade(signal)
+        """Execute trade with comprehensive error handling"""
+        try:
+            # Validate MT5 connection first
+            if not mt5.initialize():
+                self.logger.error("MT5 not initialized")
+                return {'success': False, 'error': 'MT5 not initialized'}
+
+            # Check if symbol is available for trading
+            symbol_info = mt5.symbol_info(signal['symbol'])
+            if symbol_info is None:
+                self.logger.error(f"Symbol {signal['symbol']} not found")
+                return {'success': False, 'error': f'Symbol {signal["symbol"]} not found'}
+
+            if not symbol_info.visible:
+                # Try to enable the symbol
+                if not mt5.symbol_select(signal['symbol'], True):
+                    self.logger.error(f"Failed to select {signal['symbol']}")
+                    return {'success': False, 'error': f'Failed to select {signal["symbol"]}'}
+
+            # Check if market is open
+            if not symbol_info.trade_mode == mt5.SYMBOL_TRADE_MODE_FULL:
+                self.logger.error(f"Trading disabled for {signal['symbol']}: mode={symbol_info.trade_mode}")
+                return {'success': False, 'error': f'Trading disabled for {signal["symbol"]}'}
+
+            # Get current price for stop order placement
+            tick = mt5.symbol_info_tick(signal['symbol'])
+            if tick is None:
+                self.logger.error(f"Failed to get tick for {signal['symbol']}")
+                return {'success': False, 'error': f'Failed to get tick for {signal["symbol"]}'}
+
+            # Determine order type and price
+            if signal['direction'] == 'BUY':
+                order_type = mt5.ORDER_TYPE_BUY_STOP
+                # For buy stop, entry must be above current ask
+                entry_price = max(signal['entry_price'], tick.ask + symbol_info.point)
+            else:
+                order_type = mt5.ORDER_TYPE_SELL_STOP
+                # For sell stop, entry must be below current bid
+                entry_price = min(signal['entry_price'], tick.bid - symbol_info.point)
+
+            # Round prices to symbol's digit precision
+            entry_price = round(entry_price, symbol_info.digits)
+            sl_price = round(signal['stop_loss'], symbol_info.digits)
+            tp_price = round(signal['take_profit'], symbol_info.digits)
+
+            # Normalize volume to symbol's requirements
+            volume = signal['position_size']
+            volume = max(volume, symbol_info.volume_min)
+            volume = min(volume, symbol_info.volume_max)
+            # Round to volume step
+            volume_step = symbol_info.volume_step
+            volume = round(volume / volume_step) * volume_step
+
+            # Create order request
+            request = {
+                "action": mt5.TRADE_ACTION_PENDING,
+                "symbol": signal['symbol'],
+                "volume": volume,
+                "type": order_type,
+                "price": entry_price,
+                "sl": sl_price,
+                "tp": tp_price,
+                "deviation": 20,
+                "magic": 234000,
+                "comment": f"FX-Ai {signal['symbol']}",
+                "type_time": mt5.ORDER_TIME_GTC,
+                "type_filling": mt5.ORDER_FILLING_IOC,
+            }
+
+            # Log the request for debugging
+            self.logger.info(f"Sending order request: {request}")
+
+            # Send order to MT5
+            result = mt5.order_send(request)
+
+            # Check if result is None
+            if result is None:
+                # Get last error for more details
+                last_error = mt5.last_error()
+                error_msg = f"MT5 returned None. Last error: {last_error}"
+                self.logger.error(error_msg)
+
+                # Try alternative filling mode if IOC failed
+                if "filling" in str(last_error).lower():
+                    self.logger.info("Retrying with RETURN filling mode...")
+                    request["type_filling"] = mt5.ORDER_FILLING_RETURN
+                    result = mt5.order_send(request)
+
+                    if result is None:
+                        # Try FOK as last resort
+                        self.logger.info("Retrying with FOK filling mode...")
+                        request["type_filling"] = mt5.ORDER_FILLING_FOK
+                        result = mt5.order_send(request)
+
+                # If still None, return detailed error
+                if result is None:
+                    return {
+                        'success': False,
+                        'error': f'MT5 order_send returned None. Last error: {mt5.last_error()}'
+                    }
+
+            # Check result retcode
+            if result.retcode != mt5.TRADE_RETCODE_DONE:
+                error_msg = f"Order failed: {result.retcode} - {result.comment}"
+                self.logger.error(error_msg)
+
+                # Provide specific error messages for common issues
+                if result.retcode == 10014:  # Invalid volume
+                    error_msg = f"Invalid volume: {volume} (min: {symbol_info.volume_min}, max: {symbol_info.volume_max})"
+                elif result.retcode == 10015:  # Invalid price
+                    error_msg = f"Invalid price: entry={entry_price}, sl={sl_price}, tp={tp_price}"
+                elif result.retcode == 10016:  # Invalid stops
+                    error_msg = f"Invalid stops: Check SL/TP distances for {signal['symbol']}"
+                elif result.retcode == 10018:  # Market closed
+                    error_msg = f"Market closed for {signal['symbol']}"
+
+                return {'success': False, 'error': error_msg}
+
+            # Success!
+            self.logger.info(f"✅ Order placed successfully: {signal['symbol']} {signal['direction']} "
+                            f"Order #{result.order}, Volume: {volume}, Entry: {entry_price}")
+
+            return {
+                'success': True,
+                'order_id': result.order,
+                'symbol': signal['symbol'],
+                'direction': signal['direction'],
+                'volume': volume,
+                'entry_price': entry_price,
+                'sl': sl_price,
+                'tp': tp_price,
+                'comment': result.comment
+            }
+
+        except Exception as e:
+            self.logger.error(f"Exception in _execute_trade_safe: {str(e)}", exc_info=True)
+            return {'success': False, 'error': f'Exception: {str(e)}'}
 
     async def execute_trade(self, signal: Dict) -> Optional[Dict]:
         """Execute a trading signal - main entry point for trade execution"""
