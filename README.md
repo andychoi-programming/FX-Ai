@@ -50,6 +50,9 @@ python main.py --mode backtest
 venv\Scripts\activate
 python main.py
 ```
+
+```bash
+# Emergency stop (legacy method)
 python -c "from app.application import FXAiApplication; import asyncio; app = FXAiApplication(); asyncio.run(app.emergency_stop())"
 ```
 
@@ -107,7 +110,8 @@ python -c "from app.application import FXAiApplication; import asyncio; app = FX
 FX-Ai has been refactored to eliminate code duplication and provide a cleaner, more maintainable architecture:
 
 #### Core Components
-```
+
+```text
 core/
 ├── config_manager.py      # Unified configuration for live/backtest modes
 ├── parameter_manager.py   # Centralized parameter optimization
@@ -119,7 +123,8 @@ core/
 ```
 
 #### Unified Entry Points
-```
+
+```text
 fxai.py                   # Single launcher for all operations
 main.py                   # Main application (supports --mode flag)
 scripts/
@@ -130,26 +135,31 @@ scripts/
 ### Key Improvements
 
 #### 1. **Configuration Consolidation**
+
 - **Before**: Multiple config files with unclear precedence
 - **After**: Single `ConfigManager` with mode-specific overrides
 - **Benefit**: No more configuration conflicts, clear separation of live/backtest settings
 
 #### 2. **Parameter Management Unification**
+
 - **Before**: `DynamicParameterManager` in live_trading/, separate optimization logic
 - **After**: `ParameterManager` base class with `DynamicParameterManager` extension
 - **Benefit**: Single source of truth for all parameter operations
 
 #### 3. **Trading Engine Consolidation**
+
 - **Before**: Separate engines for live and backtest with duplicated logic
 - **After**: Single `TradingEngine` class with mode parameter
 - **Benefit**: 30-40% code reduction, easier testing and maintenance
 
 #### 4. **Simplified Directory Structure**
+
 - **Before**: Mixed architecture with modules in root and nested directories
 - **After**: Clear separation with `core/`, `scripts/`, and mode-specific directories
 - **Benefit**: Predictable file locations, easier navigation
 
 #### 5. **Unified Launcher**
+
 - **Before**: Multiple batch files and entry points
 - **After**: Single `fxai.py` launcher with command-line interface
 - **Benefit**: Consistent interface for all operations
