@@ -717,6 +717,7 @@ class OrderExecutor:
 
         # Initialize learning database for recording stop orders
         self.learning_db = LearningDatabase(config=config)
+        self.learning_db.init_database()  # Initialize database tables
 
         # Initialize order manager
         self.order_manager = OrderManager(self.mt5, self.config, self)
@@ -1344,13 +1345,21 @@ class OrderExecutor:
         """Place order through MT5 - ASYNC - ONLY STOP ORDERS ALLOWED"""
         logger.info(f"🔍 [OrderExecutor] place_order called for {symbol} {order_type}")
         try:
-            # Check MT5 connection
+            # Check MT5 connection state before placing order
             terminal_info = mt5.terminal_info()  # type: ignore
             if terminal_info is None:
-                logger.error("MT5 terminal not connected")
+                logger.error("❌ MT5 terminal not connected - cannot place order")
                 return {
                     'success': False,
                     'error': 'MT5 terminal not connected'}
+
+            if not terminal_info.trade_allowed:
+                logger.error("❌ Trading not allowed in MT5 terminal - cannot place order")
+                return {
+                    'success': False,
+                    'error': 'Trading not allowed in MT5 terminal'}
+
+            logger.info(f"✅ MT5 connection OK - Terminal: {terminal_info.name}, Trade allowed: {terminal_info.trade_allowed}")
 
             # Select symbol for trading
             if not mt5.symbol_select(symbol, True):  # type: ignore
@@ -1800,28 +1809,34 @@ class OrderExecutor:
 
                     logger.debug(f"Trying filling mode {filling_mode} ({type(filling_mode).__name__}) for {symbol}")
                     
+                    # Log the complete MT5 request before sending
+                    logger.info(f"📤 MT5 Request for {symbol}: {request}")
+                    
                     # Send order
                     result = mt5.order_send(request)  # type: ignore
 
-                    # Check if order_send returned None
+                    # Log the complete MT5 response immediately
                     if result is None:
+                        logger.error(f"❌ MT5 Response for {symbol}: None - No response from MT5")
                         last_error = f"Filling mode {filling_mode}: Order send failed - no response from MT5"
                         logger.debug(last_error)
                         continue
-
-                    # Define success codes
-                    SUCCESS_CODES = [mt5.TRADE_RETCODE_PLACED, mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL]
-
-                    if result.retcode in SUCCESS_CODES:
-                        logger.info(f"Order placed with filling mode {filling_mode}: {symbol} {order_type} @ {price}")
-                        break  # Success, exit the retry loop
                     else:
-                        error_desc = f"Filling mode {filling_mode}: Retcode {result.retcode}"
-                        if hasattr(result, 'comment') and result.comment:
-                            error_desc += f", Comment: {result.comment}"
-                        logger.debug(f"Filling mode {filling_mode} failed: {error_desc}")
-                        last_error = error_desc
-                        continue
+                        logger.info(f"📥 MT5 Response for {symbol}: retcode={result.retcode}, order={getattr(result, 'order', 'N/A')}, comment='{getattr(result, 'comment', 'N/A')}'")
+                        
+                        # Check if order was successful
+                        SUCCESS_CODES = [mt5.TRADE_RETCODE_PLACED, mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL]
+                        
+                        if result.retcode in SUCCESS_CODES:
+                            logger.info(f"✅ Order placed successfully for {symbol}: ticket {result.order}")
+                            break  # Success, exit the retry loop
+                        else:
+                            error_desc = f"Filling mode {filling_mode}: Retcode {result.retcode}"
+                            if hasattr(result, 'comment') and result.comment:
+                                error_desc += f", Comment: {result.comment}"
+                            logger.error(f"❌ MT5 order failed for {symbol}: {error_desc}")
+                            last_error = error_desc
+                            continue
                         
                 except Exception as e:
                     last_error = str(e)
