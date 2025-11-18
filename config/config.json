@@ -7,6 +7,13 @@
     "path": "",
     "_comment": "MT5 credentials loaded from .env file for security"
   },
+  "data": {
+    "external_data_directory": "D:\\FX-Ai-Data",
+    "learning_database_path": "D:\\FX-Ai-Data\\databases\\performance_history.db",
+    "models_directory": "D:\\FX-Ai-Data\\models",
+    "logs_directory": "D:\\FX-Ai-Data\\logs",
+    "_comment": "External data directory for persistent learning data and logs"
+  },
   "trading": {
     "symbols": [
       "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "NZDUSD", "USDCAD",

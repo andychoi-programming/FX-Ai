@@ -110,7 +110,7 @@ class RLAgent:
         self.episode_count = 0
 
         # Model persistence
-        self.model_dir = config.get('model_dir', 'models')
+        self.model_dir = config.get('data', {}).get('models_directory', 'models')
         os.makedirs(self.model_dir, exist_ok=True)
         self.model_path = os.path.join(self.model_dir, 'rl_agent.pkl')
 

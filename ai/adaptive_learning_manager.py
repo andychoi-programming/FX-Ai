@@ -50,7 +50,7 @@ class AdaptiveLearningManager:
         self.logger = logging.getLogger(__name__)
 
         # Initialize modular components
-        self.db = LearningDatabase()
+        self.db = LearningDatabase(config=config)
         self.scheduler = LearningScheduler()
         self.analyzer = TradeAnalyzer()
         self.algorithms = LearningAlgorithms(config)

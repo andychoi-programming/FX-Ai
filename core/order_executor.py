@@ -578,7 +578,7 @@ class OrderExecutor:
         self.dry_run = config.get('trading', {}).get('dry_run')
 
         # Initialize learning database for recording stop orders
-        self.learning_db = LearningDatabase()
+        self.learning_db = LearningDatabase(config=config)
 
         # Initialize order manager
         self.order_manager = OrderManager(self.mt5, self.config, self)

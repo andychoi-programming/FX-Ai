@@ -46,7 +46,7 @@ class MLPredictor:
         ]
 
         # Model paths
-        self.model_dir = config.get('model_dir', 'models')
+        self.model_dir = config.get('data', {}).get('models_directory', 'models')
         os.makedirs(self.model_dir, exist_ok=True)
 
         # Feature consistency tracking

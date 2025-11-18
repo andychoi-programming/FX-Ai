@@ -20,10 +20,18 @@ class LearningDatabase:
     Handles trade recording, performance tracking, and data retrieval.
     """
 
-    def __init__(self, db_path: str = None):
+    def __init__(self, db_path: str = None, config: dict = None):
         """Initialize database connection"""
-        self.db_path = db_path or os.path.join('data', 'performance_history.db')
-        os.makedirs('data', exist_ok=True)
+        if db_path:
+            self.db_path = db_path
+        elif config and 'data' in config and 'learning_database_path' in config['data']:
+            self.db_path = config['data']['learning_database_path']
+        else:
+            self.db_path = os.path.join('data', 'performance_history.db')
+        
+        # Ensure the directory exists
+        db_dir = os.path.dirname(self.db_path)
+        os.makedirs(db_dir, exist_ok=True)
 
     def init_database(self):
         """Initialize SQLite database for trade and performance tracking"""
