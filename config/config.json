@@ -168,7 +168,7 @@
       "sl_atr_multiplier_cross": 2.5,
       "sl_atr_multiplier_jpy": 2.5,
       "sl_atr_multiplier_gold": 1.5,
-      "sl_atr_multiplier_silver": 3.0,
+      "sl_atr_multiplier_silver": 1.5,
       "professional_minimums": {
         "EURUSD": 0.0010,
         "GBPUSD": 0.0015,
@@ -210,7 +210,7 @@
     "take_profit_rules": {
       "method": "rr_based",
       "tp_atr_multiplier_forex": 6.0,
-      "tp_atr_multiplier_metals": 8.0,
+      "tp_atr_multiplier_metals": 4.0,
       "default_tp_pips": 60,
       "tp_adjustment_sentiment": true,
       "tp_adjustment_fundamental": true,

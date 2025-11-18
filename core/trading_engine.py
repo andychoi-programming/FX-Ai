@@ -358,7 +358,7 @@ class TradingEngine:
                 }
             )
 
-            if result.get('success', False):
+            if result and result.get('success', False):
                 # Add signal data to result for monitoring
                 result.update({
                     'symbol': symbol,
