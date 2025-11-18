@@ -355,139 +355,179 @@ class TradingEngine:
             return None
 
     async def _execute_trade_safe(self, signal: Dict) -> Optional[Dict]:
-        """Execute trade with comprehensive error handling"""
+        """Execute trade with comprehensive error handling using FixedOrderExecutor logic"""
         try:
             # Validate MT5 connection first
             if not mt5.initialize():
                 self.logger.error("MT5 not initialized")
                 return {'success': False, 'error': 'MT5 not initialized'}
 
-            # Check if symbol is available for trading
-            symbol_info = mt5.symbol_info(signal['symbol'])
+            symbol = signal['symbol']
+            direction = signal['direction']
+
+            # Get symbol info
+            symbol_info = mt5.symbol_info(symbol)
             if symbol_info is None:
-                self.logger.error(f"Symbol {signal['symbol']} not found")
-                return {'success': False, 'error': f'Symbol {signal["symbol"]} not found'}
+                self.logger.error(f"Symbol {symbol} not found")
+                return {'success': False, 'error': f'Symbol {symbol} not found'}
 
             if not symbol_info.visible:
-                # Try to enable the symbol
-                if not mt5.symbol_select(signal['symbol'], True):
-                    self.logger.error(f"Failed to select {signal['symbol']}")
-                    return {'success': False, 'error': f'Failed to select {signal["symbol"]}'}
+                if not mt5.symbol_select(symbol, True):
+                    self.logger.error(f"Failed to select {symbol}")
+                    return {'success': False, 'error': f'Failed to select {symbol}'}
 
-            # Check if market is open
-            if not symbol_info.trade_mode == mt5.SYMBOL_TRADE_MODE_FULL:
-                self.logger.error(f"Trading disabled for {signal['symbol']}: mode={symbol_info.trade_mode}")
-                return {'success': False, 'error': f'Trading disabled for {signal["symbol"]}'}
+            # Get current prices
+            prices = mt5.symbol_info_tick(symbol)
+            if prices is None:
+                self.logger.error(f"Cannot get prices for {symbol}")
+                return {'success': False, 'error': f'Cannot get prices for {symbol}'}
 
-            # Get current price for stop order placement
-            tick = mt5.symbol_info_tick(signal['symbol'])
-            if tick is None:
-                self.logger.error(f"Failed to get tick for {signal['symbol']}")
-                return {'success': False, 'error': f'Failed to get tick for {signal["symbol"]}'}
-
-            # Determine order type and price
-            if signal['direction'] == 'BUY':
-                order_type = mt5.ORDER_TYPE_BUY_STOP
-                # For buy stop, entry must be above current ask
-                entry_price = max(signal['entry_price'], tick.ask + symbol_info.point)
+            # Determine order type and entry price
+            if direction.upper() == 'BUY':
+                order_type = mt5.ORDER_TYPE_BUY
+                entry_price = prices.ask
+            elif direction.upper() == 'SELL':
+                order_type = mt5.ORDER_TYPE_SELL
+                entry_price = prices.bid
             else:
-                order_type = mt5.ORDER_TYPE_SELL_STOP
-                # For sell stop, entry must be below current bid
-                entry_price = min(signal['entry_price'], tick.bid - symbol_info.point)
+                self.logger.error(f"Invalid direction: {direction}")
+                return {'success': False, 'error': f'Invalid direction: {direction}'}
 
-            # Round prices to symbol's digit precision
+            # Normalize entry price
+            tick_size = symbol_info.trade_tick_size
+            if tick_size == 0:
+                tick_size = symbol_info.point
+            entry_price = round(entry_price / tick_size) * tick_size
             entry_price = round(entry_price, symbol_info.digits)
-            sl_price = round(signal['stop_loss'], symbol_info.digits)
-            tp_price = round(signal['take_profit'], symbol_info.digits)
 
-            # Normalize volume to symbol's requirements
-            volume = signal['position_size']
-            volume = max(volume, symbol_info.volume_min)
-            volume = min(volume, symbol_info.volume_max)
-            # Round to volume step
-            volume_step = symbol_info.volume_step
-            volume = round(volume / volume_step) * volume_step
+            # Calculate stop distances (1.5-2x minimum requirements)
+            stops_level = symbol_info.trade_stops_level
+            point = symbol_info.point
+            min_stop_price = stops_level * point
 
-            # Create order request
+            # Use 2x minimum for safety
+            sl_distance_price = max(min_stop_price * 2, min_stop_price * 1.5)
+
+            # For metals, ensure minimum distances
+            if symbol in ['XAUUSD', 'XAGUSD']:
+                sl_distance_price = max(sl_distance_price, 0.5)  # At least 50 cents for gold/silver
+
+            # Calculate TP distance for RR ratio (use 2.0 as default)
+            rr_ratio = 2.0
+            tp_distance_price = sl_distance_price * rr_ratio
+
+            # Calculate SL and TP prices
+            if direction.upper() == 'BUY':
+                sl_price = entry_price - sl_distance_price
+                tp_price = entry_price + tp_distance_price
+            else:  # SELL
+                sl_price = entry_price + sl_distance_price
+                tp_price = entry_price - tp_distance_price
+
+            # Normalize SL and TP
+            sl_price = round(sl_price / tick_size) * tick_size
+            tp_price = round(tp_price / tick_size) * tick_size
+            sl_price = round(sl_price, symbol_info.digits)
+            tp_price = round(tp_price, symbol_info.digits)
+
+            # Calculate lot size based on risk amount
+            risk_amount = signal.get('position_size', 0.01)  # Default to 0.01 if not specified
+            stop_loss_pips = sl_distance_price / point
+            pip_value = (symbol_info.trade_tick_value / point) * symbol_info.trade_contract_size
+            lot_size = risk_amount / (stop_loss_pips * pip_value)
+
+            # Round lot size to step
+            lot_step = symbol_info.volume_step
+            lot_size = round(lot_size / lot_step) * lot_step
+            lot_size = max(symbol_info.volume_min, min(symbol_info.volume_max, lot_size))
+
+            # Test filling modes (use IOC as primary, fallback to others)
+            filling_modes = [mt5.ORDER_FILLING_IOC, mt5.ORDER_FILLING_RETURN, mt5.ORDER_FILLING_FOK]
+            working_filling = mt5.ORDER_FILLING_IOC  # Default
+
+            for filling in filling_modes:
+                test_request = {
+                    "action": mt5.TRADE_ACTION_DEAL,
+                    "symbol": symbol,
+                    "volume": lot_size,
+                    "type": order_type,
+                    "price": entry_price,
+                    "sl": sl_price,
+                    "tp": tp_price,
+                    "deviation": 10,
+                    "magic": self.config.get('trading', {}).get('magic_number', 123456),
+                    "comment": f"test_fill_{filling}",
+                    "type_time": mt5.ORDER_TIME_GTC,
+                    "type_filling": filling,
+                }
+
+                test_result = mt5.order_send(test_request)
+                if test_result and test_result.retcode == mt5.TRADE_RETCODE_DONE:
+                    working_filling = filling
+                    # Close the test order immediately
+                    if test_result.order:
+                        close_request = {
+                            "action": mt5.TRADE_ACTION_DEAL,
+                            "symbol": symbol,
+                            "volume": lot_size,
+                            "type": mt5.ORDER_TYPE_SELL if order_type == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_BUY,
+                            "position": test_result.order,
+                            "price": prices.bid if order_type == mt5.ORDER_TYPE_BUY else prices.ask,
+                            "deviation": 10,
+                            "magic": test_request["magic"],
+                            "comment": "Close test position",
+                            "type_time": mt5.ORDER_TIME_GTC,
+                            "type_filling": filling,
+                        }
+                        mt5.order_send(close_request)
+                    break
+
+            # Create final order request
             request = {
-                "action": mt5.TRADE_ACTION_PENDING,
-                "symbol": signal['symbol'],
-                "volume": volume,
+                "action": mt5.TRADE_ACTION_DEAL,
+                "symbol": symbol,
+                "volume": lot_size,
                 "type": order_type,
                 "price": entry_price,
                 "sl": sl_price,
                 "tp": tp_price,
-                "deviation": 20,
-                "magic": 234000,
-                "comment": f"FX-Ai {signal['symbol']}",
+                "deviation": 10,
+                "magic": self.config.get('trading', {}).get('magic_number', 123456),
+                "comment": f"FX-Ai {symbol} Fixed",
                 "type_time": mt5.ORDER_TIME_GTC,
-                "type_filling": mt5.ORDER_FILLING_IOC,
+                "type_filling": working_filling,
             }
 
-            # Log the request for debugging
-            self.logger.info(f"Sending order request: {request}")
+            self.logger.info(f"Executing {direction} order for {symbol}:")
+            self.logger.info(f"  Entry: {entry_price}, SL: {sl_price}, TP: {tp_price}")
+            self.logger.info(f"  Lot Size: {lot_size}, RR: {rr_ratio}")
+            self.logger.info(f"  Stops Level: {stops_level}, Min Distance: {min_stop_price}")
 
-            # Send order to MT5
+            # Send order
             result = mt5.order_send(request)
 
-            # Check if result is None
-            if result is None:
-                # Get last error for more details
-                last_error = mt5.last_error()
-                error_msg = f"MT5 returned None. Last error: {last_error}"
-                self.logger.error(error_msg)
-
-                # Try alternative filling mode if IOC failed
-                if "filling" in str(last_error).lower():
-                    self.logger.info("Retrying with RETURN filling mode...")
-                    request["type_filling"] = mt5.ORDER_FILLING_RETURN
-                    result = mt5.order_send(request)
-
-                    if result is None:
-                        # Try FOK as last resort
-                        self.logger.info("Retrying with FOK filling mode...")
-                        request["type_filling"] = mt5.ORDER_FILLING_FOK
-                        result = mt5.order_send(request)
-
-                # If still None, return detailed error
-                if result is None:
-                    return {
-                        'success': False,
-                        'error': f'MT5 order_send returned None. Last error: {mt5.last_error()}'
-                    }
-
-            # Check result retcode
-            if result.retcode != mt5.TRADE_RETCODE_DONE:
-                error_msg = f"Order failed: {result.retcode} - {result.comment}"
-                self.logger.error(error_msg)
-
-                # Provide specific error messages for common issues
-                if result.retcode == 10014:  # Invalid volume
-                    error_msg = f"Invalid volume: {volume} (min: {symbol_info.volume_min}, max: {symbol_info.volume_max})"
-                elif result.retcode == 10015:  # Invalid price
-                    error_msg = f"Invalid price: entry={entry_price}, sl={sl_price}, tp={tp_price}"
-                elif result.retcode == 10016:  # Invalid stops
-                    error_msg = f"Invalid stops: Check SL/TP distances for {signal['symbol']}"
-                elif result.retcode == 10018:  # Market closed
-                    error_msg = f"Market closed for {signal['symbol']}"
-
-                return {'success': False, 'error': error_msg}
-
-            # Success!
-            self.logger.info(f"✅ Order placed successfully: {signal['symbol']} {signal['direction']} "
-                            f"Order #{result.order}, Volume: {volume}, Entry: {entry_price}")
-
-            return {
-                'success': True,
-                'order_id': result.order,
-                'symbol': signal['symbol'],
-                'direction': signal['direction'],
-                'volume': volume,
-                'entry_price': entry_price,
-                'sl': sl_price,
-                'tp': tp_price,
-                'comment': result.comment
-            }
+            if result and result.retcode == mt5.TRADE_RETCODE_DONE:
+                self.logger.info(f"✅ Order executed successfully: Ticket {result.order}")
+                return {
+                    'success': True,
+                    'order_id': result.order,
+                    'symbol': symbol,
+                    'direction': direction,
+                    'volume': lot_size,
+                    'entry_price': entry_price,
+                    'sl': sl_price,
+                    'tp': tp_price,
+                    'comment': result.comment
+                }
+            else:
+                error = mt5.last_error()
+                self.logger.error(f"❌ Order failed: {error}")
+                return {
+                    'success': False,
+                    'error': f'Order failed: {error}',
+                    'symbol': symbol,
+                    'direction': direction
+                }
 
         except Exception as e:
             self.logger.error(f"Exception in _execute_trade_safe: {str(e)}", exc_info=True)
