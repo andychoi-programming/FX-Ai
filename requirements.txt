@@ -14,8 +14,8 @@ tensorflow>=2.15.0
 lightgbm>=4.2.0
 
 # Computer Vision & Image Processing
-opencv-python>=4.8.0
-scikit-image>=0.21.0
+# opencv-python>=4.8.0  # Not used for forex trading
+# scikit-image>=0.21.0  # Image processing not needed
 
 # Technical Analysis
 ta>=0.11.0
@@ -46,7 +46,7 @@ psutil>=5.9.0
 
 # Database (optional)
 sqlalchemy>=2.0.0
-pymongo>=4.6.0
+# pymongo>=4.6.0  # MongoDB not used (SQLite is used)
 
 # API & Communication
 websocket-client>=1.6.0
@@ -60,11 +60,11 @@ pylint==2.17.4
 
 # Logging & Monitoring
 loguru==0.7.0
-sentry-sdk==1.29.2
+# sentry-sdk==1.29.2  # External monitoring not configured
 
 # Time & Date
 pytz==2023.3
 python-dateutil==2.8.2
 
 # Performance
-cython>=3.0.0
+# cython>=3.0.0  # Performance optimization not implemented

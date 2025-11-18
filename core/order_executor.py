@@ -11,10 +11,10 @@ logger = logging.getLogger(__name__)
 class OrderManager:
     """Hybrid order manager supporting multiple entry strategies"""
 
-    def __init__(self, order_executor):
-        self.order_executor = order_executor
-        self.mt5 = order_executor.mt5
-        self.config = order_executor.config
+    def __init__(self, mt5, config):
+        self.mt5 = mt5
+        self.config = config
+        self.magic_number = self.config.get('trading', {}).get('magic_number')
 
         # Load order management settings
         order_mgmt_config = self.config.get('trading', {}).get('order_management', {})
@@ -486,7 +486,7 @@ class OrderManager:
                 return {'managed': 0, 'cancelled': 0, 'errors': 0}
 
             # Filter to only our system's orders
-            our_orders = [order for order in orders if hasattr(order, 'magic') and order.magic == self.order_executor.magic_number]
+            our_orders = [order for order in orders if hasattr(order, 'magic') and order.magic == self.magic_number]
             total_pending = len(our_orders)
             managed = 0
             cancelled = 0
@@ -639,7 +639,7 @@ class OrderExecutor:
         self.learning_db = LearningDatabase()
 
         # Initialize order manager
-        self.order_manager = OrderManager(self)
+        self.order_manager = OrderManager(self.mt5, self.config)
 
     def check_pending_orders_health(self) -> Dict:
         """Check health of pending orders for monitoring system"""
@@ -1377,7 +1377,7 @@ class OrderExecutor:
                         continue
 
                     # Define success codes
-                    SUCCESS_CODES = [10008, 10009, 10010]  # PLACED, DONE, DONE_PARTIAL
+                    SUCCESS_CODES = [mt5.TRADE_RETCODE_PLACED, mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL]
 
                     if result.retcode in SUCCESS_CODES:
                         logger.info(f"Order placed with filling mode {filling_mode}: {symbol} {order_type} @ {price}")

@@ -11,8 +11,6 @@ from datetime import datetime, UTC, time
 from typing import Dict, Optional, Tuple
 
 # Set up logger
-logger = logging.getLogger('FX-Ai.RiskManager')
-
 logger = logging.getLogger(__name__)
 
 class RiskManager:
