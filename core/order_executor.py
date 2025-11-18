@@ -56,16 +56,21 @@ class OrderManager:
             dict: Order result
         """
 
+        logger.info(f"🔍 [OrderManager] place_order called with symbol={symbol}, signal={signal}, entry_strategy={entry_strategy}, volume={volume}")
+
         if entry_strategy is None:
             entry_strategy = self.default_entry_strategy
+            logger.info(f"🔍 [OrderManager] Using default entry_strategy: {entry_strategy}")
 
         if entry_strategy == "stop":
+            logger.info(f"🔍 [OrderManager] Calling _place_stop_order")
             return await self._place_stop_order(symbol, signal, volume, stop_loss, take_profit, signal_data)
         elif entry_strategy == "market":
             return await self._place_market_order(symbol, signal, volume, stop_loss, take_profit, signal_data)
         elif entry_strategy == "limit":
             return await self._place_limit_order(symbol, signal, volume, stop_loss, take_profit, signal_data)
         else:
+            logger.info(f"🔍 [OrderManager] Returning unknown strategy error for {symbol}")
             return {
                 'success': False,
                 'error': f'Unknown entry strategy: {entry_strategy}'
@@ -77,13 +82,17 @@ class OrderManager:
         """Place stop order with ATR-based distance calculation"""
 
         try:
+            logger.info(f"🔍 [OrderManager] Placing stop order for {symbol} {signal}")
+            
             # Get current price and ATR
             tick = mt5.symbol_info_tick(symbol)
             if tick is None:
                 return {'success': False, 'error': f'Failed to get tick data for {symbol}'}
 
             current_price = tick.ask if signal == "BUY" else tick.bid
-            atr = self._get_atr(symbol)
+            atr = self.order_executor._get_atr(symbol)
+            
+            logger.info(f"🔍 [OrderManager] {symbol}: Current price: {current_price:.5f}, ATR: {atr:.5f}")
 
             # Calculate optimal stop distance
             stop_distance = self.order_executor._calculate_stop_distance(symbol, signal, atr, signal_data)
@@ -93,26 +102,31 @@ class OrderManager:
                 stop_price = current_price + stop_distance
             else:  # SELL
                 stop_price = current_price - stop_distance
+            
+            logger.info(f"🔍 [OrderManager] {symbol}: Stop distance: {stop_distance:.5f}, Stop price: {stop_price:.5f}")
 
             # Validate stop order before placing
-            is_valid, validation_error = self._validate_stop_order(symbol, signal, stop_price, current_price)
+            is_valid, validation_error = self.order_executor._validate_stop_order(symbol, signal, stop_price, current_price)
             if not is_valid:
                 return {'success': False, 'error': validation_error}
 
             # Calculate volume if not provided
             if volume is None:
-                volume = self._calculate_position_size(symbol, stop_price, stop_loss or (stop_price - stop_distance))
+                volume = self.order_executor._calculate_position_size(symbol, stop_price, stop_loss or (stop_price - stop_distance))
 
             # Calculate SL/TP if not provided
             if stop_loss is None or take_profit is None:
-                sl_price, tp_price = self._calculate_sl_tp(symbol, signal, stop_price, atr)
+                logger.info(f"🔍 [OrderManager] Calculating SL/TP for {symbol}")
+                sl_price, tp_price = self.order_executor._calculate_sl_tp(symbol, signal, stop_price, atr)
                 if stop_loss is None:
                     stop_loss = sl_price
                 if take_profit is None:
                     take_profit = tp_price
+            
+            logger.info(f"🔍 [OrderManager] {symbol}: Final SL: {stop_loss:.5f}, TP: {take_profit:.5f}")
 
             # Set order expiration
-            expiration = self._calculate_order_expiration()
+            expiration = self.order_executor._calculate_order_expiration()
 
             # Place the stop order
             return await self.order_executor.place_order(
@@ -707,6 +721,149 @@ class OrderExecutor:
         # Initialize order manager
         self.order_manager = OrderManager(self.mt5, self.config, self)
 
+    def _get_atr(self, symbol: str, period: int = 14) -> float:
+        """Get ATR value for symbol - try technical analyzer first, fallback to manual calculation"""
+        try:
+            if hasattr(self, 'technical_analyzer') and self.technical_analyzer:
+                atr_value = self.technical_analyzer.get_atr(symbol, period)
+                if atr_value and atr_value > 0:
+                    return atr_value
+            # Default ATR values based on symbol type
+            if 'JPY' in symbol:
+                return 1.0
+            elif symbol == 'XAUUSD':
+                return 10.0
+            elif symbol == 'XAGUSD':
+                return 0.5
+            else:
+                return 0.001
+        except Exception as e:
+            self.logger.debug(f"Error getting ATR for {symbol}: {e}")
+            # Default fallbacks
+            if 'JPY' in symbol:
+                return 1.0
+            elif symbol == 'XAUUSD':
+                return 10.0
+            elif symbol == 'XAGUSD':
+                return 0.5
+            else:
+                return 0.001
+
+    def _validate_stop_order(self, symbol: str, signal: str, stop_price: float, current_price: float) -> tuple[bool, str]:
+        """Validate stop order before placing"""
+
+        try:
+            symbol_info = mt5.symbol_info(symbol)
+            if symbol_info is None:
+                return False, f"Symbol {symbol} not found"
+
+            min_distance = self._calculate_min_stop_distance(symbol, symbol_info)
+
+            if signal == "BUY":
+                # Buy stop must be above current price
+                if stop_price <= current_price:
+                    return False, f"Buy stop ({stop_price:.5f}) must be above current price ({current_price:.5f})"
+
+                # Must be minimum distance away
+                if stop_price - current_price < min_distance:
+                    return False, f"Buy stop too close (min: {min_distance:.5f} price units)"
+
+            elif signal == "SELL":
+                # Sell stop must be below current price
+                if stop_price >= current_price:
+                    return False, f"Sell stop ({stop_price:.5f}) must be below current price ({current_price:.5f})"
+
+                if current_price - stop_price < min_distance:
+                    return False, f"Sell stop too close (min: {min_distance:.5f} price units)"
+
+            return True, "Valid"
+
+        except Exception as e:
+            self.logger.error(f"Error validating stop order for {symbol}: {e}")
+            return False, f"Validation error: {str(e)}"
+
+    def _calculate_position_size(self, symbol: str, entry_price: float, stop_loss_price: float) -> float:
+        """Calculate position size based on risk management"""
+
+        try:
+            # Calculate stop loss distance in pips
+            symbol_info = mt5.symbol_info(symbol)
+            if symbol_info is None:
+                return 0.01
+
+            stop_distance = abs(entry_price - stop_loss_price)
+            pip_size = symbol_info.point * 10  # Assuming 5-digit broker
+            stop_pips = stop_distance / pip_size
+
+            # Use risk manager for position sizing if available
+            if hasattr(self, 'risk_manager') and self.risk_manager:
+                return self.risk_manager.calculate_position_size(symbol, stop_pips)
+
+            # Fallback calculation
+            risk_amount = self.config.get('trading', {}).get('risk_per_trade', 50.0)
+
+            # Simple pip value calculation
+            tick = mt5.symbol_info_tick(symbol)
+            if tick is None:
+                return 0.01
+
+            if symbol.endswith("USD"):
+                pip_value_per_lot = 10.0  # $10 per pip for 1 lot
+            elif "JPY" in symbol:
+                pip_value_per_lot = (0.01 * 100000) / tick.bid
+            else:
+                pip_value_per_lot = (0.0001 * 100000) / tick.bid
+
+            if pip_value_per_lot > 0 and stop_pips > 0:
+                position_size = risk_amount / (pip_value_per_lot * stop_pips)
+                # Apply lot size limits
+                min_lot = self.config.get('trading', {}).get('min_lot_size', 0.01)
+                max_lot = self.config.get('trading', {}).get('max_lot_size', 1.0)
+                position_size = max(min_lot, min(max_lot, position_size))
+                return round(position_size, 2)
+
+            return 0.01
+
+        except Exception as e:
+            logger.error(f"Error calculating position size for {symbol}: {e}")
+            return 0.01
+
+    def _calculate_sl_tp(self, symbol: str, signal: str, entry_price: float, atr: float) -> tuple[float, float]:
+        """Calculate stop loss and take profit prices using dynamic RR ratios"""
+
+        # Calculate stop loss distance using ATR-based method
+        stop_distance = self._calculate_stop_distance(symbol, signal, atr)
+
+        # Get RR ratio from config for this symbol
+        rr_ratios = self.config.get('trading_rules', {}).get('take_profit_rules', {}).get('rr_ratios', {})
+        rr_ratio = rr_ratios.get(symbol, 3.0)  # Default to 3.0 if not found
+
+        # Calculate take profit distance: stop_distance * rr_ratio
+        tp_distance = stop_distance * rr_ratio
+
+        if signal == "BUY":
+            stop_loss = entry_price - stop_distance
+            take_profit = entry_price + tp_distance
+        else:  # SELL
+            stop_loss = entry_price + stop_distance
+            take_profit = entry_price - tp_distance
+
+        logger.debug(
+            f"{symbol} {signal}: SL distance: {stop_distance:.5f}, RR ratio: {rr_ratio}, "
+            f"TP distance: {tp_distance:.5f}, SL: {stop_loss:.5f}, TP: {take_profit:.5f}"
+        )
+
+        return stop_loss, take_profit
+
+    def _calculate_order_expiration(self) -> int:
+        """Calculate order expiration timestamp"""
+
+        # Expire after configured hours
+        expiration = datetime.now().replace(hour=23, minute=59, second=0, microsecond=0)
+        # For orders placed during trading hours, expire at end of day
+        # For orders placed outside hours, expire after configured hours
+        return int(expiration.timestamp())
+
     def _calculate_stop_distance(self, symbol: str, signal: str, atr: float,
                                signal_data: Optional[Dict] = None) -> float:
         """
@@ -779,6 +936,16 @@ class OrderExecutor:
             # 3. Broker requirement * 1.5 (safety margin)
             stop_distance = max(atr_distance, min_distance, broker_min_distance)
             
+            # DEBUG LOGGING FOR METALS
+            if symbol in ['XAUUSD', 'XAGUSD']:
+                logger.info(f"🔍 [{symbol}] ATR SL DEBUG:")
+                logger.info(f"   Raw ATR: ${atr:.5f}")
+                logger.info(f"   ATR Multiplier: {atr_multiplier}")
+                logger.info(f"   ATR Distance: ${atr_distance:.5f}")
+                logger.info(f"   Min Distance: ${min_distance:.5f}")
+                logger.info(f"   Broker Min: ${broker_min_distance:.5f}")
+                logger.info(f"   Final SL Distance: ${stop_distance:.5f}")
+            
             self.logger.info(f"{symbol}: Calculated stop distance: {stop_distance:.5f} ({stop_distance/symbol_info.point:.1f} pips)")
             
             return stop_distance
@@ -833,6 +1000,16 @@ class OrderExecutor:
             
             # Calculate base TP distance
             tp_distance = atr_value * tp_multiplier
+
+            # DEBUG LOGGING FOR METALS
+            if symbol in ['XAUUSD', 'XAGUSD']:
+                logger.info(f"🔍 [{symbol}] ATR TP DEBUG:")
+                logger.info(f"   ATR Value: ${atr_value:.5f}")
+                logger.info(f"   TP Multiplier: {tp_multiplier}")
+                logger.info(f"   Raw TP Distance: ${tp_distance:.5f}")
+                logger.info(f"   Min TP Distance: ${min_tp_distance:.5f}")
+                logger.info(f"   Max TP Distance: ${max_tp_distance:.5f}")
+                logger.info(f"   Final TP Distance: ${tp_distance:.5f}")
             
             # Apply min/max constraints
             min_tp_pips = self.config.get('trading_rules', {}).get('take_profit_rules', {}).get('min_tp_pips', 20)
@@ -1165,6 +1342,7 @@ class OrderExecutor:
                           stop_loss: Optional[float] = None, take_profit: Optional[float] = None,
                           price: Optional[float] = None, comment: str = "", signal_data: Optional[Dict] = None) -> Dict:
         """Place order through MT5 - ASYNC - ONLY STOP ORDERS ALLOWED"""
+        logger.info(f"🔍 [OrderExecutor] place_order called for {symbol} {order_type}")
         try:
             # Check MT5 connection
             terminal_info = mt5.terminal_info()  # type: ignore
@@ -1418,7 +1596,9 @@ class OrderExecutor:
                         'error': f'Only stop orders allowed: {order_type} is not supported'}
 
             # Recalculate stop loss and take profit based on stop order price
-            if stop_loss is not None and price is not None:
+            if price is not None:
+                logger.info(f"🔍 [{symbol}] STARTING SL/TP CALCULATION - Price: {price:.5f}")
+                
                 # Get default pips from config
                 config = getattr(self, 'config', {})
                 default_sl_pips = config.get('trading', {}).get('default_sl_pips')
@@ -1434,17 +1614,55 @@ class OrderExecutor:
                 else:
                     pip_size = symbol_info.point
                 
-                # For stop orders, SL/TP are calculated from the stop order price
-                if order_type.lower() == 'buy_stop':
-                    # BUY STOP: SL below stop price, TP above stop price
-                    stop_loss = price - (default_sl_pips * pip_size)
-                    if take_profit is not None:
-                        take_profit = price + (default_tp_pips * pip_size)
-                elif order_type.lower() == 'sell_stop':
-                    # SELL STOP: SL above stop price, TP below stop price
-                    stop_loss = price + (default_sl_pips * pip_size)
-                    if take_profit is not None:
-                        take_profit = price - (default_tp_pips * pip_size)
+                # For metals, use ATR-based calculations instead of fixed pips
+                if symbol in ['XAUUSD', 'XAGUSD']:
+                    logger.info(f"🔍 [{symbol}] USING ATR-BASED CALCULATION")
+                    # Get ATR value
+                    atr = self.order_manager._get_atr(symbol)
+                    
+                    # Get ATR multipliers from config
+                    trading_rules = config.get('trading_rules', {}).get('stop_loss_rules', {})
+                    if symbol == 'XAUUSD':
+                        sl_multiplier = trading_rules.get('sl_atr_multiplier_gold', 1.5)
+                        tp_multiplier = config.get('trading_rules', {}).get('take_profit_rules', {}).get('tp_atr_multiplier_metals', 4.0)
+                    elif symbol == 'XAGUSD':
+                        sl_multiplier = trading_rules.get('sl_atr_multiplier_silver', 1.5)
+                        tp_multiplier = config.get('trading_rules', {}).get('take_profit_rules', {}).get('tp_atr_multiplier_metals', 4.0)
+                    
+                    # Calculate ATR-based distances
+                    sl_distance = atr * sl_multiplier
+                    tp_distance = atr * tp_multiplier
+                    
+                    # DEBUG LOGGING FOR METALS
+                    logger.info(f"🔍 [{symbol}] ATR-BASED SL/TP CALCULATION:")
+                    logger.info(f"   ATR Value: ${atr:.5f}")
+                    logger.info(f"   SL Multiplier: {sl_multiplier}")
+                    logger.info(f"   TP Multiplier: {tp_multiplier}")
+                    logger.info(f"   SL Distance: ${sl_distance:.5f}")
+                    logger.info(f"   TP Distance: ${tp_distance:.5f}")
+                    
+                    # Apply ATR-based SL/TP
+                    if order_type.lower() == 'buy_stop':
+                        stop_loss = price - sl_distance
+                        if take_profit is not None:
+                            take_profit = price + tp_distance
+                    elif order_type.lower() == 'sell_stop':
+                        stop_loss = price + sl_distance
+                        if take_profit is not None:
+                            take_profit = price - tp_distance
+                else:
+                    # For forex pairs, use pip-based calculations
+                    # For stop orders, SL/TP are calculated from the stop order price
+                    if order_type.lower() == 'buy_stop':
+                        # BUY STOP: SL below stop price, TP above stop price
+                        stop_loss = price - (default_sl_pips * pip_size)
+                        if take_profit is not None:
+                            take_profit = price + (default_tp_pips * pip_size)
+                    elif order_type.lower() == 'sell_stop':
+                        # SELL STOP: SL above stop price, TP below stop price
+                        stop_loss = price + (default_sl_pips * pip_size)
+                        if take_profit is not None:
+                            take_profit = price - (default_tp_pips * pip_size)
                 
                 # Round to symbol precision
                 stop_loss = round(stop_loss, symbol_info.digits)
@@ -1625,6 +1843,7 @@ class OrderExecutor:
             # If both market and pending orders failed, return the last error
             if result is None or result.retcode not in [10008, 10009, 10010]:
                 logger.error(f"All order types failed for {symbol}. Last error: {last_error}")
+                logger.info(f"🔍 [OrderExecutor] place_order returning all failed error for {symbol}")
                 return {
                     'success': False,
                     'error': last_error or 'All order types failed'
@@ -1737,6 +1956,7 @@ class OrderExecutor:
                     logger.error(f"[{symbol}] Recording traceback: {traceback.format_exc()}")
                     logger.error(f"[{symbol}] Recording parameters: ticket={result.order}, symbol={symbol}, order_type={order_type_str}, price={price}, signal_data_keys={list(signal_data.keys()) if signal_data else None}")
 
+                logger.info(f"🔍 [OrderExecutor] place_order returning success for {symbol}")
                 return {
                     'success': True,
                     'order': result.order,
@@ -1745,6 +1965,7 @@ class OrderExecutor:
 
         except Exception as e:
             logger.error(f"Error placing order: {e}")
+            logger.info(f"🔍 [OrderExecutor] place_order returning exception error for {symbol}")
             return {
                 'success': False,
                 'error': str(e)

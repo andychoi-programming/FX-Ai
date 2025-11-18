@@ -394,7 +394,15 @@ class TradingOrchestrator:
                             trades_attempted += 1
 
                             # Execute the trade
-                            trade_result = await self.trading_engine.execute_trade_with_validation(signal, self)
+                            self.logger.info(f"🔍 [ORCHESTRATOR] About to call trading_engine.execute_trade_with_validation for {symbol}")
+                            try:
+                                trade_result = await self.trading_engine.execute_trade_with_validation(signal, self)
+                                self.logger.info(f"🔍 [ORCHESTRATOR] trading_engine.execute_trade_with_validation returned: {trade_result}")
+                            except Exception as e:
+                                self.logger.error(f"🔍 [ORCHESTRATOR] Exception in trading_engine.execute_trade_with_validation: {e}")
+                                import traceback
+                                self.logger.error(f"🔍 [ORCHESTRATOR] Traceback: {traceback.format_exc()}")
+                                trade_result = {'success': False, 'error': f'Exception: {str(e)}'}
 
                             if trade_result and trade_result.get('success', False):
                                 trades_successful += 1

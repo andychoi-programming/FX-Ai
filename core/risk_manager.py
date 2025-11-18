@@ -582,37 +582,52 @@ class RiskManager:
     def validate_risk_reward(self, symbol: str, entry_price: float, stop_loss: float, take_profit: float) -> Tuple[bool, str]:
         """
         Validate that the risk-reward ratio meets the symbol-specific minimum requirements
-        
+
         Args:
             symbol: Trading symbol
             entry_price: Entry price
             stop_loss: Stop loss price
             take_profit: Take profit price
-            
+
         Returns:
             Tuple of (is_valid, reason)
         """
         try:
             # Get symbol-specific minimum RR ratio
             min_rr_ratio = self._get_symbol_min_rr(symbol)
-            
+
             # Calculate risk and reward distances
             risk_distance = abs(entry_price - stop_loss)
             reward_distance = abs(entry_price - take_profit)
-            
+
+            # DEBUG LOGGING FOR METALS
+            if symbol in ['XAUUSD', 'XAGUSD']:
+                logger.info(f"🔍 [{symbol}] RR DEBUG:")
+                logger.info(f"   Entry Price: ${entry_price:.5f}")
+                logger.info(f"   Stop Loss: ${stop_loss:.5f}")
+                logger.info(f"   Take Profit: ${take_profit:.5f}")
+                logger.info(f"   Risk Distance: ${risk_distance:.5f}")
+                logger.info(f"   Reward Distance: ${reward_distance:.5f}")
+                logger.info(f"   Required RR: {min_rr_ratio}:1")
+
             if risk_distance == 0:
                 return False, "Invalid stop loss: risk distance is zero"
-            
+
             # Calculate actual RR ratio
             actual_ratio = reward_distance / risk_distance
-            
+
+            # DEBUG LOGGING FOR METALS
+            if symbol in ['XAUUSD', 'XAGUSD']:
+                logger.info(f"   Calculated RR: {actual_ratio:.2f}:1")
+                logger.info(f"   Validation: {'PASS' if actual_ratio >= (min_rr_ratio - 0.05) else 'FAIL'}")
+
             # Check if it meets minimum requirement (with small tolerance for floating point precision)
             if actual_ratio < (min_rr_ratio - 0.05):
                 return False, f"Risk-reward ratio too low: {actual_ratio:.2f}:1 < {min_rr_ratio}:1 required for {symbol}"
-            
+
             logger.info(f"[{symbol}] RR validation passed: {actual_ratio:.2f}:1 >= {min_rr_ratio}:1")
             return True, f"RR ratio validated: {actual_ratio:.2f}:1"
-            
+
         except Exception as e:
             logger.error(f"Error validating risk-reward ratio for {symbol}: {e}")
             return False, f"RR validation error: {e}"

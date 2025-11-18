@@ -272,48 +272,82 @@ class TradingEngine:
         Returns:
             Trade result or None if validation fails
         """
+        print(f"🔍 [TradingEngine] execute_trade_with_validation ENTERED for {signal.get('symbol')} {signal.get('direction')}")
+        logger.info(f"🔍 [TradingEngine] execute_trade_with_validation ENTERED for {signal.get('symbol')} {signal.get('direction')}")
         try:
+            print(f"🔍 [TradingEngine] execute_trade_with_validation called for {signal.get('symbol')} {signal.get('direction')}")
+            logger.info(f"🔍 [TradingEngine] execute_trade_with_validation called for {signal.get('symbol')} {signal.get('direction')}")
+
             # 1. Check data freshness if orchestrator available
+            print(f"🔍 [TradingEngine] Checking if orchestrator available: {orchestrator is not None}")
             if orchestrator and hasattr(orchestrator, 'log_system_health'):
+                print("🔍 [TradingEngine] Checking system health...")
+                self.logger.info("🔍 [TradingEngine] Checking system health...")
                 if not orchestrator.log_system_health():
+                    print("🔍 [TradingEngine] System health check FAILED")
                     self.logger.error("[FAIL] Trade rejected - System health check failed")
                     return None
+                print("🔍 [TradingEngine] System health check PASSED")
+                self.logger.info("🔍 [TradingEngine] System health check passed")
 
             # 2. Check daily limits
+            print(f"🔍 [TradingEngine] Checking if daily_limit_tracker available: {orchestrator and hasattr(orchestrator, 'daily_limit_tracker')}")
             if orchestrator and hasattr(orchestrator, 'daily_limit_tracker'):
+                print("🔍 [TradingEngine] Checking daily limits...")
+                self.logger.info("🔍 [TradingEngine] Checking daily limits...")
                 if not orchestrator.daily_limit_tracker.can_trade(signal['symbol']):
+                    print(f"🔍 [TradingEngine] Daily limit check FAILED for {signal['symbol']}")
                     self.logger.error(f"[FAIL] Trade rejected - Daily limit reached for {signal['symbol']}")
                     return None
+                print("🔍 [TradingEngine] Daily limits check PASSED")
+                self.logger.info("🔍 [TradingEngine] Daily limits check passed")
 
             # 3. Validate position size
+            print(f"🔍 [TradingEngine] Checking if risk_manager available: {orchestrator and hasattr(orchestrator, 'risk_manager')}")
             if orchestrator and hasattr(orchestrator, 'risk_manager'):
+                print("🔍 [TradingEngine] Validating position size...")
+                self.logger.info("🔍 [TradingEngine] Validating position size...")
                 account_balance = 0
                 if hasattr(orchestrator, 'mt5') and orchestrator.mt5:
                     account_info = orchestrator.mt5.get_account_info()
                     account_balance = account_info.get('balance', 0) if account_info else 0
 
+                position_size = signal.get('position_size', 0)
+                print(f"🔍 [TradingEngine] Position size: {position_size}, Account balance: ${account_balance:,.2f}")
+                self.logger.info(f"🔍 [TradingEngine] Position size: {position_size}, Account balance: ${account_balance:,.2f}")
+
                 if not orchestrator.risk_manager.validate_position_size(
                     signal['symbol'],
-                    signal.get('position_size', 0),
+                    position_size,
                     account_balance
                 ):
+                    print("🔍 [TradingEngine] Position size validation FAILED")
                     self.logger.error("[FAIL] Trade rejected - Position size validation failed")
                     self.logger.error(f"   Symbol: {signal['symbol']}")
                     self.logger.error(f"   Position size: {signal.get('position_size', 0)}")
                     self.logger.error(f"   Account balance: ${account_balance:,.2f}")
                     return None
+                print("🔍 [TradingEngine] Position size validation PASSED")
+                self.logger.info("🔍 [TradingEngine] Position size validation passed")
 
             # 4. Execute trade directly (circuit breaker bypassed for now due to async issues)
+            print("🔍 [TradingEngine] About to call _execute_trade_safe...")
+            self.logger.info("🔍 [TradingEngine] About to call _execute_trade_safe...")
             try:
                 result = await self._execute_trade_safe(signal)
+                print(f"🔍 [TradingEngine] _execute_trade_safe returned: {result}")
+                self.logger.info(f"🔍 [TradingEngine] _execute_trade_safe returned: {result}")
             except Exception as e:
+                print(f"🔍 [TradingEngine] _execute_trade_safe EXCEPTION: {e}")
                 self.logger.error(f"[FAIL] Trade rejected - Execution error: {e}")
                 return None
 
             # 5. Record trade in daily tracker
+            print(f"🔍 [TradingEngine] Checking if should record trade: result={result}, success={result and result.get('success') if result else False}")
             if orchestrator and hasattr(orchestrator, 'daily_limit_tracker') and result and result.get('success'):
                 orchestrator.daily_limit_tracker.record_trade(signal['symbol'])
 
+            print(f"🔍 [TradingEngine] Method returning: {result}")
             return result
 
         except Exception as e:
@@ -327,13 +361,17 @@ class TradingEngine:
     async def execute_trade(self, signal: Dict) -> Optional[Dict]:
         """Execute a trading signal - main entry point for trade execution"""
         try:
+            print(f"🔍 [TradingEngine] execute_trade called with signal: {signal}")
+            self.logger.info(f"🔍 [TradingEngine] execute_trade called with signal: {signal}")
             symbol = signal['symbol']
             direction = signal['direction']
             
             # Calculate position size if not provided
             if 'position_size' not in signal:
                 default_sl_pips = self.config.get('trading', {}).get('default_sl_pips', 20)
+                self.logger.info(f"🔍 [TradingEngine] Calculating position size for {symbol} with default_sl_pips={default_sl_pips}")
                 signal['position_size'] = self.risk_manager.calculate_position_size(symbol, default_sl_pips)
+                self.logger.info(f"🔍 [TradingEngine] Calculated position_size: {signal['position_size']}")
             
             volume = signal['position_size']
             stop_loss = signal.get('stop_loss')
@@ -341,24 +379,34 @@ class TradingEngine:
             entry_price = signal.get('entry_price')
 
             # Use OrderManager for hybrid order placement
-            result = await self.order_executor.order_manager.place_order(
-                symbol=symbol,
-                signal=direction,
-                entry_strategy="stop",  # Default to stop orders
-                volume=volume,
-                stop_loss=stop_loss,
-                take_profit=take_profit,
-                signal_data={
-                    'technical_score': signal.get('technical_score', 0.5),
-                    'fundamental_score': signal.get('fundamental_score', 0.5),
-                    'sentiment_score': signal.get('sentiment_score', 0.5),
-                    'ml_score': signal.get('ml_score', 0.0),
-                    'signal_strength': signal.get('signal_strength', 0.5),
-                    'risk_multiplier': signal.get('risk_multiplier', 1.0)
-                }
-            )
+            self.logger.info(f"🔍 [TradingEngine] About to call order_manager.place_order for {symbol} {direction}")
+            try:
+                result = await self.order_executor.order_manager.place_order(
+                    symbol=symbol,
+                    signal=direction,
+                    entry_strategy="stop",  # Default to stop orders
+                    volume=volume,
+                    stop_loss=stop_loss,
+                    take_profit=take_profit,
+                    signal_data={
+                        'technical_score': signal.get('technical_score', 0.5),
+                        'fundamental_score': signal.get('fundamental_score', 0.5),
+                        'sentiment_score': signal.get('sentiment_score', 0.5),
+                        'ml_score': signal.get('ml_score', 0.0),
+                        'signal_strength': signal.get('signal_strength', 0.5),
+                        'risk_multiplier': signal.get('risk_multiplier', 1.0)
+                    }
+                )
+                self.logger.info(f"🔍 [TradingEngine] order_manager.place_order returned: {result}")
+                self.logger.info(f"🔍 [TradingEngine] Result type: {type(result)}, Result content: {result}")
+            except Exception as e:
+                self.logger.error(f"🔍 [TradingEngine] Exception in order_manager.place_order: {e}")
+                import traceback
+                self.logger.error(f"🔍 [TradingEngine] Traceback: {traceback.format_exc()}")
+                result = {'success': False, 'error': f'Exception: {str(e)}'}
 
             if result and result.get('success', False):
+                self.logger.info(f"🔍 [TradingEngine] Result is truthy and has success=True, updating result")
                 # Add signal data to result for monitoring
                 result.update({
                     'symbol': symbol,
@@ -374,6 +422,8 @@ class TradingEngine:
                     'signal_strength': signal.get('signal_strength', 0.5),
                     'timestamp': self.mt5.get_server_time() if self.mt5 else datetime.now()
                 })
+            else:
+                self.logger.info(f"🔍 [TradingEngine] Result is falsy or success=False: result={result}, result.get('success')={result.get('success') if result else 'N/A'}")
 
             return result
 
