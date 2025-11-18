@@ -249,6 +249,33 @@ class OrderManager:
         else:
             return current_price * atr_fallbacks.get('forex_atr_percentage', 0.002)
 
+    def _calculate_min_stop_distance(self, symbol: str, symbol_info) -> float:
+        """Calculate minimum stop distance in price units - Professional Day Trading Standards"""
+
+        # Get professional minimums from config
+        stop_loss_config = self.config.get('trading_rules', {}).get('stop_loss_rules', {})
+        professional_minimums = stop_loss_config.get('professional_minimums', {})
+
+        # Get broker's technical requirement
+        stops_level = getattr(symbol_info, 'trade_stops_level', 0)
+        point_size = symbol_info.point
+        broker_minimum = stops_level * point_size
+
+        # Get professional minimum for this symbol (default to 15 pips if not specified)
+        professional_minimum = professional_minimums.get(symbol, 0.0015)
+
+        # Use the MAXIMUM of:
+        # 1. Professional minimum (allows normal market movement)
+        # 2. Broker requirement * 1.5 (safety margin above broker min)
+        final_minimum = max(professional_minimum, broker_minimum * 1.5)
+
+        logger.debug(
+            f"{symbol}: Min stop - Professional: {professional_minimum:.5f}, "
+            f"Broker: {broker_minimum:.5f}, Final: {final_minimum:.5f}"
+        )
+
+        return final_minimum
+
     def _get_pair_type(self, symbol: str) -> str:
         """Classify symbol for ATR multiplier selection"""
 
@@ -561,6 +588,102 @@ class OrderManager:
         # For now, just cancel - modification logic would be more complex
         self._cancel_order(order.ticket)
         logger.info(f"Cancelled order {order.ticket} due to price movement")
+
+    def _calculate_stop_distance(self, symbol, signal, atr, signal_data=None):
+        """Calculate stop loss distance based on ATR"""
+        try:
+            # Get ATR if not provided
+            if atr is None:
+                atr = self._get_atr(symbol)
+
+            # Base multiplier
+            sl_multiplier = 3.0
+
+            # Adjust for different symbols
+            if symbol in ['XAUUSD', 'XAGUSD']:
+                sl_multiplier = 2.5
+
+            # Calculate distance
+            stop_distance = atr * sl_multiplier
+
+            # Set min/max limits
+            if 'JPY' in symbol:
+                stop_distance = max(0.30, min(stop_distance, 5.00))
+            elif symbol == 'XAUUSD':
+                stop_distance = max(5.0, min(stop_distance, 50.0))
+            elif symbol == 'XAGUSD':
+                stop_distance = max(0.25, min(stop_distance, 5.0))
+            else:
+                stop_distance = max(0.001, min(stop_distance, 0.005))
+
+            return stop_distance
+
+        except Exception as e:
+            # Default fallbacks
+            if 'JPY' in symbol:
+                return 1.0
+            elif symbol == 'XAUUSD':
+                return 10.0
+            elif symbol == 'XAGUSD':
+                return 0.5
+            else:
+                return 0.002
+
+    def _calculate_take_profit_distance(self, symbol, order_type):
+        """Calculate take profit distance based on ATR"""
+        try:
+            # Get ATR
+            atr = self._get_atr(symbol)
+
+            # Base multiplier
+            tp_multiplier = 6.0
+
+            # Adjust for metals
+            if symbol in ['XAUUSD', 'XAGUSD']:
+                tp_multiplier = 5.0
+
+            # Calculate distance
+            tp_distance = atr * tp_multiplier
+
+            # Apply limits
+            if 'JPY' in symbol:
+                tp_distance = max(0.50, min(tp_distance, 10.00))
+            elif symbol == 'XAUUSD':
+                tp_distance = max(10.0, min(tp_distance, 100.0))
+            elif symbol == 'XAGUSD':
+                tp_distance = max(0.50, min(tp_distance, 10.0))
+            else:
+                tp_distance = max(0.002, min(tp_distance, 0.010))
+
+            return tp_distance
+
+        except Exception as e:
+            # Default fallbacks
+            if 'JPY' in symbol:
+                return 2.0
+            elif symbol == 'XAUUSD':
+                return 20.0
+            elif symbol == 'XAGUSD':
+                return 1.0
+            else:
+                return 0.004
+
+    def _get_atr(self, symbol):
+        """Get ATR from technical analyzer"""
+        try:
+            if hasattr(self, 'technical_analyzer') and self.technical_analyzer:
+                return self.technical_analyzer.get_atr(symbol)
+            # Default ATR values
+            if 'JPY' in symbol:
+                return 1.0
+            elif symbol == 'XAUUSD':
+                return 10.0
+            elif symbol == 'XAGUSD':
+                return 0.5
+            else:
+                return 0.001
+        except:
+            return 0.001
 
 
 class OrderExecutor:
