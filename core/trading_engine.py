@@ -427,6 +427,9 @@ class TradingEngine:
                 })
             else:
                 self.logger.info(f"🔍 [TradingEngine] Result is falsy or success=False: result={result}, result.get('success')={result.get('success') if result else 'N/A'}")
+                # Ensure we always return a dict
+                if not result:
+                    result = {'success': False, 'error': 'Unknown error - result is None'}
 
             return result
 
@@ -435,7 +438,7 @@ class TradingEngine:
             logger.error(f"   Signal details: {signal}")
             import traceback
             logger.error(f"   Traceback: {traceback.format_exc()}")
-            return None
+            return {'success': False, 'error': f'Critical error: {str(e)}'}
 
     async def manage_positions(self, symbol: str, time_manager=None, adaptive_learning=None):
         """Manage open positions for a symbol - delegated to PositionManager"""

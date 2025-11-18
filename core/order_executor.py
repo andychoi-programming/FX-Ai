@@ -64,17 +64,25 @@ class OrderManager:
 
         if entry_strategy == "stop":
             logger.info(f"🔍 [OrderManager] Calling _place_stop_order")
-            return await self._place_stop_order(symbol, signal, volume, stop_loss, take_profit, signal_data)
+            result = await self._place_stop_order(symbol, signal, volume, stop_loss, take_profit, signal_data)
+            logger.info(f"🔍 [OrderManager] _place_stop_order returned: {result}")
+            return result
         elif entry_strategy == "market":
-            return await self._place_market_order(symbol, signal, volume, stop_loss, take_profit, signal_data)
+            result = await self._place_market_order(symbol, signal, volume, stop_loss, take_profit, signal_data)
+            logger.info(f"🔍 [OrderManager] _place_market_order returned: {result}")
+            return result
         elif entry_strategy == "limit":
-            return await self._place_limit_order(symbol, signal, volume, stop_loss, take_profit, signal_data)
+            result = await self._place_limit_order(symbol, signal, volume, stop_loss, take_profit, signal_data)
+            logger.info(f"🔍 [OrderManager] _place_limit_order returned: {result}")
+            return result
         else:
             logger.info(f"🔍 [OrderManager] Returning unknown strategy error for {symbol}")
-            return {
+            result = {
                 'success': False,
                 'error': f'Unknown entry strategy: {entry_strategy}'
             }
+            logger.info(f"🔍 [OrderManager] Returning error result: {result}")
+            return result
 
     async def _place_stop_order(self, symbol: str, signal: str, volume: Optional[float] = None,
                                stop_loss: Optional[float] = None, take_profit: Optional[float] = None,
