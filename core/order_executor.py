@@ -186,7 +186,7 @@ class OrderManager:
         """Get ATR value for symbol - try technical analyzer first, fallback to manual calculation"""
         
         # Try to get ATR from technical analyzer if available
-        if hasattr(self.order_executor, 'technical_analyzer') and self.order_executor.technical_analyzer:
+        if self.order_executor and hasattr(self.order_executor, 'technical_analyzer') and self.order_executor.technical_analyzer:
             try:
                 atr_value = self.order_executor.technical_analyzer.get_atr(symbol, period)
                 if atr_value and atr_value > 0:
