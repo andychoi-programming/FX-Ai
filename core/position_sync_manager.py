@@ -98,7 +98,9 @@ class PositionSyncManager:
                 cursor.execute("""
                     SELECT ticket, symbol, direction, entry_price, volume, entry_time
                     FROM trades
-                    WHERE status = 'open' AND exit_time IS NULL
+                    WHERE (status IS NULL OR status = 'open' OR status = 'OPEN') 
+                      AND exit_time IS NULL 
+                      AND ticket IS NOT NULL
                     ORDER BY entry_time DESC
                 """)
                 rows = cursor.fetchall()

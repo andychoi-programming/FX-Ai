@@ -1154,10 +1154,12 @@ class OrderExecutor:
             else:
                 logger.debug(f"Terminal filling mode restrictions not available, using symbol modes only")
 
-            # Try modes in order of preference, but be more permissive
-            if filling_modes & mt5.ORDER_FILLING_IOC:
+            # Try modes in order of preference: FOK first (most reliable), then IOC, then RETURN
+            if filling_modes & mt5.ORDER_FILLING_FOK:
+                return mt5.ORDER_FILLING_FOK
+            elif filling_modes & mt5.ORDER_FILLING_IOC:
                 return mt5.ORDER_FILLING_IOC
-            elif filling_modes & mt5.ORDER_FILLING_FOK:
+            elif filling_modes & mt5.ORDER_FILLING_RETURN:
                 return mt5.ORDER_FILLING_FOK
             elif filling_modes & mt5.ORDER_FILLING_RETURN:
                 return mt5.ORDER_FILLING_RETURN
@@ -1857,7 +1859,7 @@ class OrderExecutor:
                         if filling_mode is not None:
                             request["type_filling"] = filling_mode
                         else:
-                            request["type_filling"] = mt5.ORDER_FILLING_IOC
+                            request["type_filling"] = mt5.ORDER_FILLING_FOK
 
                     # Note: SL/TP are included in pending order requests and will be applied when order fills
                     # For market orders, SL/TP will be set after order placement using TRADE_ACTION_SLTP
