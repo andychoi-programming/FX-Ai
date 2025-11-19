@@ -164,17 +164,76 @@ class OrderManager:
             # Set order expiration
             expiration = self._calculate_order_expiration()
 
-            # Place the stop order
-            return await self.order_executor.place_order(
-                symbol=symbol,
-                order_type=f"{signal.lower()}_stop",
-                volume=volume,
-                stop_loss=stop_loss,
-                take_profit=take_profit,
-                price=stop_price,
-                comment=f"FX-Ai Stop Order ({signal})",
-                signal_data=signal_data
-            )
+            # Place the stop order directly
+            try:
+                # Get symbol info for validation
+                symbol_info = mt5.symbol_info(symbol)
+                if symbol_info is None:
+                    return {'success': False, 'error': f'Symbol {symbol} not found'}
+
+                # Ensure stop price meets broker requirements
+                stops_level = getattr(symbol_info, 'trade_stops_level', 20)
+                min_distance = stops_level * symbol_info.point * 1.5  # 1.5x safety margin
+
+                if signal == "BUY":
+                    min_price = current_price + min_distance
+                    if stop_price < min_price:
+                        logger.warning(f"Adjusting BUY_STOP price from {stop_price:.5f} to {min_price:.5f}")
+                        stop_price = min_price
+                    mt5_order_type = mt5.ORDER_TYPE_BUY_STOP
+                else:  # SELL
+                    max_price = current_price - min_distance
+                    if stop_price > max_price:
+                        logger.warning(f"Adjusting SELL_STOP price from {stop_price:.5f} to {max_price:.5f}")
+                        stop_price = max_price
+                    mt5_order_type = mt5.ORDER_TYPE_SELL_STOP
+
+                # Create stop order request (NO filling mode for pending orders!)
+                request = {
+                    "action": mt5.TRADE_ACTION_PENDING,
+                    "symbol": symbol,
+                    "volume": volume,
+                    "type": mt5_order_type,
+                    "price": round(stop_price, symbol_info.digits),
+                    "magic": self.magic_number,
+                    "comment": f"FX-Ai Stop Order ({signal})",
+                    "type_time": mt5.ORDER_TIME_GTC,  # GTC for stop orders, not DAY
+                }
+
+                # Add SL/TP if provided
+                if stop_loss is not None:
+                    request["sl"] = round(stop_loss, symbol_info.digits)
+                if take_profit is not None:
+                    request["tp"] = round(take_profit, symbol_info.digits)
+
+                logger.info(f"📋 Placing {signal} STOP order: {symbol} {volume} lots @ {stop_price:.5f}")
+
+                # Send the stop order
+                result = mt5.order_send(request)
+
+                if result and result.retcode == mt5.TRADE_RETCODE_DONE:
+                    ticket = getattr(result, 'order', None)
+                    logger.info(f"✅ Stop order placed successfully! Ticket: {ticket}")
+                    return {
+                        'success': True,
+                        'ticket': ticket,
+                        'price': stop_price,
+                        'pending': True
+                    }
+                else:
+                    retcode = result.retcode if result else 'None'
+                    comment = getattr(result, 'comment', '') if result else 'No result'
+                    logger.error(f"❌ Stop order failed: Retcode {retcode}, Comment: {comment}")
+                    return {
+                        'success': False,
+                        'error': f'Stop order failed with retcode {retcode}: {comment}',
+                        'retcode': retcode,
+                        'comment': comment
+                    }
+
+            except Exception as e:
+                logger.error(f"Error executing stop order: {e}")
+                return {'success': False, 'error': str(e)}
 
         except Exception as e:
             logger.error(f"Error placing stop order for {symbol}: {e}")
