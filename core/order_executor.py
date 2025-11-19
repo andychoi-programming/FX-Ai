@@ -32,6 +32,34 @@ class OrderManager:
         validation_config = order_mgmt_config.get('validation', {})
         self.pre_place_validation = validation_config.get('pre_place_validation', True)
 
+    def get_filling_mode(self, symbol: str) -> int:
+        """
+        Get the correct filling mode for a symbol
+        This is the KEY FIX for Error 10030
+        """
+        try:
+            symbol_info = mt5.symbol_info(symbol)
+
+            if symbol_info is None:
+                logger.warning(f"No symbol info for {symbol}, using RETURN mode")
+                return mt5.ORDER_FILLING_RETURN  # TIOMarkets default
+
+            # Check supported modes in order of preference
+            # TIOMarkets typically uses RETURN (Market Execution)
+            if symbol_info.filling_mode & 4:  # RETURN (bit 2)
+                return mt5.ORDER_FILLING_RETURN
+            elif symbol_info.filling_mode & 2:  # IOC (bit 1)
+                return mt5.ORDER_FILLING_IOC
+            elif symbol_info.filling_mode & 1:  # FOK (bit 0)
+                return mt5.ORDER_FILLING_FOK
+            else:
+                logger.warning(f"No supported filling modes for {symbol}, using RETURN")
+                return mt5.ORDER_FILLING_RETURN
+
+        except Exception as e:
+            logger.error(f"Error getting filling mode for {symbol}: {e}")
+            return mt5.ORDER_FILLING_RETURN  # Safe default
+
     async def place_order(self, symbol: str, signal: str, entry_strategy: str = None,
                          volume: Optional[float] = None, stop_loss: Optional[float] = None,
                          take_profit: Optional[float] = None, signal_data: Optional[Dict] = None) -> Dict:
@@ -98,7 +126,7 @@ class OrderManager:
                 return {'success': False, 'error': f'Failed to get tick data for {symbol}'}
 
             current_price = tick.ask if signal == "BUY" else tick.bid
-            atr = self.order_executor._get_atr(symbol)
+            atr = self._get_atr(symbol)
             
             logger.info(f"🔍 [OrderManager] {symbol}: Current price: {current_price:.5f}, ATR: {atr:.5f}")
 
@@ -114,18 +142,18 @@ class OrderManager:
             logger.info(f"🔍 [OrderManager] {symbol}: Stop distance: {stop_distance:.5f}, Stop price: {stop_price:.5f}")
 
             # Validate stop order before placing
-            is_valid, validation_error = self.order_executor._validate_stop_order(symbol, signal, stop_price, current_price)
+            is_valid, validation_error = self._validate_stop_order(symbol, signal, stop_price, current_price)
             if not is_valid:
                 return {'success': False, 'error': validation_error}
 
             # Calculate volume if not provided
             if volume is None:
-                volume = self.order_executor._calculate_position_size(symbol, stop_price, stop_loss or (stop_price - stop_distance))
+                volume = self._calculate_position_size(symbol, stop_price, stop_loss or (stop_price - stop_distance))
 
             # Calculate SL/TP if not provided
             if stop_loss is None or take_profit is None:
                 logger.info(f"🔍 [OrderManager] Calculating SL/TP for {symbol}")
-                sl_price, tp_price = self.order_executor._calculate_sl_tp(symbol, signal, stop_price, atr)
+                sl_price, tp_price = self._calculate_sl_tp(symbol, signal, stop_price, atr)
                 if stop_loss is None:
                     stop_loss = sl_price
                 if take_profit is None:
@@ -134,7 +162,7 @@ class OrderManager:
             logger.info(f"🔍 [OrderManager] {symbol}: Final SL: {stop_loss:.5f}, TP: {take_profit:.5f}")
 
             # Set order expiration
-            expiration = self.order_executor._calculate_order_expiration()
+            expiration = self._calculate_order_expiration()
 
             # Place the stop order
             return await self.order_executor.place_order(
@@ -180,16 +208,74 @@ class OrderManager:
                 if take_profit is None:
                     take_profit = tp_price
 
-            # Place market order
-            return await self.order_executor.place_order(
-                symbol=symbol,
-                order_type=signal.lower(),
-                volume=volume,
-                stop_loss=stop_loss,
-                take_profit=take_profit,
-                comment=f"FX-Ai Market Order ({signal})",
-                signal_data=signal_data
-            )
+            # Place market order directly
+            try:
+                # Get current price
+                tick = mt5.symbol_info_tick(symbol)
+                if tick is None:
+                    return {'success': False, 'error': f'Cannot get tick data for {symbol}'}
+
+                # Determine order type
+                if signal.upper() == "BUY":
+                    order_type_mt5 = mt5.ORDER_TYPE_BUY
+                    price = tick.ask
+                elif signal.upper() == "SELL":
+                    order_type_mt5 = mt5.ORDER_TYPE_SELL
+                    price = tick.bid
+                else:
+                    return {'success': False, 'error': f'Invalid signal: {signal}'}
+
+                # Get the correct filling mode for this symbol
+                filling_mode = self.get_filling_mode(symbol)
+
+                # Create market order request
+                request = {
+                    "action": mt5.TRADE_ACTION_DEAL,
+                    "symbol": symbol,
+                    "volume": volume,
+                    "type": order_type_mt5,
+                    "price": price,
+                    "deviation": 10,
+                    "magic": self.magic_number,
+                    "comment": f"FX-Ai Market Order ({signal})",
+                    "type_time": mt5.ORDER_TIME_GTC,
+                    "type_filling": filling_mode,  # THIS IS THE KEY FIX!
+                }
+
+                # Add SL/TP if provided
+                if stop_loss is not None:
+                    request["sl"] = stop_loss
+                if take_profit is not None:
+                    request["tp"] = take_profit
+
+                logger.info(f"📊 Placing market order: {symbol} {signal} {volume} lots @ {price} (filling mode: {filling_mode})")
+
+                # Send the order
+                result = mt5.order_send(request)
+
+                if result and result.retcode == mt5.TRADE_RETCODE_DONE:
+                    ticket = getattr(result, 'order', None)
+                    logger.info(f"✅ Market order executed successfully! Ticket: {ticket}")
+                    return {
+                        'success': True,
+                        'ticket': ticket,
+                        'price': price,
+                        'volume': volume
+                    }
+                else:
+                    retcode = result.retcode if result else 'None'
+                    comment = getattr(result, 'comment', '') if result else 'No result'
+                    logger.error(f"❌ Market order failed: Retcode {retcode}, Comment: {comment}")
+                    return {
+                        'success': False,
+                        'error': f'Order failed with retcode {retcode}: {comment}',
+                        'retcode': retcode,
+                        'comment': comment
+                    }
+
+            except Exception as e:
+                logger.error(f"Error executing market order: {e}")
+                return {'success': False, 'error': str(e)}
 
         except Exception as e:
             logger.error(f"Error placing market order for {symbol}: {e}")
@@ -358,7 +444,7 @@ class OrderManager:
             if symbol_info is None:
                 return False, f"Symbol {symbol} not found"
 
-            min_distance = self.order_executor._calculate_min_stop_distance(symbol, symbol_info)
+            min_distance = self._calculate_min_stop_distance(symbol, symbol_info)
 
             if signal == "BUY":
                 # Buy stop must be above current price
@@ -382,6 +468,35 @@ class OrderManager:
         except Exception as e:
             logger.error(f"Error validating stop order for {symbol}: {e}")
             return False, f"Validation error: {str(e)}"
+
+    def _calculate_stop_distance(self, symbol: str, signal: str, atr: float, signal_data: Optional[Dict] = None) -> float:
+        """Calculate optimal stop distance based on ATR and market conditions"""
+
+        try:
+            # Base stop distance on ATR
+            base_distance = atr * 1.5  # 1.5 ATR for stop distance
+
+            # Adjust based on signal strength if available
+            if signal_data:
+                signal_strength = signal_data.get('strength', 0.5)
+                # Stronger signals allow tighter stops
+                if signal_strength > 0.7:
+                    base_distance *= 0.8
+                elif signal_strength < 0.3:
+                    base_distance *= 1.2
+
+            # Ensure minimum stop distance
+            symbol_info = mt5.symbol_info(symbol)
+            if symbol_info:
+                min_distance = self._calculate_min_stop_distance(symbol, symbol_info)
+                base_distance = max(base_distance, min_distance)
+
+            return base_distance
+
+        except Exception as e:
+            logger.error(f"Error calculating stop distance for {symbol}: {e}")
+            # Fallback to ATR * 2
+            return atr * 2.0
 
     def _calculate_position_size(self, symbol: str, entry_price: float, stop_loss_price: float) -> float:
         """Calculate position size based on risk management"""
