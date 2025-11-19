@@ -68,7 +68,7 @@
       "_comment": "Distance type: 'pips' or 'percentage'. If distance exceeds reanalysis threshold, analysis folder performs re-evaluation"
     },
     "order_management": {
-      "default_entry_strategy": "stop",
+      "default_entry_strategy": "market",
       "order_expiration_hours": 24,
       "pending_order_management": {
         "enabled": true,
