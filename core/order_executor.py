@@ -1154,25 +1154,22 @@ class OrderExecutor:
             else:
                 logger.debug(f"Terminal filling mode restrictions not available, using symbol modes only")
 
-            # Try modes in order of preference: RETURN first (for TIOMarkets), then IOC, then FOK
-            if filling_modes & mt5.ORDER_FILLING_RETURN:
-                return mt5.ORDER_FILLING_RETURN
-            elif filling_modes & mt5.ORDER_FILLING_IOC:
-                return mt5.ORDER_FILLING_IOC
-            elif filling_modes & mt5.ORDER_FILLING_FOK:
+            # For TIOMarkets, prioritize what actually works over symbol claims
+            # FOK (0) works in practice even if symbol says otherwise
+            if filling_modes & mt5.ORDER_FILLING_FOK:
                 return mt5.ORDER_FILLING_FOK
+            # IOC (1) is claimed to be supported but fails in practice
+            # RETURN (2) may work for some brokers
+            elif filling_modes & mt5.ORDER_FILLING_RETURN:
+                return mt5.ORDER_FILLING_RETURN
             else:
-                # If no standard modes supported, try immediate or return
-                logger.warning(f"{symbol} doesn't support standard filling modes, trying alternatives")
-                if filling_modes & mt5.ORDER_FILLING_IMMEDIATE:
-                    return mt5.ORDER_FILLING_IMMEDIATE
-                else:
-                    logger.error(f"{symbol} has no supported filling modes: {filling_modes}")
-                    return mt5.ORDER_FILLING_RETURN  # Last resort
+                # Default to FOK as it works in practice for TIOMarkets
+                self.logger.debug(f"{symbol} using FOK as fallback (works in practice)")
+                return mt5.ORDER_FILLING_FOK
 
         except Exception as e:
             logger.error(f"Error getting filling mode for {symbol}: {e}")
-            return mt5.ORDER_FILLING_RETURN
+            return mt5.ORDER_FILLING_FOK
 
     def _calculate_min_stop_distance(self, symbol: str, symbol_info) -> float:
         """Calculate minimum stop distance in price units - Professional Day Trading Standards"""
@@ -1857,7 +1854,7 @@ class OrderExecutor:
                         if filling_mode is not None:
                             request["type_filling"] = filling_mode
                         else:
-                            request["type_filling"] = mt5.ORDER_FILLING_RETURN
+                            request["type_filling"] = self.get_filling_mode(symbol)
 
                     # Note: SL/TP are included in pending order requests and will be applied when order fills
                     # For market orders, SL/TP will be set after order placement using TRADE_ACTION_SLTP
@@ -2131,7 +2128,7 @@ class OrderExecutor:
                 "magic": self.magic_number,
                 "comment": comment or "FX-Ai Pending",
                 "type_time": mt5.ORDER_TIME_GTC,  # Good till cancelled
-                "type_filling": mt5.ORDER_FILLING_RETURN,  # Return remaining
+                # Note: Pending orders don't use filling modes
             }
 
             # Add stop loss and take profit if provided

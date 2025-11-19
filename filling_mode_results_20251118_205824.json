@@ -1,0 +1,254 @@
+{
+  "EURUSD": {
+    "symbol": "EURUSD",
+    "symbol_filling_modes": 1,
+    "modes": {
+      "FOK": {
+        "supported": true,
+        "retcode": 0
+      },
+      "IOC": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      },
+      "RETURN": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      }
+    },
+    "recommended": "FOK"
+  },
+  "GBPUSD": {
+    "symbol": "GBPUSD",
+    "symbol_filling_modes": 1,
+    "modes": {
+      "FOK": {
+        "supported": true,
+        "retcode": 0
+      },
+      "IOC": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      },
+      "RETURN": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      }
+    },
+    "recommended": "FOK"
+  },
+  "USDJPY": {
+    "symbol": "USDJPY",
+    "symbol_filling_modes": 1,
+    "modes": {
+      "FOK": {
+        "supported": true,
+        "retcode": 0
+      },
+      "IOC": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      },
+      "RETURN": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      }
+    },
+    "recommended": "FOK"
+  },
+  "AUDUSD": {
+    "symbol": "AUDUSD",
+    "symbol_filling_modes": 1,
+    "modes": {
+      "FOK": {
+        "supported": true,
+        "retcode": 0
+      },
+      "IOC": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      },
+      "RETURN": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      }
+    },
+    "recommended": "FOK"
+  },
+  "USDCAD": {
+    "symbol": "USDCAD",
+    "symbol_filling_modes": 1,
+    "modes": {
+      "FOK": {
+        "supported": true,
+        "retcode": 0
+      },
+      "IOC": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      },
+      "RETURN": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      }
+    },
+    "recommended": "FOK"
+  },
+  "USDCHF": {
+    "symbol": "USDCHF",
+    "symbol_filling_modes": 1,
+    "modes": {
+      "FOK": {
+        "supported": true,
+        "retcode": 0
+      },
+      "IOC": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      },
+      "RETURN": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      }
+    },
+    "recommended": "FOK"
+  },
+  "NZDUSD": {
+    "symbol": "NZDUSD",
+    "symbol_filling_modes": 1,
+    "modes": {
+      "FOK": {
+        "supported": true,
+        "retcode": 0
+      },
+      "IOC": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      },
+      "RETURN": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      }
+    },
+    "recommended": "FOK"
+  },
+  "EURGBP": {
+    "symbol": "EURGBP",
+    "symbol_filling_modes": 1,
+    "modes": {
+      "FOK": {
+        "supported": true,
+        "retcode": 0
+      },
+      "IOC": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      },
+      "RETURN": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      }
+    },
+    "recommended": "FOK"
+  },
+  "EURJPY": {
+    "symbol": "EURJPY",
+    "symbol_filling_modes": 1,
+    "modes": {
+      "FOK": {
+        "supported": true,
+        "retcode": 0
+      },
+      "IOC": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      },
+      "RETURN": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      }
+    },
+    "recommended": "FOK"
+  },
+  "GBPJPY": {
+    "symbol": "GBPJPY",
+    "symbol_filling_modes": 1,
+    "modes": {
+      "FOK": {
+        "supported": true,
+        "retcode": 0
+      },
+      "IOC": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      },
+      "RETURN": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      }
+    },
+    "recommended": "FOK"
+  },
+  "XAUUSD": {
+    "symbol": "XAUUSD",
+    "symbol_filling_modes": 1,
+    "modes": {
+      "FOK": {
+        "supported": true,
+        "retcode": 0
+      },
+      "IOC": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      },
+      "RETURN": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      }
+    },
+    "recommended": "FOK"
+  },
+  "XAGUSD": {
+    "symbol": "XAGUSD",
+    "symbol_filling_modes": 1,
+    "modes": {
+      "FOK": {
+        "supported": true,
+        "retcode": 0
+      },
+      "IOC": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      },
+      "RETURN": {
+        "supported": false,
+        "retcode": 10030,
+        "error": "Order check failed"
+      }
+    },
+    "recommended": "FOK"
+  }
+}
