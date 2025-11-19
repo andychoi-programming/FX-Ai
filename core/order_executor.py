@@ -1140,8 +1140,8 @@ class OrderExecutor:
 
             symbol_info = mt5.symbol_info(symbol)  # type: ignore
             if symbol_info is None:
-                logger.warning(f"No symbol info for {symbol}, using FOK")
-                return mt5.ORDER_FILLING_FOK  # Fallback
+                logger.warning(f"No symbol info for {symbol}, using RETURN")
+                return mt5.ORDER_FILLING_RETURN  # Fallback
 
             # Check available filling modes (both terminal and symbol level)
             filling_modes = symbol_info.filling_mode
@@ -1154,15 +1154,13 @@ class OrderExecutor:
             else:
                 logger.debug(f"Terminal filling mode restrictions not available, using symbol modes only")
 
-            # Try modes in order of preference: FOK first (most reliable), then IOC, then RETURN
-            if filling_modes & mt5.ORDER_FILLING_FOK:
-                return mt5.ORDER_FILLING_FOK
+            # Try modes in order of preference: RETURN first (for TIOMarkets), then IOC, then FOK
+            if filling_modes & mt5.ORDER_FILLING_RETURN:
+                return mt5.ORDER_FILLING_RETURN
             elif filling_modes & mt5.ORDER_FILLING_IOC:
                 return mt5.ORDER_FILLING_IOC
-            elif filling_modes & mt5.ORDER_FILLING_RETURN:
+            elif filling_modes & mt5.ORDER_FILLING_FOK:
                 return mt5.ORDER_FILLING_FOK
-            elif filling_modes & mt5.ORDER_FILLING_RETURN:
-                return mt5.ORDER_FILLING_RETURN
             else:
                 # If no standard modes supported, try immediate or return
                 logger.warning(f"{symbol} doesn't support standard filling modes, trying alternatives")
@@ -1170,11 +1168,11 @@ class OrderExecutor:
                     return mt5.ORDER_FILLING_IMMEDIATE
                 else:
                     logger.error(f"{symbol} has no supported filling modes: {filling_modes}")
-                    return mt5.ORDER_FILLING_FOK  # Last resort
+                    return mt5.ORDER_FILLING_RETURN  # Last resort
 
         except Exception as e:
             logger.error(f"Error getting filling mode for {symbol}: {e}")
-            return mt5.ORDER_FILLING_FOK
+            return mt5.ORDER_FILLING_RETURN
 
     def _calculate_min_stop_distance(self, symbol: str, symbol_info) -> float:
         """Calculate minimum stop distance in price units - Professional Day Trading Standards"""
@@ -1859,7 +1857,7 @@ class OrderExecutor:
                         if filling_mode is not None:
                             request["type_filling"] = filling_mode
                         else:
-                            request["type_filling"] = mt5.ORDER_FILLING_FOK
+                            request["type_filling"] = mt5.ORDER_FILLING_RETURN
 
                     # Note: SL/TP are included in pending order requests and will be applied when order fills
                     # For market orders, SL/TP will be set after order placement using TRADE_ACTION_SLTP

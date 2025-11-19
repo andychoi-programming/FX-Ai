@@ -443,7 +443,7 @@ class TradingEngine:
 
             # Test filling modes using order_check (safer than placing actual orders)
             filling_modes = [mt5.ORDER_FILLING_IOC, mt5.ORDER_FILLING_RETURN, mt5.ORDER_FILLING_FOK]
-            working_filling = mt5.ORDER_FILLING_IOC  # Default
+            working_filling = mt5.ORDER_FILLING_RETURN  # Default to RETURN as suggested
 
             for filling in filling_modes:
                 check_request = {
@@ -490,24 +490,44 @@ class TradingEngine:
             # Send order
             result = mt5.order_send(request)
 
-            # Check if order was successful
-            if result is not None and hasattr(result, 'retcode') and result.retcode == mt5.TRADE_RETCODE_DONE:
-                self.logger.info(f"✅ Order executed successfully: Ticket {result.order}")
+            # Check if order was successful - handle different result formats
+            success = False
+            order_id = None
+            result_comment = ''
+
+            if result is not None:
+                if isinstance(result, tuple) and len(result) >= 2:
+                    # Handle tuple format (retcode, comment)
+                    retcode, result_comment = result[0], result[1]
+                    success = retcode in [mt5.TRADE_RETCODE_DONE, 1, 10009]
+                    order_id = None  # Not available in tuple format
+                elif hasattr(result, 'retcode'):
+                    # Handle object format
+                    retcode = result.retcode
+                    success = retcode == mt5.TRADE_RETCODE_DONE
+                    order_id = getattr(result, 'order', None)
+                    result_comment = getattr(result, 'comment', '')
+
+            if success:
+                self.logger.info(f"✅ Order executed successfully: Ticket {order_id or 'N/A'}")
                 return {
                     'success': True,
-                    'order_id': result.order,
+                    'order_id': order_id,
                     'symbol': symbol,
                     'direction': direction,
                     'volume': lot_size,
                     'entry_price': entry_price,
                     'sl': sl_price,
                     'tp': tp_price,
-                    'comment': result.comment if hasattr(result, 'comment') else ''
+                    'comment': result_comment
                 }
             else:
                 # Get detailed error information
-                retcode = result.retcode if result and hasattr(result, 'retcode') else 'Unknown'
-                comment = result.comment if result and hasattr(result, 'comment') else ''
+                if isinstance(result, tuple) and len(result) >= 2:
+                    retcode, comment = result[0], result[1]
+                else:
+                    retcode = getattr(result, 'retcode', 'Unknown') if result else 'None'
+                    comment = getattr(result, 'comment', '') if result else ''
                 last_error = mt5.last_error()
 
                 error_msg = f"Order failed - Retcode: {retcode}, Comment: {comment}, Last Error: {last_error}"
